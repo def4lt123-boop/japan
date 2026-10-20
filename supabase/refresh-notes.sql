@@ -46,8 +46,21 @@ update public.journeys set notes = 'Okinawa-Block: 27.03. bis 03.04., 7 Tage.' w
 update public.journeys set notes = '6 Tage Tokio am Ende.' where id = 'jn-39' and notes is distinct from '6 Tage Tokio am Ende.';
 update public.expenses set description = '1.050,00 € beim Okinawa-Block (02.04.) – Zweck klären' where id = 'ex-03' and description is distinct from '1.050,00 € beim Okinawa-Block (02.04.) – Zweck klären';
 
+-- Kopien aus der Referenzreise (neue IDs, gleicher Name + Stadt): bereinigten Text übernehmen.
+-- Greift nur dort, wo der Notiz-Text noch nach einer Herkunftsangabe klingt – eigene
+-- Formulierungen bleiben unverändert.
+update public.places neu
+set notes = alt.notes
+from public.places alt
+where alt.trip_id = 'trip-2025'
+  and neu.trip_id = 'trip-2027'
+  and neu.name = alt.name
+  and coalesce(neu.city, '') = coalesce(alt.city, '')
+  and neu.notes ~* '(tabelle|spreadsheet|sheets|excel|spalte|reiseplan)'
+  and neu.notes is distinct from alt.notes;
+
 commit;
 
 -- Kontrolle (muss 0 Zeilen liefern):
---   select id, name, notes from public.places where notes ~* 'tabelle|google|spalte|excel|sheets';
+--   select trip_id, id, name, notes from public.places where notes ~* 'tabelle|google|spalte|excel|sheets';
 --   select id, name, notes from public.trips  where notes ~* 'tabelle|google|spalte|excel|sheets';

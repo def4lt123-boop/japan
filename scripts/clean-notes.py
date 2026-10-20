@@ -120,12 +120,39 @@ for rid, fields in NOTES.items():
     for field, new in fields.items():
         count += 1
         lines.append(f"update public.{table} set {field} = {q(new)} where id = {q(rid)} and {field} is distinct from {q(new)};")
+# 4) Verschobene Kopien der neuen Reise: uuid-IDs, also nicht über die id erreichbar –
+#    sie bekommen den bereinigten Text des Original-Zeilenpaares (Name + Stadt).
+trips = {t['id']: t for t in data.get('trips', [])}
+old_id = next((i for i, t in trips.items() if t.get('archived')), None)
+new_ids = [i for i, t in trips.items() if not t.get('archived')]
+if old_id and new_ids:
+    lines += [
+        '',
+        '-- Kopien aus der Referenzreise (neue IDs, gleicher Name + Stadt): bereinigten Text übernehmen.',
+        '-- Greift nur dort, wo der Notiz-Text noch nach einer Herkunftsangabe klingt – eigene',
+        '-- Formulierungen bleiben unverändert.',
+    ]
+    for new_id in new_ids:
+        lines.append(
+            '\n'.join([
+                'update public.places neu',
+                'set notes = alt.notes',
+                'from public.places alt',
+                f"where alt.trip_id = {q(old_id)}",
+                f"  and neu.trip_id = {q(new_id)}",
+                '  and neu.name = alt.name',
+                "  and coalesce(neu.city, '') = coalesce(alt.city, '')",
+                "  and neu.notes ~* '(tabelle|spreadsheet|sheets|excel|spalte|reiseplan)'",
+                '  and neu.notes is distinct from alt.notes;',
+            ])
+        )
+
 lines += [
     '',
     'commit;',
     '',
     '-- Kontrolle (muss 0 Zeilen liefern):',
-    "--   select id, name, notes from public.places where notes ~* 'tabelle|google|spalte|excel|sheets';",
+    "--   select trip_id, id, name, notes from public.places where notes ~* 'tabelle|google|spalte|excel|sheets';",
     "--   select id, name, notes from public.trips  where notes ~* 'tabelle|google|spalte|excel|sheets';",
     '',
 ]
