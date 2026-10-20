@@ -7,6 +7,8 @@
 export type BookingStatus = 'offen' | 'reserviert' | 'gebucht' | 'erledigt';
 export type Priority = 'muss' | 'soll' | 'kann';
 export type TimeSlot = 'Vormittag' | 'Mittag' | 'Nachmittag' | 'Abend' | 'Nachts' | 'Ganzer Tag';
+/** Ticket-Frage an einem Ort: unklar → braucht Ticket → gekauft, oder gar keins */
+export type TicketStatus = 'unklar' | 'noetig' | 'gekauft' | 'keins';
 
 export interface Trip {
   id: string;
@@ -30,6 +32,8 @@ export interface Place {
   category: string | null;
   /** Tag, an dem der Ort geplant ist – null = noch in der Wünscheliste */
   date: string | null;
+  /** bis zu diesem Tag (Mehrtages-Ausflug) – null = ein Tag */
+  end_date: string | null;
   time_slot: TimeSlot | string | null;
   start_time: string | null; // "13:00"
   /** Dauer in Minuten */
@@ -40,6 +44,10 @@ export interface Place {
   price_note: string | null;
   booking_status: BookingStatus;
   booking_url: string | null;
+  /** Ticket needing / bought / not needed – getrennt vom Buchungsstatus */
+  ticket_status: TicketStatus;
+  /** z. B. „Timed Entry 10:00, 2 Personen“ */
+  ticket_note: string | null;
   priority: Priority;
   /** Suchbegriff für Google Maps, falls keine Koordinaten */
   maps_query: string | null;
@@ -74,6 +82,8 @@ export interface Journey {
   id: string;
   trip_id: string;
   date: string | null;
+  /** Ankunft / Rückflug – null = selben Tages */
+  end_date: string | null;
   title: string;
   from_city: string | null;
   to_city: string | null;
@@ -117,6 +127,7 @@ export interface TripBundle {
 
 export const BOOKING_STATUSES: BookingStatus[] = ['offen', 'reserviert', 'gebucht', 'erledigt'];
 export const PRIORITIES: Priority[] = ['muss', 'soll', 'kann'];
+export const TICKET_STATUSES: TicketStatus[] = ['unklar', 'noetig', 'gekauft', 'keins'];
 export const TIME_SLOTS: TimeSlot[] = [
   'Vormittag',
   'Mittag',

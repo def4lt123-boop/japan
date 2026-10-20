@@ -5,6 +5,7 @@ import type { Expense, Hotel, Journey, Place, Trip } from '../lib/types';
 import { useStore } from '../lib/store';
 import { ExpenseForm, HotelForm, JourneyForm, PlaceForm, TripForm } from './forms';
 import { geocode, queryFor, sleep } from '../lib/geocode';
+import { fmtDate } from '../lib/format';
 
 type Request =
   | { kind: 'place'; id?: string; defaults?: Partial<Place> }
@@ -63,12 +64,20 @@ export function EditorProvider({ tripId, children }: { tripId: string; children:
           tripId={tripId}
           cities={cities}
           jpyRate={trip?.jpy_rate ?? 175}
+          tripStart={trip?.start_date}
+          tripEnd={trip?.end_date}
           value={{ ...(activePlace ?? {}), ...(request.defaults ?? {}) } as Partial<Place>}
           onCancel={close}
           onSubmit={async (place) => {
             await store.upsert('places', place);
             close();
-            store.say(`„${place.name}“ ${activePlace ? 'aktualisiert' : 'hinzugefügt'}${place.date ? ` – Tag ${place.date.split('-').reverse().join('.')}` : ' (Wünscheliste)'}`);
+            store.say(
+              activePlace
+                ? `„${place.name}“ aktualisiert${place.date ? ` – Tag ${place.date.split('-').reverse().join('.')}` : ''}`
+                : place.date
+                  ? `„${place.name}“ fest für ${fmtDate(place.date, { weekday: 'short', day: '2-digit', month: '2-digit' })} eingeplant.`
+                  : `„${place.name}“ angelegt – ohne Tag in der Wünscheliste. Zieh ihn auf der Tages-Seite auf einen Tag.`,
+            );
           }}
           onDelete={
             activePlace
@@ -86,6 +95,8 @@ export function EditorProvider({ tripId, children }: { tripId: string; children:
         <HotelForm
           tripId={tripId}
           cities={cities}
+          tripStart={trip?.start_date}
+          tripEnd={trip?.end_date}
           value={{ ...(activeHotel ?? {}), ...(request.defaults ?? {}) } as Partial<Hotel>}
           onCancel={close}
           onSubmit={async (hotel) => {
@@ -107,6 +118,8 @@ export function EditorProvider({ tripId, children }: { tripId: string; children:
       {request?.kind === 'journey' ? (
         <JourneyForm
           tripId={tripId}
+          tripStart={trip?.start_date}
+          tripEnd={trip?.end_date}
           value={{ ...(activeJourney ?? {}), ...(request.defaults ?? {}) } as Partial<Journey>}
           onCancel={close}
           onSubmit={async (j) => {
@@ -128,6 +141,8 @@ export function EditorProvider({ tripId, children }: { tripId: string; children:
       {request?.kind === 'expense' ? (
         <ExpenseForm
           tripId={tripId}
+          tripStart={trip?.start_date}
+          tripEnd={trip?.end_date}
           jpyRate={trip?.jpy_rate ?? 175}
           value={{ ...(activeExpense ?? {}), ...(request.defaults ?? {}) } as Partial<Expense>}
           onCancel={close}

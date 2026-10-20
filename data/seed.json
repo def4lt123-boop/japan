@@ -9,7 +9,7 @@
       "travelers": 2,
       "budget_eur": 3500,
       "jpy_rate": 168,
-      "notes": "Vorlage: 1:1 aus der Google-Tabelle „Reiseplan“ übernommen. Dient als Referenz für die neue Reise – nichts wird hier verbogen oder erfunden.",
+      "notes": "Referenz-Reise 2025, so wie geplant – zum Anschauen und Duplizieren. Hier nichts ändern, außer du willst die Vorlage nachziehen.",
       "archived": true
     },
     {
@@ -88,7 +88,7 @@
       "hotel_name": null,
       "nights": null,
       "booking_status": "erledigt",
-      "notes": "In der Tabelle standen die 218,00 € / 7 Nächte beim 04.03. – gehören zum Hotel Tokio."
+      "notes": "Die 218,00 € / 7 Nächte beim 04.03. gehören zum Hotel Tokio."
     },
     {
       "id": "jn-05",
@@ -136,7 +136,7 @@
       "hotel_name": null,
       "nights": null,
       "booking_status": "erledigt",
-      "notes": "7 Tage Tokio gesamt (Spalte „Spalte 1“ in der Tabelle)."
+      "notes": "7 Tage Tokio gesamt."
     },
     {
       "id": "jn-08",
@@ -168,7 +168,7 @@
       "hotel_name": null,
       "nights": null,
       "booking_status": "erledigt",
-      "notes": "2 Nächte, 72,00 € laut Tabelle."
+      "notes": "2 Nächte, 72,00 €."
     },
     {
       "id": "jn-10",
@@ -312,7 +312,7 @@
       "hotel_name": null,
       "nights": null,
       "booking_status": "erledigt",
-      "notes": "15 Nächte Osaka, 601,00 € laut Tabelle (ab hier notiert)."
+      "notes": "15 Nächte Osaka, 601,00 € – ab hier sind die Preise notiert."
     },
     {
       "id": "jn-19",
@@ -360,7 +360,7 @@
       "hotel_name": null,
       "nights": null,
       "booking_status": "erledigt",
-      "notes": "6 Tage Osaka gesamt (Tabelle)."
+      "notes": "6 Tage Osaka gesamt."
     },
     {
       "id": "jn-22",
@@ -408,7 +408,7 @@
       "hotel_name": null,
       "nights": null,
       "booking_status": "offen",
-      "notes": "Tottori (Conan Town + Dünen) stand in der Tabelle ohne Datum – 2 Tage eingeplant, aber im Reiseverlauf nicht aufgetaucht."
+      "notes": "Tottori (Conan Town + Dünen) war ohne Datum überliefert – 2 Tage eingeplant, taucht im Reiseverlauf nicht auf."
     },
     {
       "id": "jn-25",
@@ -488,7 +488,7 @@
       "hotel_name": "Hotel Okinawa",
       "nights": 1,
       "booking_status": "erledigt",
-      "notes": "Tabelle: „1 Nacht | 55,00 €“ beim 29.03., Okinawa-Block weiter unten sagt 27.03.–03.04. (7 Tage) – bitte prüfen."
+      "notes": "1 Nacht / 55,00 € beim 29.03., der Okinawa-Block sagt 27.03.–03.04. (7 Tage) – bitte prüfen."
     },
     {
       "id": "jn-30",
@@ -552,7 +552,7 @@
       "hotel_name": null,
       "nights": null,
       "booking_status": "erledigt",
-      "notes": "1.050,00 € in der Tabelle beim 02.04. notiert (Zweck unklar – vermutlich Unterkunft/Flüge)."
+      "notes": "1.050,00 € beim 02.04. – Zweck unklar, vermutlich Unterkunft oder Flüge."
     },
     {
       "id": "jn-34",
@@ -568,7 +568,7 @@
       "hotel_name": null,
       "nights": null,
       "booking_status": "erledigt",
-      "notes": "Okinawa-Block in der Tabelle: 27.03. bis 03.04., 7 Tage."
+      "notes": "Okinawa-Block: 27.03. bis 03.04., 7 Tage."
     },
     {
       "id": "jn-35",
@@ -648,7 +648,7 @@
       "hotel_name": null,
       "nights": null,
       "booking_status": "erledigt",
-      "notes": "6 Tage Tokio am Ende (Tabelle)."
+      "notes": "6 Tage Tokio am Ende."
     },
     {
       "id": "jn-40",
@@ -683,7 +683,7 @@
       "lng": null,
       "booking_url": null,
       "booking_status": "erledigt",
-      "notes": "Wert aus der Tabelle (Zeile 04.03.). Name des Hotels war nicht notiert."
+      "notes": "Preis vom 04.03. überliefert, der Name des Hotels ist nicht notiert."
     },
     {
       "id": "ht-hakodate",
@@ -700,7 +700,7 @@
       "lng": 140.7287,
       "booking_url": null,
       "booking_status": "erledigt",
-      "notes": "In der Tabelle „Hakkodate“ geschrieben; 72,00 € beim 09.03."
+      "notes": "„Hakkodate“ – 72,00 € beim 09.03."
     },
     {
       "id": "ht-osaka",
@@ -734,7 +734,7 @@
       "lng": 135.4326,
       "booking_url": "https://www.parkfront-hotel.com/",
       "booking_status": "erledigt",
-      "notes": "Stand in der Standort-Spalte der Tabelle (18.03., ganzer Tag, Super Nintendo World). Preis in 601 € enthalten? Unklar – nicht doppelt zählen."
+      "notes": "18.03., ganzer Tag, Super Nintendo World. Ist der Preis in den 601 € für Osaka enthalten? Unklar – nicht doppelt zählen."
     },
     {
       "id": "ht-hiroshima",
@@ -768,7 +768,7 @@
       "lng": 127.6809,
       "booking_url": null,
       "booking_status": "erledigt",
-      "notes": "Tabelle: 1 Nacht / 55 €. Okinawa-Block sagt aber 27.03.–03.04. (7 Tage) – und 1.050 € beim 02.04. Offener Punkt."
+      "notes": "1 Nacht / 55 €. Der Okinawa-Block sagt aber 27.03.–03.04. (7 Tage) – und 1.050 € beim 02.04. Offener Punkt."
     },
     {
       "id": "ht-tokio-2",
@@ -812,7 +812,7 @@
       "trip_id": "trip-2025",
       "date": "2025-04-02",
       "category": "Sonstiges",
-      "description": "1.050,00 € laut Tabelle beim Okinawa-Block – Zweck klären",
+      "description": "1.050,00 € beim Okinawa-Block (02.04.) – Zweck klären",
       "amount_eur": 1050,
       "payer": null
     }
@@ -830,7 +830,7 @@
       "start_time": null,
       "duration_min": 30,
       "travel_time": null,
-      "notes": "Gibt es nur am Flughafen (Tabelle: „Suica Card Haneda Terminal 3 kaufen gibts nur am Flughafen“).",
+      "notes": "Gibt es nur am Flughafen – Suica direkt am Haneda Terminal 3 holen.",
       "price_eur": 20,
       "price_note": "Kaution 500 ¥",
       "booking_status": "erledigt",
@@ -944,7 +944,7 @@
       "start_time": null,
       "duration_min": 60,
       "travel_time": "Ca 30 Min",
-      "notes": "Bild-Link aus der Tabelle übernommen.",
+      "notes": null,
       "price_eur": 8,
       "price_note": "≈ 1.000–1.300 ¥",
       "booking_status": "offen",
@@ -1031,7 +1031,7 @@
       "start_time": null,
       "duration_min": 45,
       "travel_time": null,
-      "notes": "Tabelle: „a Tempel halt mein Gott“ 😄",
+      "notes": "„a Tempel halt mein Gott“ 😄",
       "price_eur": null,
       "booking_status": "offen",
       "priority": "kann",
@@ -1073,7 +1073,7 @@
       "start_time": null,
       "duration_min": 45,
       "travel_time": null,
-      "notes": "Tabelle: „Seconds Street – Tokio günstige Figuren“.",
+      "notes": "Seconds Street – günstige Figuren und Kleinkram.",
       "price_eur": null,
       "booking_status": "offen",
       "priority": "kann",
@@ -1094,7 +1094,7 @@
       "start_time": null,
       "duration_min": 60,
       "travel_time": null,
-      "notes": "Tabelle: „Cafe mit Tollen Süßigkeiten – uiiii“.",
+      "notes": "Café mit tollen Süßigkeiten – uiiii.",
       "price_eur": 12,
       "booking_status": "offen",
       "priority": "kann",
@@ -1327,7 +1327,7 @@
       "start_time": null,
       "duration_min": 60,
       "travel_time": null,
-      "notes": "Tabelle: „keine ahnung diggah“ 😅 – DIY, Beauty, Reisekram.",
+      "notes": "„keine ahnung diggah“ 😅 – DIY, Beauty, Reisekram.",
       "price_eur": null,
       "booking_status": "offen",
       "priority": "kann",
@@ -1453,7 +1453,7 @@
       "start_time": null,
       "duration_min": 90,
       "travel_time": null,
-      "notes": "In der Tabelle unter Tokio mit „außerhalb Tokios“ notiert – der berühmte Bambuswald ist in Kyoto. Klären.",
+      "notes": "Achtung: der berühmte Bambuswald liegt in Arashiyama (Nordwest-Kyoto), nicht außerhalb von Tokio. Tag und Stadt noch klären.",
       "price_eur": null,
       "booking_status": "offen",
       "priority": "kann",
@@ -1539,7 +1539,7 @@
       "start_time": null,
       "duration_min": 45,
       "travel_time": null,
-      "notes": "Tabelle sagt Shiga – der Moos-Tempel Hōsen-in liegt in Ohara (Nord-Kyoto). Jikkō-in und Sanzen-in sind daneben.",
+      "notes": "Liegt in Ohara (Nord-Kyoto), nicht in Shiga. Jikkō-in und Sanzen-in sind gleich daneben.",
       "price_eur": 4,
       "booking_status": "offen",
       "priority": "kann",
@@ -1644,7 +1644,7 @@
       "start_time": null,
       "duration_min": 60,
       "travel_time": null,
-      "notes": "Kaffee mit Matcha und Kuchi (Tabelle).",
+      "notes": "Kaffee mit Matcha und Kuchi.",
       "price_eur": 7,
       "booking_status": "offen",
       "priority": "kann",
@@ -1708,7 +1708,7 @@
       "start_time": null,
       "duration_min": 90,
       "travel_time": null,
-      "notes": "Tabelle: „Essen ganz eigen, mit Pflanzen oder so“ – Kaiseki-Restaurant mit Garten, mittags auch Café.",
+      "notes": "„Essen ganz eigen, mit Pflanzen oder so“ – Kaiseki-Restaurant mit Garten, mittags auch Café.",
       "price_eur": 40,
       "booking_status": "offen",
       "priority": "kann",
@@ -1772,7 +1772,7 @@
       "start_time": null,
       "duration_min": 90,
       "travel_time": null,
-      "notes": "Tabelle: „Higashiyama (ähnlich)“ – Shops, Matcha-Eis, Kiyomizu-dera am Ende.",
+      "notes": "Higashiyama-ähnlich – Shops, Matcha-Eis, Kiyomizu-dera am Ende.",
       "price_eur": null,
       "booking_status": "offen",
       "priority": "soll",
@@ -1900,7 +1900,7 @@
       "start_time": "08:00",
       "duration_min": 600,
       "travel_time": null,
-      "notes": "Tabelle: 18.03., ganzer Tag. Early Entry nutzen, Power-Up-Band vorab buchen.",
+      "notes": "Ganzer Tag einplanen. Early Entry nutzen, Power-Up-Band vorab buchen.",
       "price_eur": 95,
       "price_note": "1-Day-Park-Ticket ≈ 10.900 ¥",
       "booking_status": "gebucht",
@@ -1944,7 +1944,7 @@
       "start_time": null,
       "duration_min": 150,
       "travel_time": null,
-      "notes": "Tabelle: „Der Park drum herum, nicht in die Burg hinein“ – Park + Nishinomaru-Maru reichen.",
+      "notes": "„Der Park drum herum, nicht in die Burg hinein“ – Park + Nishinomaru reichen.",
       "price_eur": 0,
       "price_note": "Park frei, Burg 1.200 ¥",
       "booking_status": "offen",
@@ -2009,7 +2009,7 @@
       "start_time": null,
       "duration_min": 60,
       "travel_time": null,
-      "notes": "Mojitos? – „Moji Fruits“ aus der Tabelle: Fruchtsandwiches/Parfaits.",
+      "notes": "Mojitos? – „Moji Fruits\": Fruchtsandwiches und Parfaits.",
       "price_eur": 12,
       "booking_status": "offen",
       "priority": "kann",
@@ -2093,7 +2093,7 @@
       "start_time": null,
       "duration_min": 120,
       "travel_time": null,
-      "notes": "Tabelle: „Dotonbori Street (auch Einkaufsmeile)“ – überdacht, Regen-Backup.",
+      "notes": "Dotonbori Street (auch Einkaufsmeile) – überdacht, gutes Regen-Backup.",
       "price_eur": null,
       "booking_status": "offen",
       "priority": "soll",
@@ -2114,7 +2114,7 @@
       "start_time": null,
       "duration_min": 90,
       "travel_time": null,
-      "notes": "Tabelle: „Figuren usw“ – Dachgeschoss = Food Court.",
+      "notes": "Figuren usw. – Dachgeschoss = Food Court.",
       "price_eur": null,
       "booking_status": "offen",
       "priority": "kann",
@@ -2135,7 +2135,7 @@
       "start_time": null,
       "duration_min": 420,
       "travel_time": "Ca 45 Min ab Osaka",
-      "notes": "Nara-Park, Tōdai-ji, Kasuga-Schrein. In der Tabelle stand bei diesem Eintrag noch „Kifune Shrine“ – das gehört nach Kyoto.",
+      "notes": "Nara-Park, Tōdai-ji, Kasuga-Schrein. Der Kifune-Schrein gehört nicht hierher – der liegt in Kyoto.",
       "price_eur": 0,
       "price_note": "Hirsch-Cracker 200 ¥",
       "booking_status": "offen",
@@ -2157,7 +2157,7 @@
       "start_time": null,
       "duration_min": 420,
       "travel_time": null,
-      "notes": "Tabelle: „müssen no schauen“ – Optionen: Fish Market um 6 Uhr, Wakayama Castle.",
+      "notes": "„müssen no schauen“ – Optionen: Fish Market um 6 Uhr, Wakayama Castle.",
       "price_eur": null,
       "booking_status": "offen",
       "priority": "kann",
@@ -2200,7 +2200,7 @@
       "start_time": null,
       "duration_min": 240,
       "travel_time": null,
-      "notes": "Tabelle: „müssen no schauen“. 10-Million-Dollar-Night-View, Alpina-Rokko (Sesselbahn).",
+      "notes": "„müssen no schauen“. 10-Million-Dollar-Night-View, Alpina-Rokko (Sesselbahn).",
       "price_eur": 10,
       "price_note": "Parkgebühr 600 ¥ + Seilbahn",
       "booking_status": "offen",
@@ -2397,7 +2397,7 @@
       "start_time": null,
       "duration_min": null,
       "travel_time": null,
-      "notes": "Tabelle: 27.03. bis 03.04., 7 Tage, ohne Programm. Nachholen für 2026: Shuri-Jō, Manmo Beach, Manzamo, Ryukyu Mura, Churaumi-Aquarium.",
+      "notes": "27.03.–03.04., 7 Tage, ohne Programm. Nachholen für 2027: Shuri-Jō, Manmo Beach, Manzamo, Ryukyu Mura, Churaumi-Aquarium.",
       "price_eur": null,
       "booking_status": "offen",
       "priority": "soll",
@@ -2418,7 +2418,7 @@
       "start_time": null,
       "duration_min": 120,
       "travel_time": null,
-      "notes": "Fehlte in der Tabelle – für 2026 ergänzt: Seilbahn rauf, einer der besten Night Views Japans.",
+      "notes": "Neu für 2027 dazugenommen: Seilbahn rauf, einer der besten Night Views Japans.",
       "price_eur": 12,
       "price_note": "Seilbahn ~ 1.280 ¥ retour",
       "booking_status": "offen",
@@ -2440,7 +2440,7 @@
       "start_time": "07:00",
       "duration_min": 90,
       "travel_time": null,
-      "notes": "Für 2026 ergänzt – Fisch-Restaurant-Straße, danach Yunokawa Onsen (Meerwasser-Bäder).",
+      "notes": "Neu für 2027 dazugenommen: Fisch-Restaurant-Straße, danach Yunokawa Onsen (Meerwasser-Bäder).",
       "price_eur": 12,
       "booking_status": "offen",
       "priority": "kann",

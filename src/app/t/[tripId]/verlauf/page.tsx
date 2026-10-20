@@ -50,7 +50,7 @@ export default function JourneyPage() {
       <SectionTitle
         title="Reiseverlauf"
         icon="🚄"
-        hint="Ankunft, Weiterzüge, Rückflug – die Kette aus der alten Tabelle, jetzt mit Etappenpreis und Hotelwechsel."
+        hint="Ankunft, Weiterzüge, Rückflug – die Kette mit Etappenpreis und Hotelwechsel."
         right={
           <>
             {modes.length ? (
@@ -104,6 +104,11 @@ export default function JourneyPage() {
                     </div>
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-slate-400">
                       {j.departure_time ? <span className="tabular-nums">Abflug {j.departure_time}</span> : null}
+                      {j.end_date ? (
+                        <span className="tabular-nums">
+                          · {j.mode === 'Flug' ? 'zurück' : 'an'} {fmtDate(j.end_date, { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        </span>
+                      ) : null}
                       {j.duration_min ? <span>· {fmtDuration(j.duration_min)}</span> : null}
                       {j.hotel_name ? (
                         <span className="text-slate-300">

@@ -65,7 +65,7 @@ export default function HomePage() {
           ⛩️
         </div>
         <h1 className="max-w-3xl text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl">
-          Urlaubsplanung – so genau wie deine Tabelle, aber im Browser
+          Urlaubsplanung – jeder Tag, jedes Hotel, jeder offene Punkt
         </h1>
         <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-slate-300">
           Jeder Ort mit <b>Tageszeit</b>, <b>Dauer</b>, <b>Fahrzeit vom Hotel</b>, <b>Hinweisen</b>, <b>Status</b>, <b>Preis</b> und <b>Google-Maps-Koordinaten</b>. Tage lassen sich planen, Einträge anlegen,
@@ -272,7 +272,7 @@ function TipsCard() {
   return (
     <section className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
       <Card className="p-4">
-        <SectionTitle title="So arbeitest du" icon="💡" hint="Alles, was in der Tabelle stand – nur schneller und mit Karte." />
+        <SectionTitle title="So arbeitest du" icon="💡" hint="Plane pro Tag, sieh was fehlt, und behalte Betten und Kosten im Blick." />
         <ul className="grid gap-1.5 text-[13px] leading-relaxed text-slate-300 sm:grid-cols-2">
           <li>
             <b>Tage</b>: Einträge zwischen Tagen ziehen, ✎ bearbeiten, ✓ erledigt.
@@ -281,7 +281,7 @@ function TipsCard() {
             <b>Übersicht</b>: Band mit Betten, Etappen und Tagesluft – darunter jeder Tag als Zeitbild.
           </li>
           <li>
-            <b>Tabelle</b>: dieselben Spalten wie in der Tabelle, sortierbar, als CSV.
+            <b>Tabelle</b>: alle Felder in einer Zeile – sortierbar, filterbar, als CSV.
           </li>
           <li>
             <b>Karte</b>: Punkte aus den Koordinaten, fehlende lassen sich per Suche setzen.
@@ -304,8 +304,8 @@ function TipsCard() {
             ↻ Neu laden
           </Button>
           {store.mode !== 'supabase' ? (
-            <Button size="sm" variant="ghost" onClick={() => void store.resetLocalData()} title="Alle Einträge durch die Vorlage aus der Tabelle ersetzen">
-              ⟲ Auf Vorlage zurücksetzen
+            <Button size="sm" variant="ghost" onClick={() => void store.resetLocalData()} title="Alle Reisen und Einträge durch die mitgelieferte Vorlage ersetzen">
+              ⟲ Vorlage wiederherstellen
             </Button>
           ) : null}
         </div>

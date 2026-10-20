@@ -1,8 +1,8 @@
 # Urlaubsplaner – Japan 🗾
 
-Aus der alten Google-Tabelle („Reiseplan“) wurde eine richtige Web-App: Reisetage, Orte mit **Fahrzeit ab Hotel**, **Dauer**, **Tageszeit**, **Hinweisen**, **Preisen**, **Buchungsstatus** und **Google-Maps-Koordinaten** – plus Unterkünfte, Reiseverlauf und Budget. Gebaut mit **Next.js + Tailwind**, gehostet auf **Vercel**, Daten optional in **Supabase (Postgres)**.
+Urlaubsplanung als richtige Web-App: Reisetage, Orte mit **Fahrzeit ab Hotel**, **Dauer**, **Tageszeit**, **Hinweisen**, **Preisen**, **Buchungsstatus** und **Google-Maps-Koordinaten** – plus Unterkünfte, Reiseverlauf, Budget und eine grafische Übersicht, die pro Tag zeigt, was geplant ist und was noch fehlt. Gebaut mit **Next.js + Tailwind**, gehostet auf **Vercel**, Daten optional in **Supabase (Postgres)**.
 
-Ohne Datenbank-Zugangsdaten läuft die App im **Demo-Modus**: alle Daten liegen im Browser (localStorage), die Vorlage (Japan 2025) ist 1:1 aus der Tabelle übernommen. Sobald `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` gesetzt sind, werden die gleichen Tabellen in Supabase gelesen/geschrieben. Auf der Seite selbst steht dazu nur der Status **„Datenbank verbunden"** – alle Einrichtungsdoku liegt hier im README, nicht im UI.
+Ohne Datenbank-Zugangsdaten läuft die App im **Demo-Modus**: alle Daten liegen im Browser (localStorage), die mitgelieferte Vorlage (Japan 2025 als Referenz, Japan 2027 als Planungsreise) ist eingebaut. Sobald `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` gesetzt sind, werden die gleichen Tabellen in Supabase gelesen/geschrieben. Auf der Seite selbst steht dazu nur der Status **„Datenbank verbunden"** – alle Einrichtungsdoku liegt hier im README, nicht im UI.
 
 ---
 
@@ -13,11 +13,11 @@ Ohne Datenbank-Zugangsdaten läuft die App im **Demo-Modus**: alle Daten liegen 
 | 🏠 **Übersicht** | **grafische Reisekarte**: Band über alle Reisetage (Bett-Balken pro Unterkunft, Nächte mit/ohne Quartier, Etappen-Icons, Auslastungssäulen) · **jeder Tag als Zeitbild** auf der Achse 07–23 Uhr (Balken = Eintrag, gestrichelt = ohne feste Uhrzeit, rot umrandet = Muss noch offen) · **Ring „Planungsgrad“** mit Checklist „was noch fehlen würde" (Nächte, Termine, Tickets, Preise, Fahrzeiten, Koordinaten, Etappenzeiten, Budget) · **„was noch verfügbar ist"**: freie Tage, Luft pro Tag, Punkte/Nächte-Balance pro Stadt, ⚡ Wünsche auf freie Tage legen, offene Buchungen mit Link |
 | 🗓️ **Tage** | Tagesplan pro Reisetag, Einträge per **Drag & Drop** verschieben (mobil ◀ ▶), Tagesauslastung in Stunden, Hotel der Nacht + Etappen (Flug/Zug) direkt am Tag, ✓ erledigt |
 | ✨ **Wünscheliste** | alles ohne Tag; pro Eintrag Tag zuweisen, **⚡ Automatisch verteilen**, Koordinaten nachziehen |
-| 📊 **Tabelle** | Ansicht wie in Google Sheets: sortierbare Spalten, Inline-Edit (Datum/Status/Prio), Filter + Suche, **CSV-Export** (Semikolon, de-DE → wieder nach Sheets/Excel importierbar) |
+| 📊 **Tabelle** | alle Felder als Zeilen: sortierbare Spalten, Inline-Edit (Datum/Status/Prio), Filter + Suche, **CSV-Export** (Semikolon, de-DE → in jedes Tabellenprogramm importierbar) |
 | 🗺️ **Karte** | Marker aus den Koordinaten (Farbe = Kategorie, hohl = ohne Tag), Route des gewählten Tages als Linie, Unterkünfte als 🏨-Marker, Popup mit Details + Maps/Route-Links |
 | 🏨 **Unterkünfte** | Nächte, Gesamtpreis, € / Nacht, € / Person / Nacht, **Nächte-Check** (welche Nacht hat kein Hotel?), Preisvergleich-Balken |
 | 💶 **Kosten** | Budgetauslastung, aufgeschlüsselt nach Unterkunft / Transport / Tickets / Ausgaben, Yen-Umrechnung mit einstellbarem Kurs, „wer hat vorgestreckt“ + Ausgleich |
-| 🚄 **Reiseverlauf** | Etappen (Ankunft, Shinkansen, Flüge, Hotelwechsel) inkl. Preis und Nights – wie die rechte Spaltengruppe in der Tabelle |
+| 🚄 **Reiseverlauf** | Etappen (Ankunft, Shinkansen, Flüge, Hotelwechsel) inkl. Preis, Hotel und Nächten je Halt |
 | ⚙ **Reisen** | mehrere Reisen, **duplizieren** (neues Jahr = alte Reise als Vorlage, Wochentage bleiben gleich), archivieren, Budget/¥-Kurs/Personen |
 
 Jeder Eintrag speichert zusätzlich `maps_query`, `lat`, `lng`: Koordinaten lassen sich per **OpenStreetMap-Suche** füllen oder indem du einen **Google-Maps-Link einfügst** (`…/@35.6597,139.7007,17z`, `?query=lat,lng`, `!3d…!4d…`, rohe `35.6597, 139.7007`) – das Formular extrahiert die Zahlen automatisch.
@@ -50,7 +50,7 @@ Vercel erkennt Next.js automatisch. Es sind keine Server-Funktionen nötig (alle
 
 ### A) Ein File, ein Klick (empfohlen)
 
-`supabase/setup.sql` enthält **alles für das erste Setup**: Tabellen + Constraints + Indizes + Sichten + RLS-Policies + deine Beispieldaten (Reise 2025 aus der Tabelle, Reise 2027 bereits befüllt).
+`supabase/setup.sql` enthält **alles für das erste Setup**: Tabellen + Constraints + Indizes + Sichten + RLS-Policies + deine Beispieldaten (Reise 2025 als Referenz, Reise 2027 bereits befüllt).
 
 1. [supabase.com](https://supabase.com) → Projekt öffnen → **SQL Editor** → *New query*
 2. Inhalt von [`supabase/setup.sql`](supabase/setup.sql) komplett rein kopieren → **Run**
@@ -93,7 +93,7 @@ Zwei Möglichkeiten – beide nutzen `supabase/migrations/`:
 ## Datenhaltung / Architektur
 
 ```
-data/seed.json            Vorlage aus der Google-Tabelle (Reisen, Orte, Hotels, Etappen, Ausgaben)
+data/seed.json            Vorlage-Reisen (Reisen, Orte, Hotels, Etappen, Ausgaben) – Quelle für Seed & SQL
 src/lib/types.ts          Feldnamen = Datenbankspalten (snake_case) → kein Mapping nötig
 src/lib/supabase.ts       Client, Spaltenlisten, select/upsert/patch/delete
 src/lib/seed.ts           Seed + „Reise duplizieren“ (Tage verschieben, Status zurücksetzen)
@@ -109,6 +109,7 @@ supabase/setup.sql        ERSTES SETUP: schema.sql + Beispieldaten in einem File
 supabase/schema.sql       Tabellen + Sichten + Policies (Quelle für alles)
 supabase/migrations/*     gespiegelte schema.sql → supabase db push / CI / Git-Integration
 supabase/seed.sql         Beispieldaten, erzeugt aus data/seed.json (npm run seed:sql)
+supabase/refresh-notes.sql  optionales UPDATE-Script: Notizen von Altlasten befreien
 ```
 
 Änderungen an `data/seed.json` immer mit `node scripts/emit-seed-sql.mjs` in SQL spiegeln.
@@ -120,4 +121,6 @@ supabase/seed.sql         Beispieldaten, erzeugt aus data/seed.json (npm run see
 
 ## Anmerkungen zur Vorlage
 
-Die 2025-Daten sind so übernommen, wie sie in der Tabelle standen – auch die offenen Punkte (z. B. „Hōsen-in“ stand bei Shiga, liegt aber in Ohara/Kyoto; Okinawa: 1 Nacht/55 € vs. 7-Tage-Block; 1.050 € beim 02.04. ohne Zweck). Solche Stellen sind in den Hinweisen markiert, damit sie in der neuen Reise geklärt werden können. Die beiden Hakodate-Punkte (Berg Yōmei, Morgenmarkt) wurden als Vorschlag ergänzt, weil für Hakodate gar nichts geplant war.
+Die 2025-Daten sind der übernommene Planungsstand – inklusive der Stellen, die schon damals offen waren (z. B. „Hōsen-in“ bei Shiga statt Ohara/Kyoto; Okinawa: 1 Nacht/55 € vs. 7-Tage-Block; 1.050 € beim 02.04. ohne Zweck). Genau diese Punkte stehen in den **Hinweisen** der Einträge, damit sie für die neue Reise geklärt werden – die Übersichtsseite sammelt sie unter „Was noch fehlen würde“. Die beiden Hakodate-Punkte (Berg Yōmei, Morgenmarkt) sind als Ergänzung markiert, weil für Hakodate nichts geplant war.
+
+**Keine Herkunfts-Vermerke:** in den Notizen stehen nur Reise-Infos, nicht wo sie früher standen. Falls deine Datenbank noch ältere Notiz-Texte hat: `supabase/refresh-notes.sql` im SQL-Editor ausführen – bereinigt auch die kopierten Zeilen der neuen Reise, ist idempotent und überschreibt sonst nichts. Die Datei entsteht aus derselben Quelle wie der Seed → `python3 scripts/clean-notes.py`.

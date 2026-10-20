@@ -3,17 +3,38 @@ import { cityDates, cloneHotels, cloneJourneys, clonePlaces, dayDiff } from './p
 import type { Snapshot, Trip } from './types';
 
 /**
- * Startdaten: die alte Urlaubstabelle (data/seed.json) + eine neue Reise,
- * deren Inhalte aus der Vorlage abgeleitet werden.
+ * Startdaten: die Referenz-Reise (data/seed.json) + eine neue Reise,
+ * deren Inhalte aus dieser Vorlage abgeleitet werden.
  */
+/** Einträge mit festem Einlass-/Zeitfenster-System – dort führt der Weg immer online vorbei. */
+const TICKET_PFLICHT = [
+  'teamLab Planets',
+  'teamLab Borderless',
+  'Tokyo Skytree',
+  'Tokyo Tower',
+  'Shibuya Sky',
+  'Umeda Sky Building',
+  'Kinkaku-ji',
+  'Nijigen no Mori',
+  'Kobe Tower',
+];
+
 export function seedSnapshot(): Snapshot {
   const raw = (seedJson as { default?: unknown })?.default ?? seedJson;
   const base = raw as unknown as Snapshot;
   const snapshot: Snapshot = {
     trips: base.trips.map((t) => ({ ...t })),
-    places: base.places.map((p) => ({ ...p })),
+    places: base.places.map((p) => {
+      const ticketpflicht = TICKET_PFLICHT.some((k) => p.name.includes(k));
+      return {
+        ...p,
+        ticket_status: p.ticket_status ?? (ticketpflicht ? ('noetig' as const) : ('unklar' as const)),
+        ticket_note: p.ticket_note ?? (ticketpflicht ? 'Zeitfenster-Ticket vorab buchen' : null),
+        end_date: p.end_date ?? null,
+      };
+    }),
     hotels: base.hotels.map((h) => ({ ...h })),
-    journeys: base.journeys.map((j) => ({ ...j })),
+    journeys: base.journeys.map((j) => ({ ...j, end_date: j.end_date ?? null })),
     expenses: base.expenses.map((e) => ({ ...e })),
   };
   const source = snapshot.trips.find((t) => t.id === 'trip-2025');

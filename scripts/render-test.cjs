@@ -135,7 +135,7 @@ async function render(name, Page, tripId) {
       console.log(`✅ ${page.name}  (${text.length} Zeichen Text)`);
     }
     errors.filter((e) => /Each child in a list|unique "key"/.test(e)).forEach((e) => warnings.push(`${page.name}: ${e.slice(0, 160)}`));
-    const tech = /NEXT_PUBLIC[A-Z_]*|https?:\/\/[a-z0-9]+\.supabase\.co|schema\.sql|seed\.sql|anon[- ]?key/i.exec(text);
+    const tech = /NEXT_PUBLIC[A-Z_]*|https?:\/\/[a-z0-9]+\.supabase\.co|schema\.sql|seed\.sql|anon[- ]?key|google[- ]tabelle|google sheets|excel|spreadsheet|reiseplan/i.exec(text);
     if (tech) techLeaks.push(`${page.name}: „${tech[0]}“`);
 
   }
@@ -188,7 +188,7 @@ async function render(name, Page, tripId) {
     await new Promise((r) => setTimeout(r, 60));
   });
   const layoutText = container.textContent || '';
-  const tabsOk = /Übersicht/.test(layoutText) && /Wünscheliste/.test(layoutText) && /Kosten/.test(layoutText) && /Samstag/.test(layoutText);
+  const tabsOk = /Übersicht/.test(layoutText) && /Wünscheliste/.test(layoutText) && /Kosten/.test(layoutText) && /Samstag/.test(layoutText) && /Nach rechts auf einen Tag ziehen/.test(layoutText);
   console.log((tabsOk ? '✅' : '❌') + ' Reise-Layout: Tabs + Tagesplan mit Daten');
   if (!tabsOk) {
     failures.push('Layout');
@@ -203,8 +203,11 @@ async function render(name, Page, tripId) {
   const forms = require('../src/components/forms.tsx');
   const formCases = [
     ['PlaceForm', React.createElement(forms.PlaceForm, { tripId: 'trip-2027', cities: ['Tokio'], value: null, onSubmit() {}, onCancel() {} }), /Was ist es\?/],
+    ['PlaceForm Ticket-Frage', React.createElement(forms.PlaceForm, { tripId: 'trip-2027', cities: ['Tokio'], value: null, tripStart: '2027-03-06', tripEnd: '2027-04-14', onSubmit() {}, onCancel() {} }), /Ticket\?/],
+    ['PlaceForm Mehrtage-Feld', React.createElement(forms.PlaceForm, { tripId: 'trip-2027', cities: ['Tokio'], value: null, tripStart: '2027-03-06', tripEnd: '2027-04-14', onSubmit() {}, onCancel() {} }), /Mehrtages-Ausflug/],
     ['HotelForm', React.createElement(forms.HotelForm, { tripId: 'trip-2027', cities: ['Tokio'], value: null, onSubmit() {}, onCancel() {} }), /Preis gesamt/],
     ['JourneyForm', React.createElement(forms.JourneyForm, { tripId: 'trip-2027', value: null, onSubmit() {}, onCancel() {} }), /Verkehrsmittel/],
+    ['JourneyForm Zeitraum', React.createElement(forms.JourneyForm, { tripId: 'trip-2027', value: null, onSubmit() {}, onCancel() {} }), /zweiter Klick = Ankunft/],
     ['ExpenseForm', React.createElement(forms.ExpenseForm, { tripId: 'trip-2027', value: null, onSubmit() {}, onCancel() {} }), /Wer war in Vorleistung/],
     ['TripForm', React.createElement(forms.TripForm, { value: null, onSubmit() {}, onCancel() {} }), /¥ pro €|Budget/]
   ];
@@ -244,7 +247,9 @@ async function render(name, Page, tripId) {
     await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
     clicked = /Was ist es\?/.test(c2.textContent || '');
   }
-  const hasDate = clicked && /value="2027-[0-9]{2}-[0-9]{2}"/.test(c2.innerHTML);
+  const dateInputs = [...c2.querySelectorAll('input[type=date]')].map((i) => i.name + '=' + i.value).join(',');
+  const det = c2.querySelector('details');
+  const hasDate = clicked && /2027-[0-9]{2}-[0-9]{2}/.test(dateInputs);
   console.log((clicked && hasDate ? '✅' : '❌') + ' Klick „Ort an diesem Tag anlegen“ öffnet Formular mit vorbelegtem Datum');
   if (!(clicked && hasDate)) { failures.push('Klick Test'); console.log('   clicked=' + clicked + ' hasDate=' + hasDate); clickErr.filter(e=>/Error|not a function|Cannot read/.test(e)).slice(0,3).forEach(e=>console.log('   '+e.slice(0,240))); }
   console.error = oe2;
@@ -261,8 +266,10 @@ async function render(name, Page, tripId) {
   const rows = c3.querySelectorAll('tbody tr').length;
   const inputs = c3.querySelectorAll('tbody input[type=date]').length;
   const selects = c3.querySelectorAll('tbody select').length;
-  const tableOk = rows > 60 && inputs === rows && selects === rows * 2;
-  console.log((tableOk ? '✅' : '❌') + ` Tabelle: ${rows} Zeilen, ${inputs} Datums-Edits, ${selects} Status/Prio-Selects`);
+  const tickets = c3.querySelectorAll('tbody select').length;
+  const tableOk = rows > 60 && inputs === rows && selects === rows * 3;
+  console.log((tableOk ? '✅' : '❌') + ` Tabelle: ${rows} Zeilen, ${inputs} Datums-Edits, ${selects} Status/Ticket/Prio-Selects`);
+  if (!tableOk) console.log('   erwartet: rows*3 Selects, gefunden ' + tickets);
   if (!tableOk) failures.push('Tabelle Inline-Edits');
   await act(async () => r3.unmount());
   if (warnings.length) {
@@ -270,11 +277,11 @@ async function render(name, Page, tripId) {
     [...new Set(warnings)].slice(0, 8).forEach((w) => console.log('   ' + w));
   }
   if (techLeaks.length) {
-    failures.push('Technik-Hinweise im UI');
-    console.log('❌ Seite zeigt technische Hinweise:');
+    failures.push('Technik-/Herkunfts-Hinweise im UI');
+    console.log('❌ Seite zeigt technische oder Herkunfts-Hinweise:');
     techLeaks.forEach((l) => console.log('   ' + l));
   } else {
-    console.log('✅ Kein Hinweis auf Datenbank-Zugangsdaten, .env-Dateien oder SQL-Dateien im UI');
+    console.log('✅ UI frei von Setup-Details (Keys/.env/SQL) und Herkunfts-Vermerken');
   }
   console.log(failures.length ? `\n❌ ${failures.length} Seiten mit Problem: ${failures.join(', ')}` : '\n🎉 Alle Seiten gerendert (inkl. datenabhängiger Zweige)');
   process.exit(failures.length ? 1 : 0);

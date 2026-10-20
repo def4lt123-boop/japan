@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import type { Place } from '../lib/types';
-import { STATUS_META, categoryMeta } from '../lib/categories';
+import { STATUS_META, TICKET_META, TICKET_ORDER, categoryMeta } from '../lib/categories';
 import { Select, TextInput, cx } from './ui';
 import { BOOKING_STATUSES } from '../lib/types';
 
@@ -11,10 +11,11 @@ export interface PlaceFilter {
   city: string;
   status: string;
   prio: string;
-  missing: 'alle' | 'ohne-termin' | 'ohne-koordinaten';
+  ticket: string;
+  missing: 'alle' | 'ohne-termin' | 'ohne-koordinaten' | 'ohne-ticket';
 }
 
-export const EMPTY_FILTER: PlaceFilter = { q: '', city: '', status: '', prio: '', missing: 'alle' };
+export const EMPTY_FILTER: PlaceFilter = { q: '', city: '', status: '', prio: '', ticket: '', missing: 'alle' };
 
 export function applyFilter(places: Place[], f: PlaceFilter): Place[] {
   const q = f.q.trim().toLowerCase();
@@ -22,6 +23,8 @@ export function applyFilter(places: Place[], f: PlaceFilter): Place[] {
     if (f.city && p.city !== f.city) return false;
     if (f.status && p.booking_status !== f.status) return false;
     if (f.prio && p.priority !== f.prio) return false;
+    if (f.ticket && (p.ticket_status ?? 'unklar') !== f.ticket) return false;
+    if (f.missing === 'ohne-ticket' && (p.ticket_status === 'gekauft' || p.ticket_status === 'keins')) return false;
     if (f.missing === 'ohne-termin' && p.date) return false;
     if (f.missing === 'ohne-koordinaten' && p.lat !== null && p.lng !== null) return false;
     if (!q) return true;
@@ -43,7 +46,7 @@ export function FilterBar({
 }) {
   const cities = useMemo(() => Array.from(new Set(places.map((p) => p.city).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'de')), [places]);
   const set = (patch: Partial<PlaceFilter>) => onChange({ ...value, ...patch });
-  const active = value.q || value.city || value.status || value.prio || value.missing !== 'alle';
+  const active = value.q || value.city || value.status || value.prio || value.ticket || value.missing !== 'alle';
 
   return (
     <div className="no-print mb-3 flex flex-wrap items-center gap-1.5">
@@ -85,10 +88,19 @@ export function FilterBar({
         onChange={(e) => set({ prio: e.target.value })}
       />
       <Select
+        className={cx('!w-auto', value.ticket && 'border-shu-400/60')}
+        allowEmpty
+        emptyLabel="Alle Tickets"
+        options={TICKET_ORDER.map((t) => ({ value: t, label: `${TICKET_META[t].icon} ${TICKET_META[t].short}` }))}
+        value={value.ticket}
+        onChange={(e) => set({ ticket: e.target.value })}
+      />
+      <Select
         className={cx('!w-auto', value.missing !== 'alle' && 'border-shu-400/60')}
         options={[
           { value: 'alle', label: 'Alle Einträge' },
           { value: 'ohne-termin', label: 'Ohne Tag (Pool)' },
+          { value: 'ohne-ticket', label: 'Ticket fehlt noch' },
           { value: 'ohne-koordinaten', label: 'Ohne Koordinaten' },
         ]}
         value={value.missing}

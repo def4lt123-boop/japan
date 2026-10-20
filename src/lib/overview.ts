@@ -49,6 +49,8 @@ export interface Block {
   /** false = ohne Uhrzeit eingeplant, Position nur geschätzt */
   timed: boolean;
   fullDay: boolean;
+  /** >1 = Eintrag über mehrere Tage */
+  span: number;
   duration: number;
   price_eur: number | null;
   booking_status: string;
@@ -121,6 +123,10 @@ export function dayCells(bundle: BundleLike): DayCell[] {
     if (noPrice) issues.push(`${noPrice}× ohne Preis`);
     const open = places.filter((p) => p.booking_status === 'offen' && p.priority === 'muss').length;
     if (open) issues.push(`${open} Muss offen`);
+    const tickets = places.filter((p) => p.ticket_status === 'noetig').length;
+    if (tickets) issues.push(`${tickets} ${tickets === 1 ? 'Ticket' : 'Tickets'} offen`);
+    const multi = places.filter((p) => p.end_date && p.date && p.end_date > p.date).length;
+    if (multi) issues.push(`${multi}× mehrtägig`);
 
     return {
       date,
@@ -149,6 +155,9 @@ export function dayCells(bundle: BundleLike): DayCell[] {
  * Setzt die Orte eines Tages auf die 07–23-Achse: feste Uhrzeiten zuerst,
  * der Rest wird danach hintereinander gepackt (20 Min Wegezeit dazwischen).
  */
+const daySpan = (from?: string | null, to?: string | null) =>
+  from && to ? Math.max(1, Math.round((new Date(`${to}T00:00:00`).getTime() - new Date(`${from}T00:00:00`).getTime()) / 86400000) + 1) : 1;
+
 export function layoutDay(places: Place[], date: string): Block[] {
   const withMin = places.map((p) => ({ p, at: timeToMin(p.start_time), slot: p.time_slot ? SLOT_START[p.time_slot] ?? null : null }));
   withMin.sort((a, b) => {
@@ -160,7 +169,8 @@ export function layoutDay(places: Place[], date: string): Block[] {
   let cursor = AXIS_START;
   const blocks: Block[] = [];
   for (const { p, at, slot } of withMin) {
-    const fullDay = p.time_slot === 'Ganzer Tag';
+    const spansDays = Boolean(p.end_date && p.date && p.end_date > p.date);
+    const fullDay = p.time_slot === 'Ganzer Tag' || spansDays;
     const duration = fullDay ? AXIS_SPAN : p.duration_min ?? 60;
     let start: number;
     if (at !== null) start = at;
@@ -168,6 +178,7 @@ export function layoutDay(places: Place[], date: string): Block[] {
     else start = Math.max(cursor, 9 * 60);
     start = clamp(start, AXIS_START, AXIS_END - 15);
     const end = fullDay ? AXIS_END : clamp(start + duration, start + 15, AXIS_END);
+    const span = daySpan(p.date, p.end_date);
     const meta = categoryMeta(p.category);
     blocks.push({
       id: p.id,
@@ -178,6 +189,7 @@ export function layoutDay(places: Place[], date: string): Block[] {
       end,
       timed: at !== null,
       fullDay,
+      span,
       duration: fullDay ? end - start : duration,
       price_eur: p.price_eur,
       booking_status: p.booking_status,
@@ -319,6 +331,17 @@ export function gapList(bundle: BundleLike): GapItem[] {
       href: '/wuenscheliste',
       hint: musts.length ? `${musts.filter((p) => !p.date).length} Muss-Punkte ohne Tag` : 'Keine Muss-Punkte markiert',
       samples: musts.filter((p) => !p.date).slice(0, 4).map((p) => ({ kind: 'place' as const, id: p.id, label: p.name })),
+    },
+    {
+      key: 'ticket',
+      icon: '🎟️',
+      label: 'Tickets besorgt',
+      done: bundle.places.filter((p) => p.ticket_status === 'gekauft' || p.ticket_status === 'keins').length,
+      total: bundle.places.length,
+      severity: ratio(bundle.places.filter((p) => p.ticket_status === 'gekauft' || p.ticket_status === 'keins').length, bundle.places.length),
+      href: '/tabelle',
+      hint: `${bundle.places.filter((p) => p.ticket_status === 'noetig').length} noch zu kaufen · ${bundle.places.filter((p) => !p.ticket_status || p.ticket_status === 'unklar').length} ungeklärt`,
+      samples: bundle.places.filter((p) => p.ticket_status === 'noetig').slice(0, 5).map((p) => ({ kind: 'place' as const, id: p.id, label: p.name })),
     },
     {
       key: 'booking',

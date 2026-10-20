@@ -4,7 +4,7 @@ import React from 'react';
 import type { Place } from '../lib/types';
 import { useStore } from '../lib/store';
 import { useEditor } from './EditorProvider';
-import { PRIORITY_META, STATUS_META, categoryMeta, mapsUrl, routeUrl } from '../lib/categories';
+import { PRIORITY_META, STATUS_META, TICKET_META, categoryMeta, mapsUrl, nextTicket, routeUrl } from '../lib/categories';
 import { fmtDuration, fmtDate } from '../lib/format';
 import { Button, Card, LinkTag, Money, Pill, cx } from './ui';
 
@@ -68,6 +68,11 @@ export function PlaceCard({
               </span>
             ) : null}
             {showDate && place.date ? <span className="text-[11px] text-slate-400">{fmtDate(place.date, { weekday: 'short', day: '2-digit', month: '2-digit' })}</span> : null}
+            {place.date && place.end_date && place.end_date !== place.date ? (
+              <span className="text-[11px] text-slate-400" title="Mehrtages-Eintrag">
+                → {fmtDate(place.end_date, { day: '2-digit', month: '2-digit' })}
+              </span>
+            ) : null}
           </div>
 
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-slate-400">
@@ -82,8 +87,18 @@ export function PlaceCard({
 
           {place.notes ? <p className="mt-1.5 whitespace-pre-line text-[12.5px] leading-snug text-slate-300/90">{place.notes}</p> : null}
 
+          {place.ticket_note ? <p className="mt-1 text-[11.5px] text-slate-400">🎟 {place.ticket_note}</p> : null}
+
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <StatusPill status={place.booking_status} />
+            <button
+              onClick={() => store.patch('places', place.id, { ticket_status: nextTicket(place.ticket_status) })}
+              title={`${(TICKET_META[place.ticket_status ?? 'unklar'] ?? TICKET_META.unklar).label} – klicken zum Weiterschalten (unklar → nötig → gekauft → keins)`}
+              className={cx('chip ring-1 transition hover:brightness-125', (TICKET_META[place.ticket_status ?? 'unklar'] ?? TICKET_META.unklar).chip)}
+            >
+              <span aria-hidden>{(TICKET_META[place.ticket_status ?? 'unklar'] ?? TICKET_META.unklar).icon}</span>
+              {(TICKET_META[place.ticket_status ?? 'unklar'] ?? TICKET_META.unklar).short}
+            </button>
             {place.price_eur !== null && place.price_eur !== undefined ? (
               <Pill className="bg-white/[0.05] text-slate-200 ring-white/10">
                 <Money value={place.price_eur} />

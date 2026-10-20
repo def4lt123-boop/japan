@@ -26,7 +26,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </span>
           <span className="leading-tight">
             <span className="block text-[15px] font-semibold tracking-tight text-white">Urlaubsplaner</span>
-            <span className="block text-[11px] text-slate-400">Tabelle → Web · Japan &amp; mehr</span>
+            <span className="block text-[11px] text-slate-400">Tage · Betten · Kosten · Karte</span>
           </span>
         </Link>
 
@@ -84,7 +84,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             Neu laden
           </button>
           <button className="btn-ghost !py-1 !text-[12px]" onClick={() => void store.resetLocalData()}>
-            Auf Tabellen-Stand zurücksetzen
+            Vorlage neu laden
           </button>
         </div>
       ) : null}

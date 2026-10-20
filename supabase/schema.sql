@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Urlaubsplaner – Schema für Supabase (Postgres)
 -- Ausführen im Supabase Dashboard → SQL Editor (oder: supabase db reset)
--- afterwards optional: supabase/seed.sql einspielen (Daten aus der Vorjahres-Tabelle)
+-- afterwards optional: supabase/seed.sql einspielen (Beispieldaten des Vorjahres)
 -- ============================================================================
 
 create extension if not exists pgcrypto;
@@ -25,7 +25,7 @@ create table if not exists public.trips (
 );
 
 -- ---------------------------------------------------------------------------
--- Orte / Programmpunkte – eine Zeile = eine Zeile in der alten Tabelle
+-- Orte / Programmpunkte – eine Zeile = ein Punkt (date null = Wünscheliste, end_date = Mehrtagespunkt)
 -- ---------------------------------------------------------------------------
 create table if not exists public.places (
   id            text primary key,
@@ -35,6 +35,7 @@ create table if not exists public.places (
   district      text,
   category      text,
   date          date,                                  -- NULL = Wünscheliste/Pool
+  end_date      date,                                  -- optional: Ende eines Mehrtages-Punkts
   time_slot     text,                                  -- Vormittag, Abend, …
   start_time    time,
   duration_min  integer check (duration_min is null or duration_min >= 0),
@@ -45,6 +46,8 @@ create table if not exists public.places (
   booking_status text not null default 'offen' check (booking_status in ('offen','reserviert','gebucht','erledigt')),
   booking_url   text,
   priority      text not null default 'soll' check (priority in ('muss','soll','kann')),
+  ticket_status text not null default 'unklar' check (ticket_status in ('unklar','noetig','gekauft','keins')),
+  ticket_note     text,                                  -- z. B. „Timed Entry 10:00, 2 Personen"
   maps_query    text,                                  -- Suchbegriff, falls ohne Koordinaten
   lat           double precision,
   lng           double precision,
@@ -53,7 +56,8 @@ create table if not exists public.places (
   created_at    timestamptz not null default now(),
   constraint places_coords_range check (
     (lat is null or (lat between -90 and 90)) and (lng is null or (lng between -180 and 180))
-  )
+  ),
+  constraint places_date_order check (end_date is null or date is null or end_date >= date)
 );
 
 -- ---------------------------------------------------------------------------
@@ -86,6 +90,7 @@ create table if not exists public.journeys (
   id             text primary key,
   trip_id        text not null references public.trips (id) on delete cascade,
   date           date,
+  end_date       date,                                  -- Ankunft / Rückflug
   title          text not null,
   from_city      text,
   to_city        text,

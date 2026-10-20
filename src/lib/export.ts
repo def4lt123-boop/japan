@@ -1,7 +1,7 @@
 import type { Hotel, Journey, Place } from './types';
 import { categoryMeta } from './categories';
 
-/** CSV-Export – so kann man den Plan wieder in eine Tabelle (Google Sheets) laden */
+/** CSV-Export – Semikolon + de-DE, damit sich die Pläne überall sauber importieren lassen */
 export function toCsv(headers: string[], rows: (string | number | null | undefined)[][]): string {
   const esc = (v: string | number | null | undefined) => {
     const s = v === null || v === undefined ? '' : String(v);
@@ -38,6 +38,7 @@ const PLACE_HEADERS = [
   'Preis-Hinweis',
   'Status',
   'Prio',
+  'Ticket',
   'Google Maps',
   'Breitengrad',
   'Längengrad',
@@ -65,6 +66,7 @@ export function placeCsv(places: Place[], hotels: Hotel[]): string {
       p.price_note,
       p.booking_status,
       p.priority,
+      p.ticket_status ?? 'unklar',
       mapsLink(p),
       p.lat,
       p.lng,
