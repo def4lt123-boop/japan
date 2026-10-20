@@ -120,7 +120,8 @@ export default function HomePage() {
         )}
       </section>
 
-      <SetupCard />
+      <TipsCard />
+
 
       {creating ? (
         <TripForm
@@ -266,55 +267,47 @@ function TripCard({ bundle, onEdit, onDuplicate, onDelete }: { bundle: TripBundl
   );
 }
 
-function SetupCard() {
+function TipsCard() {
   const store = useStore();
   return (
     <section className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
       <Card className="p-4">
-        <SectionTitle title="Datenbankanbindung (Supabase)" icon="🗄️" hint="Optional – ohne Zugangsdaten läuft alles im Browser." />
-        <ol className="space-y-1.5 text-[13px] leading-relaxed text-slate-300">
+        <SectionTitle title="So arbeitest du" icon="💡" hint="Alles, was in der Tabelle stand – nur schneller und mit Karte." />
+        <ul className="grid gap-1.5 text-[13px] leading-relaxed text-slate-300 sm:grid-cols-2">
           <li>
-            <b>1.</b> Projekt auf <span className="text-slate-100">supabase.com</span> anlegen.
+            <b>Tage</b>: Einträge zwischen Tagen ziehen, ✎ bearbeiten, ✓ erledigt.
           </li>
           <li>
-            <b>2.</b> <code className="rounded bg-black/40 px-1 py-0.5 text-[12px] text-shu-200">supabase/schema.sql</code> im SQL-Editor ausführen (Tabellen + RLS + Sichten).
+            <b>Übersicht</b>: Band mit Betten, Etappen und Tagesluft – darunter jeder Tag als Zeitbild.
           </li>
           <li>
-            <b>3.</b> <code className="rounded bg-black/40 px-1 py-0.5 text-[12px] text-shu-200">supabase/seed.sql</code> ausführen, wenn der Stand aus der Tabelle schon drin sein soll.
+            <b>Tabelle</b>: dieselben Spalten wie in der Tabelle, sortierbar, als CSV.
           </li>
           <li>
-            <b>4.</b> Auf Vercel unter Settings → Environment Variables: <code className="rounded bg-black/40 px-1 py-0.5 text-[12px] text-shu-200">NEXT_PUBLIC_SUPABASE_URL</code> und{' '}
-            <code className="rounded bg-black/40 px-1 py-0.5 text-[12px] text-shu-200">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>.
-          </li>
-        </ol>
-        <p className="mt-2 text-[12px] text-slate-500">
-          Aktueller Modus: <b className="text-slate-300">{store.mode === 'supabase' ? 'Supabase' : 'localStorage (Demo)'}</b>. Tabellenstruktur und Feldnamen sind identisch, du kannst also jederzeit
-          umsteigen.
-        </p>
-      </Card>
-      <Card className="p-4">
-        <SectionTitle title="Kurz erklärt" icon="💡" />
-        <ul className="space-y-1.5 text-[13px] leading-relaxed text-slate-300">
-          <li>
-            <b>Tage</b>: Einträge per Drag &amp; Drop zwischen Tagen ziehen, ✎ zum Bearbeiten, ✓ für erledigt.
+            <b>Karte</b>: Punkte aus den Koordinaten, fehlende lassen sich per Suche setzen.
           </li>
           <li>
-            <b>Tabelle</b>: dieselben Spalten wie in Google Sheets, sortierbar + CSV-Export.
+            <b>Kosten</b>: Unterkünfte + Etappen + Einträge + Ausgaben, pro Person und in ¥.
           </li>
           <li>
-            <b>Karte</b>: Marker aus den Koordinaten, fehlende lassen sich per OSM-Suche nachziehen.
-          </li>
-          <li>
-            <b>Kosten</b>: Hotels + Etappen + Einträge + Ausgaben, aufgeteilt pro Person und ¥-Umrechnung.
+            <b>Wünscheliste</b>: was noch keinen Tag hat – mit ⚡ automatisch verteilen.
           </li>
         </ul>
-        <div className="mt-3 flex gap-1.5">
+      </Card>
+      <Card className="p-4">
+        <SectionTitle title="Diese Reise-Liste" icon="🧭" hint={store.mode === 'supabase' ? 'Datenbank verbunden – Änderungen gelten auf allen Geräten.' : 'Änderungen bleiben in diesem Browser.'} />
+        <div className="flex flex-wrap gap-1.5">
           <Button size="sm" variant="ghost" onClick={() => window.print()}>
             🖨 Drucken / PDF
           </Button>
           <Button size="sm" variant="ghost" onClick={() => void store.refresh()}>
-            ↻ Daten neu laden
+            ↻ Neu laden
           </Button>
+          {store.mode !== 'supabase' ? (
+            <Button size="sm" variant="ghost" onClick={() => void store.resetLocalData()} title="Alle Einträge durch die Vorlage aus der Tabelle ersetzen">
+              ⟲ Auf Vorlage zurücksetzen
+            </Button>
+          ) : null}
         </div>
       </Card>
     </section>

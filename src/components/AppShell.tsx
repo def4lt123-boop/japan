@@ -55,14 +55,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
           <span
-            title={hasSupabase ? 'Daten liegen in Supabase/Postgres' : 'Kein Supabase konfiguriert – Daten liegen im Browser (localStorage)'}
+            title={hasSupabase ? 'Alle Änderungen werden für dich gesichert' : 'Änderungen sind nur in diesem Browser sichtbar'}
             className={cx(
               'chip',
               hasSupabase ? 'bg-emerald-500/10 text-emerald-200 ring-emerald-400/30' : 'bg-amber-500/10 text-amber-200 ring-amber-400/30',
             )}
           >
             <span className={cx('h-1.5 w-1.5 rounded-full', hasSupabase ? 'bg-emerald-400' : 'bg-amber-400')} />
-            {hasSupabase ? 'Supabase verbunden' : 'Demo-Modus (Browser-Speicher)'}
+            {hasSupabase ? 'Datenbank verbunden' : 'Nur in diesem Browser'}
           </span>
           {store.ready ? (
             <span className="text-[11.5px] tabular-nums text-slate-500">
@@ -76,10 +76,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {!hasSupabase ? (
         <div className="no-print mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-400/25 bg-amber-500/[0.07] px-3 py-2 text-[12.5px] text-amber-100/90">
-          <span>⚠️</span>
+          <span>💾</span>
           <span className="flex-1">
-            <b>Demo-Modus:</b> Änderungen werden nur in diesem Browser gespeichert. Für echte Synchronisation <code className="rounded bg-black/30 px-1">NEXT_PUBLIC_SUPABASE_URL</code> +{' '}
-            <code className="rounded bg-black/30 px-1">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> setzen und <code className="rounded bg-black/30 px-1">supabase/schema.sql</code> ausführen.
+            <b>Nur in diesem Browser:</b> nichts geteilt, nichts gesichert – Änderungen siehst nur du auf diesem Gerät.
           </span>
           <button className="btn-ghost !py-1 !text-[12px]" onClick={() => void store.refresh()}>
             Neu laden

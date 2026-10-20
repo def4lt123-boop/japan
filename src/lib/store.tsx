@@ -257,7 +257,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           await supaDelete('trips', id);
         }
       } catch {
-        say('Reise lokal gelöscht – in Supabase bitte manuell nachschauen.');
+        say('Reise aus der Liste entfernt – in der Datenbank hat es nicht ganz geklappt.');
       }
       say('Reise gelöscht.');
     },
@@ -297,7 +297,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           for (const r of rowsToSave) await supaUpsert(r.table, r.row as never);
         }
       } catch (e) {
-        say(`Kopie angelegt, DB-Fehler: ${e instanceof Error ? e.message : 'unbekannt'}`);
+        say(`Kopie angelegt – nicht alles konnte gesichert werden: ${e instanceof Error ? e.message : 'unbekannt'}`);
         return target.id;
       }
       say(`„${source.name}“ → „${target.name}“: ${newPlaces.length} Orte, ${newHotels.length} Hotels, ${newJourneys.length} Etappen kopiert.`);
@@ -308,7 +308,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const resetLocalData = useCallback(async () => {
     if (hasSupabase) {
-      say('Im Supabase-Modus werden die Daten in der Datenbank geändert – kein lokaler Reset.');
+      say('Deine Daten liegen in der Datenbank – ein Zurücksetzen auf die Vorlage ist hier nicht vorgesehen.');
       return;
     }
     window.localStorage.removeItem(LS_KEY);

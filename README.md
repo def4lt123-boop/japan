@@ -2,7 +2,7 @@
 
 Aus der alten Google-Tabelle („Reiseplan“) wurde eine richtige Web-App: Reisetage, Orte mit **Fahrzeit ab Hotel**, **Dauer**, **Tageszeit**, **Hinweisen**, **Preisen**, **Buchungsstatus** und **Google-Maps-Koordinaten** – plus Unterkünfte, Reiseverlauf und Budget. Gebaut mit **Next.js + Tailwind**, gehostet auf **Vercel**, Daten optional in **Supabase (Postgres)**.
 
-Ohne Datenbank-Zugangsdaten läuft die App im **Demo-Modus**: alle Daten liegen im Browser (localStorage), die Vorlage (Japan 2025) ist 1:1 aus der Tabelle übernommen. Sobald `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` gesetzt sind, werden die gleichen Tabellen in Supabase gelesen/geschrieben.
+Ohne Datenbank-Zugangsdaten läuft die App im **Demo-Modus**: alle Daten liegen im Browser (localStorage), die Vorlage (Japan 2025) ist 1:1 aus der Tabelle übernommen. Sobald `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` gesetzt sind, werden die gleichen Tabellen in Supabase gelesen/geschrieben. Auf der Seite selbst steht dazu nur der Status **„Datenbank verbunden"** – alle Einrichtungsdoku liegt hier im README, nicht im UI.
 
 ---
 
@@ -10,6 +10,7 @@ Ohne Datenbank-Zugangsdaten läuft die App im **Demo-Modus**: alle Daten liegen 
 
 | Bereich | Inhalt |
 | --- | --- |
+| 🏠 **Übersicht** | **grafische Reisekarte**: Band über alle Reisetage (Bett-Balken pro Unterkunft, Nächte mit/ohne Quartier, Etappen-Icons, Auslastungssäulen) · **jeder Tag als Zeitbild** auf der Achse 07–23 Uhr (Balken = Eintrag, gestrichelt = ohne feste Uhrzeit, rot umrandet = Muss noch offen) · **Ring „Planungsgrad“** mit Checklist „was noch fehlen würde" (Nächte, Termine, Tickets, Preise, Fahrzeiten, Koordinaten, Etappenzeiten, Budget) · **„was noch verfügbar ist"**: freie Tage, Luft pro Tag, Punkte/Nächte-Balance pro Stadt, ⚡ Wünsche auf freie Tage legen, offene Buchungen mit Link |
 | 🗓️ **Tage** | Tagesplan pro Reisetag, Einträge per **Drag & Drop** verschieben (mobil ◀ ▶), Tagesauslastung in Stunden, Hotel der Nacht + Etappen (Flug/Zug) direkt am Tag, ✓ erledigt |
 | ✨ **Wünscheliste** | alles ohne Tag; pro Eintrag Tag zuweisen, **⚡ Automatisch verteilen**, Koordinaten nachziehen |
 | 📊 **Tabelle** | Ansicht wie in Google Sheets: sortierbare Spalten, Inline-Edit (Datum/Status/Prio), Filter + Suche, **CSV-Export** (Semikolon, de-DE → wieder nach Sheets/Excel importierbar) |
@@ -47,7 +48,7 @@ Vercel erkennt Next.js automatisch. Es sind keine Server-Funktionen nötig (alle
 
 **Nein – Supabase liest nichts aus dem Repo.** Die `.sql`-Dateien sind Vorlagen; das Schema muss einmal in die Datenbank. Die App selbst führt kein SQL aus – sie schreibt über die API (PostgREST).
 
-### 🟢 Empfohlen: ein File, ein Klick
+### A) Ein File, ein Klick (empfohlen)
 
 `supabase/setup.sql` enthält **alles für das erste Setup**: Tabellen + Constraints + Indizes + Sichten + RLS-Policies + deine Beispieldaten (Reise 2025 aus der Tabelle, Reise 2027 bereits befüllt).
 
@@ -100,6 +101,8 @@ src/lib/planner.ts        Automatisch verteilen, Stadt→Tage-Ableitung inkl. Al
 src/lib/store.tsx         React-Context: lädt Supabase ODER localStorage, alle CRUD-Aufrufe
 src/lib/geocode.ts        Nominatim-Suche + Google-Maps-URL-Parser
 src/lib/stats.ts          Kosten, Nächte-Check, Tagesplanung, leere Tage
+src/lib/overview.ts       Tagesraster auf der 07–23-Achse, Hotel-Bänder, Baustellen-Liste, freie Kapazität
+src/components/overview.tsx  TripRibbon · DayBoard · GapPanel · CapacityPanel (die Grafik der Übersichtsseite)
 src/app/page.tsx          Reisen-Übersicht (anlegen, duplizieren, öffnen)
 src/app/t/[tripId]/*      Reise-Workspace mit Tabs
 supabase/setup.sql        ERSTES SETUP: schema.sql + Beispieldaten in einem File
