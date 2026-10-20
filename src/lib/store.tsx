@@ -18,7 +18,7 @@ export type RowOf<K extends RowKey> = K extends 'trips'
         ? Journey
         : Expense;
 
-const LS_KEY = 'urlaubsplaner.v1';
+const LS_KEY = 'urlaubsplaner.v2';
 const EMPTY: Snapshot = { trips: [], places: [], hotels: [], journeys: [], expenses: [] };
 
 function readLocal(): Snapshot | null {

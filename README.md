@@ -45,23 +45,49 @@ Vercel erkennt Next.js automatisch. Es sind keine Server-Funktionen nötig (alle
 
 ## Supabase anbinden
 
-1. Projekt auf [supabase.com](https://supabase.com) anlegen.
-2. **SQL-Editor** → Inhalt von [`supabase/schema.sql`](supabase/schema.sql) ausführen (Tabellen, Sichten, RLS-Policies, Realtime).
-3. Optional die Vorjahresdaten laden: [`supabase/seed.sql`](supabase/seed.sql) ausführen (damit steht „Japan 2025“ inklusive kopierter Reise 2026 sofort bereit).
-4. `.env.local` anlegen (lokal) bzw. Vercel → *Settings → Environment Variables*:
+**Nein – Supabase liest nichts aus dem Repo.** Die `.sql`-Dateien sind Vorlagen; das Schema muss einmal in die Datenbank. Die App selbst führt kein SQL aus – sie schreibt über die API (PostgREST).
+
+### 🟢 Empfohlen: ein File, ein Klick
+
+`supabase/setup.sql` enthält **alles für das erste Setup**: Tabellen + Constraints + Indizes + Sichten + RLS-Policies + deine Beispieldaten (Reise 2025 aus der Tabelle, Reise 2027 bereits befüllt).
+
+1. [supabase.com](https://supabase.com) → Projekt öffnen → **SQL Editor** → *New query*
+2. Inhalt von [`supabase/setup.sql`](supabase/setup.sql) komplett rein kopieren → **Run**
+3. Vercel → *Settings → Environment Variables* (und lokal als `.env.local`):
 
    ```env
    NEXT_PUBLIC_SUPABASE_URL=https://DEIN-PROJEKT.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=DEIN_ANON_KEY
    ```
 
-5. Neu deployen – der Header zeigt dann **„Supabase verbunden“**.
+4. Auf Vercel neu deployen (`vercel --prod`) – der Header in der App zeigt dann **„Supabase verbunden"**.
 
-> Ohne Seed-Dateien: beim ersten Start in eine leere Datenbank lädt die App `data/seed.json` automatisch hoch.
+Der File ist idempotent (`on conflict do nothing`, Clone-Inserts nur wenn die neue Reise noch leer ist) → beliebig oft erneut ausführbar, ohne dass eigene Einträge überschrieben oder gelöscht werden.
+
+**Nur Struktur, ohne Beispieldaten?** → [`supabase/schema.sql`](supabase/schema.sql) ausführen. Beim ersten Start in eine **leere** Datenbank lädt die App `data/seed.json` automatisch hoch – du bekommst die Vorlage also auch so.
+
+**Nur Daten, Schema steht schon?** → [`supabase/seed.sql`](supabase/seed.sql).
+
+### B) Supabase CLI (lokal, dasselbe Ergebnis)
+```bash
+npm i -g supabase
+supabase login
+supabase link --project-ref DEIN_REF
+supabase db push            # legt Tabellen + Sichten aus supabase/migrations/ an
+psql "DEINE_DB_URL" -f supabase/seed.sql   # optional die Beispieldaten
+```
+Deshalb enthält `supabase/migrations/20261020000001_urlaubsplaner.sql` denselben Inhalt wie `schema.sql` – generiert von `npm run seed:sql`, du musst also nie zwei Dateien pflegen.
+Wer so arbeitet, braucht `setup.sql` nur einmal (oder ersetzt die Migration durch den Inhalt von `setup.sql`, falls die Beispieldaten mit rein sollen).
+
+### C) Vollautomatisch bei jedem Push
+Zwei Möglichkeiten – beide nutzen `supabase/migrations/`:
+* **Supabase GitHub-Integration**: im Dashboard *Integrations → GitHub* das Repo verbinden und einen Branch zuweisen. Bei jedem Push mit neuen Dateien unter `supabase/migrations/` werden die Migrationen automatisch eingespielt.
+* **GitHub Actions**: [`.github/workflows/supabase-db-push.yml`](.github/workflows/supabase-db-push.yml) liegt schon im Repo. Nur die Secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF` (+ `SUPABASE_DB_PASSWORD` für den Pooler) anlegen – dann läuft `supabase db push` automatisch, sobald sich `supabase/` ändert. Variable `LOAD_SEED=true` setzt zusätzlich die Beispieldaten drauf.
+
+> Die App selbst schreibt immer über die API (PostgREST) – sie braucht die SQL-Dateien nicht. Wenn du die `schema.sql` änderst: `npm run seed:sql` ausführen, committen, und der Workflow (oder `db push`) migrationiert die DB nach.
 
 ### Sicherheit
-
-Die Schema-Datei öffnet Lese-/Schreibrecht für den Anon-Key (praktisch für eine persönliche App, **aber**: jeder mit dem Key darf schreiben). Für ein privates Tool: Supabase-Auth einschalten, Policies auf `to authenticated` ändern und die anon-Policies löschen – die App nutzt weiterhin nur den Anon-Key und funktioniert 1:1 weiter, sobald du `supaSelect/supaUpsert` in [`src/lib/supabase.ts`](src/lib/supabase.ts) um einen Login erweiterst.
+`schema.sql` öffnet Lese-/Schreibrecht für den Anon-Key (praktisch für eine persönliche App, **aber**: jeder mit dem Key darf schreiben). Für ein privates Tool: Supabase-Auth aktivieren, Policies auf `to authenticated` ändern und die anon-Policies löschen – die App nutzt weiterhin nur den Anon-Key und funktioniert 1:1 weiter, sobald du `supaSelect/supaUpsert` in [`src/lib/supabase.ts`](src/lib/supabase.ts) um einen Login erweiterst.
 
 ## Datenhaltung / Architektur
 
@@ -76,8 +102,10 @@ src/lib/geocode.ts        Nominatim-Suche + Google-Maps-URL-Parser
 src/lib/stats.ts          Kosten, Nächte-Check, Tagesplanung, leere Tage
 src/app/page.tsx          Reisen-Übersicht (anlegen, duplizieren, öffnen)
 src/app/t/[tripId]/*      Reise-Workspace mit Tabs
-supabase/schema.sql       Tabellen + Sichten + Policies
-supabase/seed.sql         erzeugt aus data/seed.json via: node scripts/emit-seed-sql.mjs
+supabase/setup.sql        ERSTES SETUP: schema.sql + Beispieldaten in einem File
+supabase/schema.sql       Tabellen + Sichten + Policies (Quelle für alles)
+supabase/migrations/*     gespiegelte schema.sql → supabase db push / CI / Git-Integration
+supabase/seed.sql         Beispieldaten, erzeugt aus data/seed.json (npm run seed:sql)
 ```
 
 Änderungen an `data/seed.json` immer mit `node scripts/emit-seed-sql.mjs` in SQL spiegeln.
