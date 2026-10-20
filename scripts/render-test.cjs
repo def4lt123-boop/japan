@@ -62,15 +62,15 @@ const { act } = require('react');
 const { StoreProvider } = require('../src/lib/store.tsx');
 
 const PAGES = [
-  { name: 'Reisen', path: '/', file: '../src/app/page.tsx', expect: [/Urlaubsplanung/, /Japan 2026/] },
-  { name: 'Übersicht', path: '/t/trip-2026', file: '../src/app/t/[tripId]/page.tsx', expect: [/Reisedauer/, /Offene Punkte/, /Stationen/] },
-  { name: 'Tage', path: '/t/trip-2026/tage', file: '../src/app/t/[tripId]/tage/page.tsx', expect: [/Tagesplan/, /Samstag/] },
-  { name: 'Wünscheliste', path: '/t/trip-2026/wuenscheliste', file: '../src/app/t/[tripId]/wuenscheliste/page.tsx', expect: [/Wünscheliste/] },
-  { name: 'Tabelle', path: '/t/trip-2026/tabelle', file: '../src/app/t/[tripId]/tabelle/page.tsx', expect: [/Fahrzeit ab Hotel/, /Standort/] },
-  { name: 'Karte', path: '/t/trip-2026/karte', file: '../src/app/t/[tripId]/karte/page.tsx', expect: [/Karte/, /Legende/] },
-  { name: 'Unterkünfte', path: '/t/trip-2026/unterkuenfte', file: '../src/app/t/[tripId]/unterkuenfte/page.tsx', expect: [/Nächte-Check/, /Hotel Tokio/] },
-  { name: 'Kosten', path: '/t/trip-2026/kosten', file: '../src/app/t/[tripId]/kosten/page.tsx', expect: [/Budgetauslastung/, /Alle Posten/] },
-  { name: 'Reiseverlauf', path: '/t/trip-2026/verlauf', file: '../src/app/t/[tripId]/verlauf/page.tsx', expect: [/Reiseverlauf/, /Ankunft/] },
+  { name: 'Reisen', path: '/', file: '../src/app/page.tsx', expect: [/Urlaubsplanung/, /Japan 2027/, /Japan 2025/] },
+  { name: 'Übersicht', path: '/t/trip-2027', file: '../src/app/t/[tripId]/page.tsx', expect: [/Reisedauer/, /Offene Punkte/, /Stationen/] },
+  { name: 'Tage', path: '/t/trip-2027/tage', file: '../src/app/t/[tripId]/tage/page.tsx', expect: [/Tagesplan/, /Samstag/] },
+  { name: 'Wünscheliste', path: '/t/trip-2027/wuenscheliste', file: '../src/app/t/[tripId]/wuenscheliste/page.tsx', expect: [/Wünscheliste/] },
+  { name: 'Tabelle', path: '/t/trip-2027/tabelle', file: '../src/app/t/[tripId]/tabelle/page.tsx', expect: [/Fahrzeit ab Hotel/, /Standort/] },
+  { name: 'Karte', path: '/t/trip-2027/karte', file: '../src/app/t/[tripId]/karte/page.tsx', expect: [/Karte/, /Legende/] },
+  { name: 'Unterkünfte', path: '/t/trip-2027/unterkuenfte', file: '../src/app/t/[tripId]/unterkuenfte/page.tsx', expect: [/Nächte-Check/, /Hotel Tokio/] },
+  { name: 'Kosten', path: '/t/trip-2027/kosten', file: '../src/app/t/[tripId]/kosten/page.tsx', expect: [/Budgetauslastung/, /Alle Posten/] },
+  { name: 'Reiseverlauf', path: '/t/trip-2027/verlauf', file: '../src/app/t/[tripId]/verlauf/page.tsx', expect: [/Reiseverlauf/, /Ankunft/] },
   { name: 'Referenz 2025', path: '/t/trip-2025', file: '../src/app/t/[tripId]/page.tsx', expect: [/Japan 2025|Reisedauer/] },
 ];
 
@@ -137,7 +137,7 @@ async function render(name, Page, tripId) {
   }
 
   // Interaktionen: Formular öffnen + Tag zuweisen
-  nav.setPath('/t/trip-2026/tage');
+  nav.setPath('/t/trip-2027/tage');
   const Tage = require('../src/app/t/[tripId]/tage/page.tsx').default;
   const Layout = require('../src/app/t/[tripId]/layout.tsx').default;
   const mod = { Layout, Tage };
@@ -153,7 +153,7 @@ async function render(name, Page, tripId) {
       React.createElement(
         StoreProvider,
         null,
-        React.createElement(EditorProvider, { tripId: 'trip-2026' }, React.createElement(require('../src/components/forms.tsx').PlaceForm, { tripId: 'trip-2026', cities: ['Tokio'], value: null, onSubmit: () => {}, onCancel: () => {} })),
+        React.createElement(EditorProvider, { tripId: 'trip-2027' }, React.createElement(require('../src/components/forms.tsx').PlaceForm, { tripId: 'trip-2027', cities: ['Tokio'], value: null, onSubmit: () => {}, onCancel: () => {} })),
       ),
     );
   });
@@ -172,7 +172,7 @@ async function render(name, Page, tripId) {
   await act(async () => root.unmount());
 
   // Drag & Drop-Logik indirekt: Layout mit Tabs rendern
-  nav.setPath('/t/trip-2026/tage');
+  nav.setPath('/t/trip-2027/tage');
   const root2 = createRoot(container);
   container.innerHTML = '';
   const layoutErrors = [];
@@ -198,10 +198,10 @@ async function render(name, Page, tripId) {
   // Alle Formulare rendern (Modal-Formulare direkt)
   const forms = require('../src/components/forms.tsx');
   const formCases = [
-    ['PlaceForm', React.createElement(forms.PlaceForm, { tripId: 'trip-2026', cities: ['Tokio'], value: null, onSubmit() {}, onCancel() {} }), /Was ist es\?/],
-    ['HotelForm', React.createElement(forms.HotelForm, { tripId: 'trip-2026', cities: ['Tokio'], value: null, onSubmit() {}, onCancel() {} }), /Preis gesamt/],
-    ['JourneyForm', React.createElement(forms.JourneyForm, { tripId: 'trip-2026', value: null, onSubmit() {}, onCancel() {} }), /Verkehrsmittel/],
-    ['ExpenseForm', React.createElement(forms.ExpenseForm, { tripId: 'trip-2026', value: null, onSubmit() {}, onCancel() {} }), /Wer war in Vorleistung/],
+    ['PlaceForm', React.createElement(forms.PlaceForm, { tripId: 'trip-2027', cities: ['Tokio'], value: null, onSubmit() {}, onCancel() {} }), /Was ist es\?/],
+    ['HotelForm', React.createElement(forms.HotelForm, { tripId: 'trip-2027', cities: ['Tokio'], value: null, onSubmit() {}, onCancel() {} }), /Preis gesamt/],
+    ['JourneyForm', React.createElement(forms.JourneyForm, { tripId: 'trip-2027', value: null, onSubmit() {}, onCancel() {} }), /Verkehrsmittel/],
+    ['ExpenseForm', React.createElement(forms.ExpenseForm, { tripId: 'trip-2027', value: null, onSubmit() {}, onCancel() {} }), /Wer war in Vorleistung/],
     ['TripForm', React.createElement(forms.TripForm, { value: null, onSubmit() {}, onCancel() {} }), /¥ pro €|Budget/]
   ];
   for (const [label, node, re] of formCases) {
@@ -221,7 +221,7 @@ async function render(name, Page, tripId) {
   }
 
   // Klick-Test: auf der Tagesseite einen Ort am Tag anlegen -> Modal mit Datum
-  nav.setPath('/t/trip-2026/tage');
+  nav.setPath('/t/trip-2027/tage');
   const TagePage = require('../src/app/t/[tripId]/tage/page.tsx').default;
   const c2 = document.getElementById('root');
   c2.innerHTML = '';
@@ -229,7 +229,7 @@ async function render(name, Page, tripId) {
   const clickErr = [];
   const oe2 = console.error; console.error = (...a) => clickErr.push(String(a[0]));
   await act(async () => {
-    r2.render(React.createElement(StoreProvider, null, React.createElement(EditorProvider, { tripId: 'trip-2026' }, React.createElement(TagePage))));
+    r2.render(React.createElement(StoreProvider, null, React.createElement(EditorProvider, { tripId: 'trip-2027' }, React.createElement(TagePage))));
   });
   await act(async () => { await new Promise((r) => setTimeout(r, 40)); });
   const btns = [...c2.querySelectorAll('button')];
@@ -240,19 +240,19 @@ async function render(name, Page, tripId) {
     await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
     clicked = /Was ist es\?/.test(c2.textContent || '');
   }
-  const hasDate = clicked && /value="2026-03-07"|value="2026-0[0-9]-[0-9]{2}"/.test(c2.innerHTML);
+  const hasDate = clicked && /value="2027-[0-9]{2}-[0-9]{2}"/.test(c2.innerHTML);
   console.log((clicked && hasDate ? '✅' : '❌') + ' Klick „Ort an diesem Tag anlegen“ öffnet Formular mit vorbelegtem Datum');
   if (!(clicked && hasDate)) { failures.push('Klick Test'); console.log('   clicked=' + clicked + ' hasDate=' + hasDate); clickErr.filter(e=>/Error|not a function|Cannot read/.test(e)).slice(0,3).forEach(e=>console.log('   '+e.slice(0,240))); }
   console.error = oe2;
   await act(async () => r2.unmount());
 
   // Status-Pill-Klick im Table: Inline-Select ändern
-  nav.setPath('/t/trip-2026/tabelle');
+  nav.setPath('/t/trip-2027/tabelle');
   const TabPage = require('../src/app/t/[tripId]/tabelle/page.tsx').default;
   const c3 = document.getElementById('root');
   c3.innerHTML = '';
   const r3 = createRoot(c3);
-  await act(async () => { r3.render(React.createElement(StoreProvider, null, React.createElement(EditorProvider, { tripId: 'trip-2026' }, React.createElement(TabPage)))); });
+  await act(async () => { r3.render(React.createElement(StoreProvider, null, React.createElement(EditorProvider, { tripId: 'trip-2027' }, React.createElement(TabPage)))); });
   await act(async () => { await new Promise((r) => setTimeout(r, 40)); });
   const rows = c3.querySelectorAll('tbody tr').length;
   const inputs = c3.querySelectorAll('tbody input[type=date]').length;

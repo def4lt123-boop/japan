@@ -13,15 +13,15 @@
       "archived": true
     },
     {
-      "id": "trip-2026",
-      "name": "Japan 2026",
+      "id": "trip-2027",
+      "name": "Japan 2027",
       "destination": "Japan",
-      "start_date": "2026-03-07",
-      "end_date": "2026-04-15",
+      "start_date": "2027-03-06",
+      "end_date": "2027-04-14",
       "travelers": 2,
       "budget_eur": 4200,
       "jpy_rate": 175,
-      "notes": "Neue Reise: Wünscheliste, Hotels und Route aus 2025 übernommen (gleicher Wochentag, 53 Wochen später). Tage verteilst du im Reiter „Wünscheliste“ über ⚡ Automatisch verteilen – oder ganz von Hand per Drag & Drop.",
+      "notes": "Neue Reise: Wünsche, Hotels und Route aus 2025 übernommen und um 105 Wochen verschoben (Start Sa 06.03.2027, gleicher Wochentag wie letztes Jahr). Tage kannst du im Reiter „Wünscheliste“ mit ⚡ Automatisch verteilen neu setzen oder per Drag & Drop.",
       "archived": false
     }
   ],

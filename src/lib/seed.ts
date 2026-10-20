@@ -17,7 +17,7 @@ export function seedSnapshot(): Snapshot {
     expenses: base.expenses.map((e) => ({ ...e })),
   };
   const source = snapshot.trips.find((t) => t.id === 'trip-2025');
-  const target = snapshot.trips.find((t) => t.id === 'trip-2026');
+  const target = snapshot.trips.find((t) => t.id === 'trip-2027');
   if (!source || !target) return snapshot;
   return cloneInto(snapshot, source.id, target.id);
 }

@@ -1,0 +1,51 @@
+name: Supabase – Migrationen einspielen
+
+# Spielt supabase/migrations/ automatisch in dein Supabase-Projekt, sobald sich
+# etwas daran ändert. Dafür `schema.sql` + `seed.sql` NICHT mehr von Hand ausführen.
+#
+# Nötige Secrets (GitHub → Settings → Secrets and variables → Actions):
+#   SUPABASE_ACCESS_TOKEN  – Personal Access Token aus dem Supabase-Dashboard
+#   SUPABASE_PROJECT_REF   – die Referenz deines Projekts (URL: https://<REF>.supabase.co)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/schema.sql'
+      - '.github/workflows/supabase-db-push.yml'
+  workflow_dispatch:
+
+jobs:
+  db-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Config referenzieren
+        run: |
+          mkdir -p ~/.supabase
+          printf 'project_id=%s\n' "$SUPABASE_PROJECT_REF" > .supabase/project.json 2>/dev/null || true
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+      - name: Migrationen anwenden
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          supabase link --project-ref "$SUPABASE_PROJECT_REF" \
+            --db-url "postgresql://postgres.$SUPABASE_PROJECT_REF:${SUPABASE_DB_PASSWORD}@aws-0-eu-central-1.pooler.supabase.com:6543/postgres"
+          supabase db push --include-all
+        continue-on-error: false
+
+      - name: Beispieldaten (optional) einspielen
+        if: ${{ vars.LOAD_SEED == 'true' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: psql "postgresql://postgres.$SUPABASE_PROJECT_REF@aws-0-eu-central-1.pooler.supabase.com:6543/postgres" -f supabase/seed.sql
