@@ -14,7 +14,7 @@ import { download, placeCsv } from '../../../../lib/export';
 type SortKey = 'date' | 'city' | 'name' | 'category' | 'duration' | 'travel' | 'price' | 'status' | 'prio' | 'ticket';
 
 const COLS: { key: SortKey | null; label: string; hint?: string; className?: string }[] = [
-  { key: 'date', label: 'Tag', hint: 'Datum des Eintrags – leer = Wünscheliste' },
+  { key: 'date', label: 'Tag', hint: 'Wann – leer = noch an keinem Tag' },
   { key: null, label: 'Zeit' },
   { key: 'city', label: 'Stadt / Viertel' },
   { key: 'name', label: 'Standort' },
@@ -149,7 +149,7 @@ export default function TablePage() {
                         value={p.date ?? ''}
                         onChange={(e) => store.patch('places', p.id, { date: e.target.value || null })}
                         className="w-[128px] rounded border border-transparent bg-transparent px-1 py-0.5 text-[12px] text-slate-200 outline-none hover:border-white/15 focus:border-shu-400/70 focus:bg-black/30"
-                        title={p.date ? fmtDate(p.date, { weekday: 'long' }) : 'noch kein Tag – in der Wünscheliste'}
+                        title={p.date ? fmtDate(p.date, { weekday: 'long' }) : 'noch kein Tag – steht in der Liste unter Aktivitäten'}
                       />
                     </td>
                     <td className="cell whitespace-nowrap text-slate-300">

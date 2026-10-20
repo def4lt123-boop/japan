@@ -30,7 +30,7 @@ export interface Place {
   city: string;
   district: string | null;
   category: string | null;
-  /** Tag, an dem der Ort geplant ist – null = noch in der Wünscheliste */
+  /** Tag, an dem die Aktivität geplant ist – null = noch ohne Tag in der Liste */
   date: string | null;
   /** bis zu diesem Tag (Mehrtages-Ausflug) – null = ein Tag */
   end_date: string | null;

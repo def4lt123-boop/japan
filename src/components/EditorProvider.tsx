@@ -76,7 +76,7 @@ export function EditorProvider({ tripId, children }: { tripId: string; children:
                 ? `„${place.name}“ aktualisiert${place.date ? ` – Tag ${place.date.split('-').reverse().join('.')}` : ''}`
                 : place.date
                   ? `„${place.name}“ fest für ${fmtDate(place.date, { weekday: 'short', day: '2-digit', month: '2-digit' })} eingeplant.`
-                  : `„${place.name}“ angelegt – ohne Tag in der Wünscheliste. Zieh ihn auf der Tages-Seite auf einen Tag.`,
+                  : `„${place.name}“ angelegt – ohne Tag, er steht in der Liste unter Aktivitäten. Zieh ihn auf der Tages-Seite auf einen Tag.`,
             );
           }}
           onDelete={

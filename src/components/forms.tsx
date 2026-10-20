@@ -8,8 +8,10 @@ import { eachDate, fmtDate, fmtDuration, num, parseDuration, uid } from '../lib/
 import { DateField, DateRangeField } from './dates';
 import type { TicketStatus } from '../lib/types';
 import { CATEGORY_SUGGESTIONS } from '../lib/categories';
-import { geocode, parseMapsUrl, queryFor } from '../lib/geocode';
+import { geocode, mapsUrlName, parseMapsUrl, queryFor, resolveMapsLink } from '../lib/geocode';
 import { MapPreview } from './MapPreview';
+import { useStore } from '../lib/store';
+import { DEFAULT_DURATION, freeWindows, fmtWindow, fmtWindows, minToTime, suggestStart, timeToMin } from '../lib/dayplan';
 
 const statusOptions = BOOKING_STATUSES.map((s) => ({ value: s, label: STATUS_META[s].label }));
 const priorityOptions = PRIORITIES.map((p) => ({ value: p, label: `${PRIORITY_META[p].icon} ${PRIORITY_META[p].label}` }));
@@ -21,17 +23,66 @@ function GeoFields({
   query,
   onChange,
   suggest,
+  name,
+  onName,
 }: {
   lat: number | null;
   lng: number | null;
   query: string | null;
   onChange: (patch: Partial<{ lat: number | null; lng: number | null; maps_query: string | null }>) => void;
   suggest: string;
+  /** Name des Eintrags – ein Maps-Link darf ihn füllen bzw. vorschlagen */
+  name?: string;
+  onName?: (name: string) => void;
 }) {
   const [mapsInput, setMapsInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(true);
+  const [zoom, setZoom] = useState<number | null>(null);
+  const [namedBy, setNamedBy] = useState<string | null>(null);
+  const [linkOk, setLinkOk] = useState(false);
+
+  /** Link (auch maps.app.goo.gl) lesen → Punkt, Name und Zoomebene übernehmen */
+  const applyMapsLink = async (raw?: string) => {
+    const text = (raw ?? mapsInput).trim();
+    if (!text) return;
+    setBusy(true);
+    setMsg(null);
+    const finalUrl = await resolveMapsLink(text);
+    const parsed = parseMapsUrl(finalUrl);
+    const found = mapsUrlName(finalUrl);
+    setBusy(false);
+    if (parsed) {
+      onChange({
+        lat: round(parsed.lat),
+        lng: round(parsed.lng),
+        maps_query: parsed.query || found || query || suggest,
+      });
+      if (parsed.zoom) setZoom(parsed.zoom);
+      setLinkOk(true);
+      const same = (a?: string | null, b?: string | null) => (a ?? '').trim().toLowerCase() === (b ?? '').trim().toLowerCase();
+      if (found && !same(found, name)) {
+        if (onName && !(name ?? '').trim()) {
+          onName(found);
+          setMsg(`Punkt ${parsed.lat.toFixed(6)}, ${parsed.lng.toFixed(6)} und Name „${found}“ übernommen ✔`);
+        } else {
+          setNamedBy(found);
+          setMsg(`Punkt ${parsed.lat.toFixed(6)}, ${parsed.lng.toFixed(6)} übernommen – der Link nennt „${found}“.`);
+        }
+      } else {
+        setMsg(`Punkt ${parsed.lat.toFixed(6)}, ${parsed.lng.toFixed(6)} übernommen ✔`);
+      }
+      setMapsInput('');
+    } else if (found) {
+      onChange({ maps_query: found });
+      if (onName && !(name ?? '').trim()) onName(found);
+      setMsg(`Der Link nennt „${found}“, aber keine Koordinaten – Suchbegriff übernommen, Punkt sucht 🌍.`);
+      setMapsInput('');
+    } else {
+      setMsg('Den Link konnte ich nicht lesen. Erwartet wird z. B. …/maps/place/…/@35.6597,139.7007,17z – oder rohe Zahlen „34.6851, 135.8434“.');
+    }
+  };
 
   const runGeocode = async () => {
     setBusy(true);
@@ -46,23 +97,12 @@ function GeoFields({
     }
   };
 
-  const useMapsLink = () => {
-    const parsed = parseMapsUrl(mapsInput);
-    if (!parsed) {
-      setMsg('Den Link konnte ich nicht lesen. Erwartet wird z. B. …/maps/place/…/@35.6597,139.7007,17z');
-      return;
-    }
-    onChange({ lat: round(parsed.lat), lng: round(parsed.lng), maps_query: query || parsed.query || suggest });
-    setMapsInput('');
-    setMsg('Koordinaten aus dem Google-Maps-Link übernommen ✔');
-  };
-
   return (
     <Card className="bg-black/20 p-2.5">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Karte & Google Maps</span>
         <span className="text-[11.5px] tabular-nums text-slate-400">
-          {lat !== null && lng !== null ? `${lat.toFixed(5)}, ${lng.toFixed(5)}` : 'keine Koordinaten'}
+          {lat !== null && lng !== null ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : 'noch kein Punkt'}
         </span>
       </div>
       <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
@@ -80,18 +120,40 @@ function GeoFields({
         <Button size="sm" variant="ghost" onClick={runGeocode} disabled={busy}>
           {busy ? 'Suche…' : '🌍 Koordinaten suchen (OSM)'}
         </Button>
-        <Button size="sm" variant="ghost" onClick={useMapsLink} disabled={!mapsInput.trim()}>
-          📌 Google-Maps-Link übernehmen
+        <Button size="sm" variant="ghost" onClick={() => void applyMapsLink()} disabled={!mapsInput.trim() || busy}>
+          {busy ? 'lese Link…' : '📌 Link übernehmen'}
         </Button>
-        <TextInput className="min-w-[220px] flex-1" placeholder="https://www.google.com/maps/place/…/…/@35.65,139.70,17z" value={mapsInput} onChange={(e) => setMapsInput(e.target.value)} />
+        <TextInput
+          className={cx('min-w-[220px] flex-1', linkOk && '!border-emerald-400/50')}
+          placeholder="Link hier einfügen (auch maps.app.goo.gl) – oder 34.6851, 135.8434"
+          value={mapsInput}
+          onChange={(e) => {
+            setMapsInput(e.target.value);
+            setLinkOk(false);
+          }}
+          onPaste={(e) => {
+            const text = e.clipboardData.getData('text') ?? '';
+            if (/goo\.gl|google\.[a-z.]+\/maps|^-?\d{1,3}([.,]\d+)?\s*[,;/]/i.test(text.trim())) {
+              e.preventDefault();
+              setMapsInput(text.trim());
+              void applyMapsLink(text.trim());
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              void applyMapsLink();
+            }
+          }}
+        />
         <a
           className="btn-quiet"
           href={mapsUrl({ lat, lng, name: suggest, city: '', maps_query: query ?? null })}
           target="_blank"
           rel="noreferrer"
-          title="Marker, Adresse und Route bei Google Maps"
+          title="Bei Google Maps öffnen, dort den Ort anklicken – und den Link hier einfügen"
         >
-          In Google Maps öffnen ↗
+          🎯 Punkt bei Google Maps wählen ↗
         </a>
         <Button size="sm" variant="ghost" onClick={() => setShowMap((v) => !v)} aria-expanded={showMap}>
           {showMap ? 'Vorschau zu' : '🗺️ Vorschau'}
@@ -102,8 +164,8 @@ function GeoFields({
           <MapPreview
             place={{ lat, lng, name: suggest, city: null, district: null, maps_query: query }}
             query={query?.trim() || suggest}
-            zoom={lat !== null && lng !== null ? 16 : 13}
             height={200}
+            zoom={zoom ?? (lat !== null && lng !== null ? 16 : 13)}
             heading={lat !== null && lng !== null ? 'Kartenpunkt' : 'Suchvorschau'}
           />
           <p className="mt-1 text-[11px] leading-snug text-slate-500">
@@ -111,7 +173,30 @@ function GeoFields({
           </p>
         </div>
       ) : null}
-      {msg ? <p className="mt-1.5 text-[11.5px] text-slate-400">{msg}</p> : null}
+      {namedBy && onName ? (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-lg bg-shu-500/10 px-2 py-1 text-[11.5px] text-slate-200 ring-1 ring-inset ring-shu-400/25">
+          <span>Name aus Google Maps:</span>
+          <b className="text-white">{namedBy}</b>
+          <button
+            type="button"
+            className="btn-quiet !px-1.5 !py-0.5 !text-[11px]"
+            onClick={() => {
+              onName(namedBy);
+              setMsg(`Namen „${namedBy}“ übernommen ✔`);
+              setNamedBy(null);
+            }}
+          >
+            übernehmen
+          </button>
+          <button type="button" className="text-[11px] text-slate-400 hover:text-white" onClick={() => setNamedBy(null)}>
+            egal
+          </button>
+        </div>
+      ) : null}
+      {msg ? <p className="mt-1.5 text-[11.5px] leading-snug text-slate-400">{msg}</p> : null}
+      <p className="mt-1 text-[11px] leading-snug text-slate-500">
+        So geht’s: bei Google Maps auf den Ort drücken, den Link oben einfügen – Punkt, Name und Kartenausschnitt wandern in die Aktivität.
+      </p>
     </Card>
   );
 }
@@ -218,6 +303,25 @@ export function PlaceForm({
   }, []);
 
   const set = (patch: Partial<Place>) => setDraft((d) => ({ ...d, ...patch }));
+  const store = useStore();
+
+  /** Was dieser Eintrag am gewählten Tag blockiert – und was dann noch frei ist */
+  const dayInfo = useMemo(() => {
+    if (!draft.date) return null;
+    const sibs = store.places.filter((p) => p.date === draft.date && p.id !== value?.id);
+    const len = parseDuration(durationText) ?? draft.duration_min ?? DEFAULT_DURATION;
+    const wanted = timeToMin(draft.start_time);
+    const at = wanted !== null ? suggestStart(sibs, len, wanted) : null;
+    return {
+      len,
+      wanted,
+      start: at?.start ?? null,
+      moved: at?.moved ?? false,
+      free: freeWindows(sibs),
+      nextFree: suggestStart(sibs, len, null).start,
+      others: sibs.length,
+    };
+  }, [draft.date, draft.start_time, draft.duration_min, durationText, store.places, value?.id]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,7 +342,7 @@ export function PlaceForm({
   return (
     <Modal
       title={isNew ? 'Aktivität anlegen' : 'Aktivität bearbeiten'}
-      subtitle={isNew ? 'Name, Stadt, Ticket, Preis – der Tag kommt später. Ohne Tag liegt die Aktivität in der Wünscheliste.' : draft.name}
+      subtitle={isNew ? 'Name, Stadt, Ticket, Preis – der Tag kommt später. Ohne Tag steht die Aktivität in der Liste.' : draft.name}
       onClose={onCancel}
       footer={
         <>
@@ -312,7 +416,15 @@ export function PlaceForm({
           </Field>
         </div>
 
-        <GeoFields lat={draft.lat} lng={draft.lng} query={draft.maps_query} suggest={queryFor(draft)} onChange={(patch) => set(patch)} />
+        <GeoFields
+          lat={draft.lat}
+          lng={draft.lng}
+          query={draft.maps_query}
+          suggest={queryFor(draft)}
+          name={draft.name}
+          onName={(value) => set({ name: value })}
+          onChange={(patch) => set(patch)}
+        />
 
         <Field label="Hinweise">
           <TextArea value={draft.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} placeholder="früh da sein, Ticket am Schalter, geschlossen Mo …" />
@@ -338,7 +450,7 @@ export function PlaceForm({
                 label="Tag der Reise"
                 value={draft.date}
                 onChange={(v) => set({ date: v, end_date: v && draft.end_date && draft.end_date < v ? null : draft.end_date })}
-                hint={draft.date ? undefined : 'leer = Wünscheliste'}
+                hint={draft.date ? undefined : 'leer = Liste ohne Tag'}
                 quickDates={tripDays}
                 tripBounds={bounds}
               />
@@ -364,6 +476,35 @@ export function PlaceForm({
                 <TextInput value={durationText} onChange={(e) => setDurationText(e.target.value)} placeholder="2 h" />
               </Field>
             </div>
+            {dayInfo ? (
+              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg bg-black/25 px-2 py-1.5 text-[11.5px] ring-1 ring-inset ring-white/[0.07]">
+                {dayInfo.start !== null ? (
+                  <>
+                    <span className="tabular-nums text-emerald-100">{fmtWindow(dayInfo.start, dayInfo.start + dayInfo.len)}</span>
+                    <span className="text-slate-400">wäre an diesem Tag verplant</span>
+                    {dayInfo.moved && dayInfo.wanted !== null ? (
+                      <span className="text-amber-200">· {fmtWindow(dayInfo.wanted, dayInfo.wanted + dayInfo.len)} ist schon belegt</span>
+                    ) : null}
+                  </>
+                ) : (
+                  <span className="text-slate-400">
+                    ohne Uhrzeit zählt nur die Tageszeit · erste Lücke: <span className="tabular-nums text-emerald-100">{fmtWindow(dayInfo.nextFree, dayInfo.nextFree + dayInfo.len)}</span>
+                  </span>
+                )}
+                {dayInfo.free.length ? <span className="text-slate-500">· frei bleibt {fmtWindows(dayInfo.free)}</span> : <span className="text-shu-200">· Tag wäre voll</span>}
+                <button
+                  type="button"
+                  className="btn-quiet ml-auto !px-1.5 !py-0.5 !text-[11px]"
+                  onClick={() => set({ start_time: minToTime(dayInfo.start ?? dayInfo.nextFree) })}
+                  title="Uhrzeit in das Fenster setzen"
+                >
+                  ⏱ {minToTime(dayInfo.start ?? dayInfo.nextFree)} setzen
+                </button>
+              </div>
+            ) : (
+              <p className="text-[11px] leading-snug text-slate-500">Ohne Tag bleibt die Aktivität in der Liste – ein Zeitfenster ergibt sich mit dem Tag. {dayInfo === null ? 'Dauer nicht vergessen, sonst rechnet der Tag mit 1,5 h.' : ''}</p>
+            )}
+
             <div className="grid gap-2 sm:grid-cols-2">
               <Field label="Fahrzeit vom Hotel">
                 <TextInput value={draft.travel_time ?? ''} onChange={(e) => set({ travel_time: e.target.value })} placeholder="Ca 30 Min" />
@@ -524,7 +665,9 @@ export function HotelForm({
           lng={draft.lng}
           query={null}
           suggest={draft.address || `${draft.name} ${draft.city}`}
-          onChange={(p) => set({ lat: p.lat, lng: p.lng })}
+          name={draft.name}
+          onName={(value) => set({ name: value })}
+          onChange={(p) => set({ lat: p.lat, lng: p.lng, ...(p.maps_query ? { address: p.maps_query } : {}) })}
         />
       </div>
     </Modal>

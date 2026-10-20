@@ -126,7 +126,7 @@ export default function MapView({ places, hotels, showHotels, routePlaces, selec
                 </div>
                 <div style={{ marginTop: 4, color: '#94a3b8', fontSize: 11.5 }}>
                   {p.city}
-                  {p.district ? ` · ${p.district}` : ''} · {p.date ? fmtDate(p.date, { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'Wünscheliste'}
+                  {p.district ? ` · ${p.district}` : ''} · {p.date ? fmtDate(p.date, { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'noch ohne Tag'}
                 </div>
                 <div style={{ marginTop: 4, fontSize: 12 }}>
                   {[p.start_time, p.time_slot, p.duration_min ? fmtDuration(p.duration_min) : null, p.travel_time ? `🚈 ${p.travel_time}` : null, p.price_eur ? fmtMoney(p.price_eur) : null]

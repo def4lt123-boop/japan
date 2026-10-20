@@ -8,6 +8,8 @@ import { useEditor } from '../../../../components/EditorProvider';
 import { PlaceCard } from '../../../../components/PlaceCard';
 import { MapPreview, RoutePreview } from '../../../../components/MapPreview';
 import { dayStops, hotelForDay, routeUrl } from '../../../../lib/maps';
+import { assign, minToTime } from '../../../../lib/dayplan';
+import { DayBar } from '../../../../components/daybar';
 import { Button, Card, Empty, SectionTitle, TextInput, cx } from '../../../../components/ui';
 import { dayPlan, nightCoverage } from '../../../../lib/stats';
 import { categoryMeta } from '../../../../lib/categories';
@@ -46,10 +48,11 @@ export default function DaysPage() {
     const next = days[idx + dir];
     if (!next) {
       store.patch('places', placeId, { date: null });
-      store.say('Zurück in der Wünscheliste.');
+      store.say('Zurück in die Aktivitätenliste.');
       return;
     }
-    store.patch('places', placeId, { date: next.date });
+    const moving = bundle.places.find((x) => x.id === placeId);
+    if (moving) assign(store, bundle.places, moving, { date: next.date });
   };
 
   const bestDayFor = (city: string | null) => {
@@ -71,8 +74,12 @@ export default function DaysPage() {
     if (!id) return;
     const place = bundle.places.find((p) => p.id === id);
     if (!place || place.date === date) return;
-    store.patch('places', id, { date });
-    store.say(date ? `„${place.name}“ → ${fmtDate(date, { weekday: 'short', day: '2-digit', month: '2-digit' })}` : `„${place.name}“ in die Wünscheliste verschoben.`);
+    if (!date) {
+      store.patch('places', id, { date: null });
+      store.say(`„${place.name}“ zurück in die Aktivitätenliste.`);
+      return;
+    }
+    assign(store, bundle.places, place, { date });
   };
 
   if (!store.ready) return <Card className="p-8 text-center text-sm text-slate-400">lädt …</Card>;
@@ -235,6 +242,24 @@ export default function DaysPage() {
                 </div>
               ) : null}
 
+              {pool.length || d.places.length ? (
+                <div className="border-b border-white/[0.05] px-3 pb-1.5 pt-2">
+                  <DayBar
+                    places={d.places}
+                    height={8}
+                    onPickSlot={
+                      pool.length
+                        ? (m) => {
+                            const candidate = pool.find((x) => x.city === d.places[0]?.city) ?? pool[0];
+                            if (candidate) assign(store, bundle.places, candidate, { date: d.date, start_time: minToTime(m) });
+                          }
+                        : undefined
+                    }
+                  />
+                  {pool.length ? <p className="mt-0.5 text-[10.5px] text-slate-500">Lücke anklicken = oberster Wunsch der Liste rutscht dorthin</p> : null}
+                </div>
+              ) : null}
+
               <div className="space-y-2 p-2.5">
                 {d.places.length ? (
                   d.places.map((p) => <PlaceCard key={p.id} place={p} onMove={(dir) => moveDay(p.id, d.date, dir)} />)
@@ -252,7 +277,7 @@ export default function DaysPage() {
                           className="text-shu-200 underline-offset-2 hover:underline"
                           onClick={() => {
                             const candidate = pool.find((p) => p.priority === 'muss') ?? pool[0];
-                            if (candidate) store.patch('places', candidate.id, { date: d.date });
+                            if (candidate) assign(store, bundle.places, candidate, { date: d.date });
                           }}
                         >
                           nächsten Wunsch hierher legen
@@ -278,9 +303,9 @@ export default function DaysPage() {
           onDrop={drop(null)}
         >
           <div className="mb-1.5 flex items-center gap-1.5">
-            <h3 className="text-[13px] font-semibold text-white">✨ Wünscheliste <span className="tabular-nums text-slate-400">{pool.length}</span></h3>
-            <Link href={`/t/${tripId}/wuenscheliste`} className="ml-auto text-[11.5px] text-slate-400 underline-offset-2 hover:text-white hover:underline">
-              alle →
+            <h3 className="text-[13px] font-semibold text-white">✨ Noch ohne Tag <span className="tabular-nums text-slate-400">{pool.length}</span></h3>
+            <Link href={`/t/${tripId}/aktivitaeten`} className="ml-auto text-[11.5px] text-slate-400 underline-offset-2 hover:text-white hover:underline">
+              Liste →
             </Link>
           </div>
           <p className="mb-1.5 text-[11px] leading-snug text-slate-500">Nach rechts auf einen Tag ziehen. Das Pfeil-Symbol legt den Punkt auf den Tag mit der meisten Luft.</p>
@@ -317,8 +342,7 @@ export default function DaysPage() {
                     title={target ? `Auf ${target.split('-').reverse().join('.')} legen (meiste freie Zeit)` : 'Kein Tag verfügbar'}
                     onClick={() => {
                       if (!target) return;
-                      store.patch('places', item.id, { date: target });
-                      store.say(`„${item.name}“ → ${fmtDate(target, { weekday: 'short', day: '2-digit', month: '2-digit' })}`);
+                      assign(store, bundle.places, item, { date: target });
                     }}
                   >
                     →

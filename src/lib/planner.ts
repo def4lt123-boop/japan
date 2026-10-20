@@ -106,7 +106,7 @@ export function clonePlaces(places: Place[], opts: CloneOptions): Place[] {
         load.set(date, (load.get(date) ?? 0) + 1);
       }
     }
-    // „Kann“-Punkte bleiben in der neuen Reise bewusst in der Wünscheliste –
+    // „Kann“-Punkte bleiben in der neuen Reise bewusst ohne Tag –
     // so sieht man sofort, was noch Platz hat.
     if (resetForNewTrip && p.priority === 'kann') date = null;
     const clone: Place = {
