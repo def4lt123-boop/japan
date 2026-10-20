@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { Place } from '../lib/types';
 import { useStore } from '../lib/store';
 import { useEditor } from './EditorProvider';
 import { PRIORITY_META, STATUS_META, TICKET_META, categoryMeta, mapsUrl, nextTicket, routeUrl } from '../lib/categories';
 import { fmtDuration, fmtDate } from '../lib/format';
 import { Button, Card, LinkTag, Money, Pill, cx } from './ui';
+import { MapPreview } from './MapPreview';
 
 export function StatusPill({ status }: { status: Place['booking_status'] }) {
   const meta = STATUS_META[status];
@@ -36,6 +37,7 @@ export function PlaceCard({
   const { open } = useEditor();
   const meta = categoryMeta(place.category);
   const prio = PRIORITY_META[place.priority] ?? PRIORITY_META.soll;
+  const [showMap, setShowMap] = useState(false);
 
   return (
     <Card
@@ -163,8 +165,29 @@ export function PlaceCard({
               ⤓
             </Button>
           ) : null}
+          <Button
+            size="sm"
+            variant={showMap ? 'primary' : 'quiet'}
+            title="Karte hier in der App zeigen"
+            onClick={() => setShowMap((v) => !v)}
+            aria-expanded={showMap}
+          >
+            🗺️
+          </Button>
         </div>
       </div>
+
+      {showMap ? (
+        <div className="border-t border-white/[0.07] p-2.5">
+          <MapPreview
+            place={place}
+            query={`${place.name} ${place.district ?? ''} ${place.city ?? ''}`.replace(/\s+/g, ' ').trim()}
+            height={190}
+            zoom={place.lat !== null ? 16 : 13}
+            heading={place.name}
+          />
+        </div>
+      ) : null}
     </Card>
   );
 }

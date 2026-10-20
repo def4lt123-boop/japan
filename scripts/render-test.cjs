@@ -227,6 +227,23 @@ async function render(name, Page, tripId) {
     await act(async () => r.unmount());
   }
 
+  // Google-Maps-Vorschau im Formular: vorhandener Punkt -> eingebettete Karte
+  {
+    const c = document.getElementById('root');
+    c.innerHTML = '';
+    const r = createRoot(c);
+    const seed = require('../data/seed.json');
+    const sample = (seed.places || []).find((x) => typeof x.lat === 'number' && typeof x.lng === 'number') || (seed.places || [])[0];
+    await act(async () => { r.render(React.createElement(StoreProvider, null, React.createElement(forms.PlaceForm, { tripId: 'trip-2027', cities: ['Tokio'], value: sample, onSubmit() {}, onCancel() {} }))); });
+    await act(async () => { await new Promise((res) => setTimeout(res, 25)); });
+    const html = c.innerHTML;
+    const frame = /<iframe[^>]+output=embed/.test(html) && /maps\.google\.com\/maps\?q=/.test(html);
+    const link = /google\.com\/maps\/search\/\?api=1/.test(html);
+    console.log((frame && link ? '✅' : '❌') + ' Maps-Vorschau im Formular (iframe + Google-Maps-Link)');
+    if (!(frame && link)) { failures.push('Maps im Formular'); console.log('   iframe=' + frame + ' link=' + link); }
+    await act(async () => r.unmount());
+  }
+
   // Klick-Test: auf der Tagesseite einen Ort am Tag anlegen -> Modal mit Datum
   nav.setPath('/t/trip-2027/tage');
   const TagePage = require('../src/app/t/[tripId]/tage/page.tsx').default;
@@ -253,6 +270,15 @@ async function render(name, Page, tripId) {
   console.log((clicked && hasDate ? '✅' : '❌') + ' Klick „Ort an diesem Tag anlegen“ öffnet Formular mit vorbelegtem Datum');
   if (!(clicked && hasDate)) { failures.push('Klick Test'); console.log('   clicked=' + clicked + ' hasDate=' + hasDate); clickErr.filter(e=>/Error|not a function|Cannot read/.test(e)).slice(0,3).forEach(e=>console.log('   '+e.slice(0,240))); }
   console.error = oe2;
+  const mapBtn = [...c2.querySelectorAll('button')].find((b) => (b.title || '').includes('Karte zu diesem Tag'));
+  let routeFrame = false;
+  if (mapBtn) {
+    await act(async () => { mapBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+    routeFrame = /<iframe[^>]+output=embed[^>]*saddr=|<iframe[^>]*saddr=[^>]*output=embed/.test(c2.innerHTML);
+  }
+  console.log((mapBtn && routeFrame ? '✅' : (mapBtn ? '⚠️' : '❌')) + ` Tageskarte aufklappen${routeFrame ? ' – Route eingebettet' : mapBtn ? ' – iframe konnte nicht geladen werden (jsdom lädt nicht)' : ''}`);
+  if (!mapBtn) failures.push('Tageskarte');
   await act(async () => r2.unmount());
 
   // Status-Pill-Klick im Table: Inline-Select ändern

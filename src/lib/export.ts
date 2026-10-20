@@ -102,7 +102,7 @@ export function hotelCsv(hotels: Hotel[]): string {
 
 export function journeyCsv(journeys: Journey[]): string {
   const rows = journeys.map((j) => [j.date, j.title, j.from_city, j.to_city, j.mode, j.departure_time, j.duration_min, j.price_eur, j.hotel_name, j.nights, j.booking_status, (j.notes ?? '').replace(/\s+/g, ' ')]);
-  return toCsv(['Datum', 'Etappe', 'Von', 'Nach', 'Art', 'Abflug', 'Dauer (min)', 'Preis EUR', 'Hotel', 'Nächte', 'Status', 'Hinweise'], rows);
+  return toCsv(['Datum', 'Fahrt', 'Von', 'Nach', 'Art', 'Abflug', 'Dauer (min)', 'Preis EUR', 'Hotel', 'Nächte', 'Status', 'Hinweise'], rows);
 }
 
 export function jsonExport(payload: unknown) {

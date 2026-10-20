@@ -66,7 +66,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </span>
           {store.ready ? (
             <span className="text-[11.5px] tabular-nums text-slate-500">
-              {store.trips.length} Reisen · {store.places.length} Orte · {store.hotels.length} Unterkünfte
+              {store.trips.length} Reisen · {store.places.length} Aktivitäten · {store.hotels.length} Unterkünfte
             </span>
           ) : (
             <span className="text-[11.5px] text-slate-500">lade Daten …</span>

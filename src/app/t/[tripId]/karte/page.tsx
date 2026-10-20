@@ -8,6 +8,8 @@ import { useBatchGeocode, useEditor } from '../../../../components/EditorProvide
 import { Button, Card, Empty, SectionTitle, Select, cx } from '../../../../components/ui';
 import { eachDate, fmtDate, plural } from '../../../../lib/format';
 import { categoryMeta, mapsUrl } from '../../../../lib/categories';
+import { dayStops, hotelForDay, routeUrl } from '../../../../lib/maps';
+import { MapPreview, RoutePreview } from '../../../../components/MapPreview';
 import { geocode, queryFor } from '../../../../lib/geocode';
 
 const MapView = dynamic(() => import('../../../../components/MapView'), { ssr: false, loading: () => <Card className="grid h-[74vh] place-items-center text-sm text-slate-400">Karte wird geladen …</Card> });
@@ -37,6 +39,10 @@ export default function MapPage() {
     [bundle.places, day, city],
   );
   const routed = day ? visible : [];
+  const stops = dayStops(visible);
+  const anchor = visible.find((p) => p.id === selected) ?? stops[0] ?? null;
+  const hotel = hotelForDay(bundle.hotels, day || null, city || stops[0]?.city || null);
+  const routeReady = stops.length > 1;
   const missing = visible.filter((p) => p.lat === null || p.lng === null);
   const onMap = visible.filter((p) => p.lat !== null && p.lng !== null);
 
@@ -57,7 +63,7 @@ export default function MapPage() {
       <SectionTitle
         title="Karte"
         icon="🗺️"
-        hint={`${plural(onMap.length, 'Marker', 'Marker')} · gestrichelte Linie = Route des gewählten Tages · hohle Marker = noch ohne Tag`}
+        hint={`${plural(onMap.length, 'Marker', 'Marker')} · gestrichelte Linie = Route des gewählten Tages · hohle Marker = noch ohne Tag · Rechts: dasselbe bei Google Maps`}
         right={
           <>
             <Select
@@ -75,6 +81,22 @@ export default function MapPage() {
             <Button size="sm" variant={showHotels ? 'primary' : 'ghost'} onClick={() => setShowHotels((v) => !v)}>
               🏨 Unterkünfte
             </Button>
+            {routeReady ? (
+              <a
+                className="btn-quiet"
+                href={routeUrl({
+                  origin: hotel ?? stops[0],
+                  destination: stops[stops.length - 1],
+                  stops: stops.slice(1, -1),
+                  mode: 'transit',
+                })}
+                target="_blank"
+                rel="noreferrer"
+                title={`${stops.length} Punkte als Route – mit Fahrplan und Umstiegen`}
+              >
+                🧭 Route ({stops.length})
+              </a>
+            ) : null}
             {day ? (
               <Button size="sm" variant="ghost" onClick={() => setDay('')}>
                 Tag zurücksetzen
@@ -100,6 +122,37 @@ export default function MapPage() {
         </Card>
 
         <div className="space-y-3">
+          {anchor ? (
+            <Card className="p-2.5">
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <h3 className="text-[13px] font-semibold text-white">{selected ? 'Auswahl bei Google Maps' : 'Gegend bei Google Maps'}</h3>
+                <button className="text-[11px] text-slate-400 hover:text-white" onClick={() => setSelected(null)} title="Auswahl aufheben">
+                  ×
+                </button>
+              </div>
+              {selected && stops.length > 1 ? (
+                <RoutePreview
+                  origin={hotel ?? stops[0]}
+                  destination={stops[stops.length - 1]}
+                  stops={stops.slice(1, -1)}
+                  mode="transit"
+                  height={200}
+                  heading={anchor.name}
+                />
+              ) : (
+                <MapPreview
+                  place={anchor}
+                  query={`${anchor.name} ${anchor.district ?? ''} ${anchor.city ?? ''}`.replace(/\s+/g, ' ').trim()}
+                  height={210}
+                  zoom={anchor.lat !== null ? 16 : 12}
+                  heading={anchor.name}
+                />
+              )}
+              <p className="mt-1 text-[11px] leading-snug text-slate-500">
+                Marker in der Liste antippen – die Karte folgt. {routeReady ? 'Der Route-Knopf oben verbindet alle Punkte des gewählten Tages in Google Maps.' : 'Sobald ein Tag gewählt ist, erscheint hier der Weg über die Punkte.'}
+              </p>
+            </Card>
+          ) : null}
           <Card className="p-3">
             <div className="mb-2 flex items-center justify-between">
               <h3 className="text-[13px] font-semibold text-white">Legende</h3>
@@ -122,7 +175,7 @@ export default function MapPage() {
 
           <Card className="max-h-[40vh] overflow-y-auto p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <h3 className="text-[13px] font-semibold text-white">Sichtbare Orte</h3>
+              <h3 className="text-[13px] font-semibold text-white">Sichtbare Aktivitäten</h3>
               <Button size="sm" variant="ghost" onClick={() => void geocodeAll()} title="Fehlende Koordinaten über OpenStreetMap suchen">
                 🌍 alle nachziehen
               </Button>
@@ -187,7 +240,7 @@ export default function MapPage() {
                 </ul>
               </div>
             ) : null}
-            {!visible.length ? <Empty title="Keine Orte im Filter" hint="Tag oder Stadt zurücksetzen." /> : null}
+            {!visible.length ? <Empty title="Keine Aktivitäten im Filter" hint="Tag oder Stadt zurücksetzen." /> : null}
           </Card>
         </div>
       </div>

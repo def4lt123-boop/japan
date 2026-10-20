@@ -300,7 +300,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         say(`Kopie angelegt – nicht alles konnte gesichert werden: ${e instanceof Error ? e.message : 'unbekannt'}`);
         return target.id;
       }
-      say(`„${source.name}“ → „${target.name}“: ${newPlaces.length} Orte, ${newHotels.length} Hotels, ${newJourneys.length} Etappen kopiert.`);
+      say(`„${source.name}“ → „${target.name}“: ${newPlaces.length} Aktivitäten, ${newHotels.length} Unterkünfte, ${newJourneys.length} Fahrten kopiert.`);
       return target.id;
     },
     [data, persist, say],

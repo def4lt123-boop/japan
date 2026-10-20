@@ -80,7 +80,7 @@ export function TripRibbon({ tripId, cells, stays }: { tripId: string; cells: Da
             <a
               key={c.date}
               href={`#day-${c.date}`}
-              title={`${fmtDate(c.date, { weekday: 'long', day: 'numeric', month: 'long' })} · ${plural(c.blocks.length, 'Ort', 'Orte')} · ${c.plannedMin ? fmtDuration(c.plannedMin) : 'kein Programm'}${c.hotel ? ` · 🛏 ${c.hotel.name}` : ''}`}
+              title={`${fmtDate(c.date, { weekday: 'long', day: 'numeric', month: 'long' })} · ${plural(c.blocks.length, 'Aktivität', 'Aktivitäten')} · ${c.plannedMin ? fmtDuration(c.plannedMin) : 'kein Programm'}${c.hotel ? ` · 🛏 ${c.hotel.name}` : ''}`}
               style={colStyle(1, i + 2)}
               className={cx(
                 'rounded-md px-0.5 pb-1 pt-0.5 text-center transition hover:bg-white/10',
@@ -623,7 +623,7 @@ export function CapacityPanel({
           <div>
             <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Offene Buchungen · Verfügbarkeit prüfen</p>
             {!openBookings.length ? (
-              <Empty title="Alles gebucht ✅" hint="Keine Unterkunft und keine Etappe wartet noch auf eine Buchung." />
+              <Empty title="Alles gebucht ✅" hint="Keine Unterkunft und keine Fahrt wartet noch auf eine Buchung." />
             ) : (
               <ul className="space-y-1">
                 {openBookings.slice(0, 7).map((b) => (

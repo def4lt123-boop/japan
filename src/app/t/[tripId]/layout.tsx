@@ -9,6 +9,7 @@ import { EditorProvider, useBatchGeocode, useEditor } from '../../../components/
 import { Button, Card, cx } from '../../../components/ui';
 import { daysBetween, fmtMoney, fmtRange, plural } from '../../../lib/format';
 import { download, hotelCsv, journeyCsv, jsonExport, placeCsv } from '../../../lib/export';
+import { placesToKml } from '../../../lib/maps';
 import { costsOf } from '../../../lib/stats';
 
 const TABS = [
@@ -77,9 +78,10 @@ function TripTopBar({ tripId }: { tripId: string }) {
   const days = trip?.start_date && trip?.end_date ? daysBetween(trip.start_date, trip.end_date) : 0;
 
   const exports = [
-    { label: '📄 Orte als CSV', run: () => download(`${tripId}-orte.csv`, placeCsv(bundle.places, bundle.hotels)) },
+    { label: '📄 Aktivitäten als CSV', run: () => download(`${tripId}-aktivitaeten.csv`, placeCsv(bundle.places, bundle.hotels)) },
     { label: '🏨 Unterkünfte als CSV', run: () => download(`${tripId}-hotels.csv`, hotelCsv(bundle.hotels)) },
-    { label: '🚄 Reiseverlauf als CSV', run: () => download(`${tripId}-verlauf.csv`, journeyCsv(bundle.journeys)) },
+    { label: '🚄 Fahrten als CSV', run: () => download(`${tripId}-fahrten.csv`, journeyCsv(bundle.journeys)) },
+    { label: '🧭 Google Maps: alle Punkte (KML)', run: () => download(`${tripId}-kml.kml`, placesToKml(bundle.places, trip?.name ?? 'Reise'), 'application/vnd.google-earth.kml+xml') },
     { label: '🧬 Alles als JSON', run: () => download(`${tripId}.json`, jsonExport(bundle), 'application/json') },
     { label: '🖨 Drucken / PDF', run: () => window.print() },
   ];
@@ -94,19 +96,19 @@ function TripTopBar({ tripId }: { tripId: string }) {
         <p className="mt-0.5 text-[12.5px] text-slate-400">
           {trip?.destination ? `${trip.destination} · ` : ''}
           {fmtRange(trip?.start_date, trip?.end_date)}
-          {days ? ` · ${plural(days, 'Tag', 'Tage')}` : ''} · {plural(bundle.places.length, 'Ort', 'Orte')} · {plural(bundle.hotels.length, 'Unterkunft', 'Unterkünfte')}
+          {days ? ` · ${plural(days, 'Tag', 'Tage')}` : ''} · {plural(bundle.places.length, 'Aktivität', 'Aktivitäten')} · {plural(bundle.hotels.length, 'Unterkunft', 'Unterkünfte')}
         </p>
       </div>
 
       <div className="no-print flex flex-wrap items-center gap-1.5">
         <Button variant="primary" onClick={() => open({ kind: 'place' })}>
-          ＋ Eintrag
+          ＋ Aktivität
         </Button>
         <Button variant="ghost" onClick={() => open({ kind: 'hotel' })}>
           ＋ Unterkunft
         </Button>
         <Button variant="ghost" onClick={() => open({ kind: 'journey' })}>
-          ＋ Etappe
+          ＋ Flug / Zug
         </Button>
         {missingCoords ? (
           <Button variant="ghost" onClick={() => void geocodeAll()} title={`${missingCoords} Einträge ohne Koordinaten – OpenStreetMap fragen (1,1 s Abstand pro Suchanfrage)`}>
