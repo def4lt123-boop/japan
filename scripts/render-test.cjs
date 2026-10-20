@@ -63,7 +63,7 @@ const { StoreProvider } = require('../src/lib/store.tsx');
 
 const PAGES = [
   { name: 'Reisen', path: '/', file: '../src/app/page.tsx', expect: [/Urlaubsplanung/, /Japan 2027/, /Japan 2025/] },
-  { name: 'Übersicht', path: '/t/trip-2027', file: '../src/app/t/[tripId]/page.tsx', expect: [/Reisedauer/, /Offene Punkte/, /Stationen/] },
+  { name: 'Übersicht', path: '/t/trip-2027', file: '../src/app/t/[tripId]/page.tsx', expect: [/Reisedauer/, /Reise auf einem Blick/, /Jeder Tag im Bild/, /Was noch fehlen würde/, /Was noch verfügbar ist/, /Bett pro Nacht/] },
   { name: 'Tage', path: '/t/trip-2027/tage', file: '../src/app/t/[tripId]/tage/page.tsx', expect: [/Tagesplan/, /Samstag/] },
   { name: 'Wünscheliste', path: '/t/trip-2027/wuenscheliste', file: '../src/app/t/[tripId]/wuenscheliste/page.tsx', expect: [/Wünscheliste/] },
   { name: 'Tabelle', path: '/t/trip-2027/tabelle', file: '../src/app/t/[tripId]/tabelle/page.tsx', expect: [/Fahrzeit ab Hotel/, /Standort/] },
@@ -76,6 +76,7 @@ const PAGES = [
 
 const failures = [];
 const warnings = [];
+const techLeaks = [];
 
 const { EditorProvider } = require('../src/components/EditorProvider.tsx');
 
@@ -134,6 +135,9 @@ async function render(name, Page, tripId) {
       console.log(`✅ ${page.name}  (${text.length} Zeichen Text)`);
     }
     errors.filter((e) => /Each child in a list|unique "key"/.test(e)).forEach((e) => warnings.push(`${page.name}: ${e.slice(0, 160)}`));
+    const tech = /NEXT_PUBLIC[A-Z_]*|https?:\/\/[a-z0-9]+\.supabase\.co|schema\.sql|seed\.sql|anon[- ]?key/i.exec(text);
+    if (tech) techLeaks.push(`${page.name}: „${tech[0]}“`);
+
   }
 
   // Interaktionen: Formular öffnen + Tag zuweisen
@@ -264,6 +268,13 @@ async function render(name, Page, tripId) {
   if (warnings.length) {
     console.log('\n⚠️  Hinweise:');
     [...new Set(warnings)].slice(0, 8).forEach((w) => console.log('   ' + w));
+  }
+  if (techLeaks.length) {
+    failures.push('Technik-Hinweise im UI');
+    console.log('❌ Seite zeigt technische Hinweise:');
+    techLeaks.forEach((l) => console.log('   ' + l));
+  } else {
+    console.log('✅ Kein Hinweis auf Datenbank-Zugangsdaten, .env-Dateien oder SQL-Dateien im UI');
   }
   console.log(failures.length ? `\n❌ ${failures.length} Seiten mit Problem: ${failures.join(', ')}` : '\n🎉 Alle Seiten gerendert (inkl. datenabhängiger Zweige)');
   process.exit(failures.length ? 1 : 0);
