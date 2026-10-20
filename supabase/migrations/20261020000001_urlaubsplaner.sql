@@ -1,5 +1,5 @@
--- Supabase Migration – automatisch gespiegelt aus supabase/schema.sql
--- Quelle: node scripts/emit-seed-sql.mjs (nicht separat editieren)
+-- Supabase Migration – gespiegelt aus supabase/schema.sql (nicht separat editieren)
+-- Quelle: node scripts/emit-seed-sql.mjs
 
 -- ============================================================================
 -- Urlaubsplaner – Schema für Supabase (Postgres)

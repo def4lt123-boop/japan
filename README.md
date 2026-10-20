@@ -45,13 +45,28 @@ Vercel erkennt Next.js automatisch. Es sind keine Server-Funktionen nötig (alle
 
 ## Supabase anbinden
 
-**Nein – Supabase liest nichts aus dem Repo.** Die `.sql`-Dateien sind reine Vorlagen; die Tabellen müssen einmal in die Datenbank. Drei Wege, je nachdem wie bequem du es haben willst:
+**Nein – Supabase liest nichts aus dem Repo.** Die `.sql`-Dateien sind Vorlagen; das Schema muss einmal in die Datenbank. Die App selbst führt kein SQL aus – sie schreibt über die API (PostgREST).
 
-### A) Manuell im Dashboard (einmalig, 2 Minuten)
-1. Projekt auf [supabase.com](https://supabase.com) anlegen.
-2. **SQL Editor** → Inhalt von [`supabase/schema.sql`](supabase/schema.sql) einfügen → *Run*. Das ist Pflicht (Tabellen, Sichten, Policies).
-3. **Optional** [`supabase/seed.sql`](supabase/seed.sql) ausführen, damit die Reisen 2025/2027 aus deiner Tabelle schon drin sind. Mehrfach ausführbar: bestehende Zeilen werden nie überschrieben (`on conflict do nothing`), die neue Reise wird nur gefüllt, wenn sie noch leer ist.
-4. Vercel → *Settings → Environment Variables*: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Fertig – ohne diese beiden Variablen bleibt die App im Demo-Modus.
+### 🟢 Empfohlen: ein File, ein Klick
+
+`supabase/setup.sql` enthält **alles für das erste Setup**: Tabellen + Constraints + Indizes + Sichten + RLS-Policies + deine Beispieldaten (Reise 2025 aus der Tabelle, Reise 2027 bereits befüllt).
+
+1. [supabase.com](https://supabase.com) → Projekt öffnen → **SQL Editor** → *New query*
+2. Inhalt von [`supabase/setup.sql`](supabase/setup.sql) komplett rein kopieren → **Run**
+3. Vercel → *Settings → Environment Variables* (und lokal als `.env.local`):
+
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=https://DEIN-PROJEKT.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=DEIN_ANON_KEY
+   ```
+
+4. Auf Vercel neu deployen (`vercel --prod`) – der Header in der App zeigt dann **„Supabase verbunden"**.
+
+Der File ist idempotent (`on conflict do nothing`, Clone-Inserts nur wenn die neue Reise noch leer ist) → beliebig oft erneut ausführbar, ohne dass eigene Einträge überschrieben oder gelöscht werden.
+
+**Nur Struktur, ohne Beispieldaten?** → [`supabase/schema.sql`](supabase/schema.sql) ausführen. Beim ersten Start in eine **leere** Datenbank lädt die App `data/seed.json` automatisch hoch – du bekommst die Vorlage also auch so.
+
+**Nur Daten, Schema steht schon?** → [`supabase/seed.sql`](supabase/seed.sql).
 
 ### B) Supabase CLI (lokal, dasselbe Ergebnis)
 ```bash
@@ -62,6 +77,7 @@ supabase db push            # legt Tabellen + Sichten aus supabase/migrations/ a
 psql "DEINE_DB_URL" -f supabase/seed.sql   # optional die Beispieldaten
 ```
 Deshalb enthält `supabase/migrations/20261020000001_urlaubsplaner.sql` denselben Inhalt wie `schema.sql` – generiert von `npm run seed:sql`, du musst also nie zwei Dateien pflegen.
+Wer so arbeitet, braucht `setup.sql` nur einmal (oder ersetzt die Migration durch den Inhalt von `setup.sql`, falls die Beispieldaten mit rein sollen).
 
 ### C) Vollautomatisch bei jedem Push
 Zwei Möglichkeiten – beide nutzen `supabase/migrations/`:
@@ -86,6 +102,7 @@ src/lib/geocode.ts        Nominatim-Suche + Google-Maps-URL-Parser
 src/lib/stats.ts          Kosten, Nächte-Check, Tagesplanung, leere Tage
 src/app/page.tsx          Reisen-Übersicht (anlegen, duplizieren, öffnen)
 src/app/t/[tripId]/*      Reise-Workspace mit Tabs
+supabase/setup.sql        ERSTES SETUP: schema.sql + Beispieldaten in einem File
 supabase/schema.sql       Tabellen + Sichten + Policies (Quelle für alles)
 supabase/migrations/*     gespiegelte schema.sql → supabase db push / CI / Git-Integration
 supabase/seed.sql         Beispieldaten, erzeugt aus data/seed.json (npm run seed:sql)

@@ -1,20 +1,26 @@
 -- ============================================================================
--- Urlaubsplaner – Beispieldaten (Reise 2025 aus der Google-Tabelle)
--- Automatisch erzeugt aus data/seed.json – nicht von Hand editieren.
--- Neu erzeugen: node scripts/emit-seed-sql.mjs
---
--- Wiederholbar & schonend: existing Zeilen werden nie überschrieben
--- (on conflict do nothing), und die neue Reise 'trip-2027' nur gefüllt,
--- wenn sie noch leer ist. Du kannst dieses File also mehrfach ausführen.
+-- Urlaubsplaner – Beispieldaten (nur Daten – Schema muss stehen)
+-- Automatisch erzeugt – Quelle: data/seed.json / supabase/schema.sql
+-- Neu erzeugen: node scripts/emit-seed-sql.mjs  (npm run seed:sql)
+-- Idempotent: bestehende Zeilen werden nie überschrieben,
+-- die neue Reise 'trip-2027' wird nur gefüllt wenn sie noch leer ist.
 -- ============================================================================
 
 begin;
+
+-- ---------------------------------------------------------------------------
+-- Beispieldaten aus der Google-Tabelle (Reise 2025) + Übernahme in die
+-- neue Reise 'trip-2027'. Tage: Orte mit Datum werden um den Abstand der
+-- Reisestarts verschoben, Orte ohne Datum starten in der Wünscheliste
+-- (im UI: "Wünscheliste → ⚡ Automatisch verteilen").
+-- ---------------------------------------------------------------------------
 
 insert into public.trips (id, name, destination, start_date, end_date, travelers, budget_eur, jpy_rate, notes, archived)
 values
   ('trip-2025', 'Japan 2025', 'Japan', '2025-03-01', '2025-04-09', 2, 3500, 168, 'Vorlage: 1:1 aus der Google-Tabelle „Reiseplan“ übernommen. Dient als Referenz für die neue Reise – nichts wird hier verbogen oder erfunden.', true),
   ('trip-2027', 'Japan 2027', 'Japan', '2027-03-06', '2027-04-14', 2, 4200, 175, 'Neue Reise: Wünsche, Hotels und Route aus 2025 übernommen und um 105 Wochen verschoben (Start Sa 06.03.2027, gleicher Wochentag wie letztes Jahr). Tage kannst du im Reiter „Wünscheliste“ mit ⚡ Automatisch verteilen neu setzen oder per Drag & Drop.', false)
 on conflict (id) do nothing;
+
 insert into public.journeys (id, trip_id, date, title, from_city, to_city, mode, departure_time, duration_min, price_eur, hotel_name, nights, booking_status, notes)
 values
   ('jn-01', 'trip-2025', '2025-03-01', 'Ankunft Tokio', 'Frankfurt/München', 'Tokio', 'Flug', null, null, null, 'Hotel Tokio', 7, 'erledigt', 'Suica Card am Haneda Terminal 3 kaufen – gibt es nur am Flughafen.'),
@@ -58,6 +64,7 @@ values
   ('jn-39', 'trip-2025', '2025-04-08', 'Tokio', null, 'Tokio', null, null, null, null, null, null, 'erledigt', '6 Tage Tokio am Ende (Tabelle).'),
   ('jn-40', 'trip-2025', '2025-04-09', 'Rückflug', 'Tokio', 'Zuhause', 'Flug', null, null, null, null, null, 'erledigt', null)
 on conflict (id) do nothing;
+
 insert into public.hotels (id, trip_id, name, city, check_in, check_out, nights, price_total_eur, price_per_night_eur, address, lat, lng, booking_url, booking_status, notes)
 values
   ('ht-tokio-1', 'trip-2025', 'Hotel Tokio (1. Block)', 'Tokio', '2025-03-01', '2025-03-08', 7, 218, 31.14, null, null, null, null, 'erledigt', 'Wert aus der Tabelle (Zeile 04.03.). Name des Hotels war nicht notiert.'),
@@ -68,6 +75,7 @@ values
   ('ht-okinawa', 'trip-2025', 'Hotel Okinawa', 'Okinawa', '2025-03-29', '2025-03-30', 1, 55, 55, null, 26.2124, 127.6809, null, 'erledigt', 'Tabelle: 1 Nacht / 55 €. Okinawa-Block sagt aber 27.03.–03.04. (7 Tage) – und 1.050 € beim 02.04. Offener Punkt.'),
   ('ht-tokio-2', 'trip-2025', 'Hotel Tokio (2. Block)', 'Tokio', '2025-04-04', '2025-04-09', 5, 368, 73.6, null, null, null, null, 'erledigt', null)
 on conflict (id) do nothing;
+
 insert into public.places (id, trip_id, name, city, district, category, date, time_slot, start_time, duration_min, travel_time, notes, price_eur, price_note, booking_status, booking_url, priority, maps_query, lat, lng, image_url, sort_order)
 values
   ('pl-001', 'trip-2025', 'Suica Card am Flughafen holen', 'Tokio', 'Haneda Terminal 3', 'Organisation', '2025-03-01', 'Vormittag', null, 30, null, 'Gibt es nur am Flughafen (Tabelle: „Suica Card Haneda Terminal 3 kaufen gibts nur am Flughafen“).', 20, 'Kaution 500 ¥', 'erledigt', null, 'muss', 'Haneda Airport Terminal 3', 35.5499, 139.7787, null, 1),
@@ -147,6 +155,7 @@ values
   ('pl-075', 'trip-2025', 'Berg Yōmei & Panorama', 'Hakodate', 'Hakodate', 'Aussichtspunkt', null, 'Bei Nacht', null, 120, null, 'Fehlte in der Tabelle – für 2026 ergänzt: Seilbahn rauf, einer der besten Night Views Japans.', 12, 'Seilbahn ~ 1.280 ¥ retour', 'offen', null, 'soll', 'Mount Hakodate ropeway', 41.758, 140.734, null, 1),
   ('pl-076', 'trip-2025', 'Morgenmarkt Hakodate', 'Hakodate', 'Hakodate', 'Markt / Frühstück', null, 'Vormittag', '07:00:00', 90, null, 'Für 2026 ergänzt – Fisch-Restaurant-Straße, danach Yunokawa Onsen (Meerwasser-Bäder).', 12, null, 'offen', null, 'kann', 'Hakodate Morning Market', 41.8106, 140.7451, null, 2)
 on conflict (id) do nothing;
+
 insert into public.expenses (id, trip_id, date, category, description, amount_eur, payer)
 values
   ('ex-01', 'trip-2025', '2025-03-01', 'Transport', 'JR Pass 14 Tage (2 Personen)', 0, null),
@@ -154,19 +163,10 @@ values
   ('ex-03', 'trip-2025', '2025-04-02', 'Sonstiges', '1.050,00 € laut Tabelle beim Okinawa-Block – Zweck klären', 1050, null)
 on conflict (id) do nothing;
 
--- ---------------------------------------------------------------------------
--- Neue Reise 'trip-2027': Inhalte der Vorlage übernehmen, Termine um den
--- Abstand der beiden Startdaten verschieben. Tage bleiben bei Orten ohne
--- Datum leer – im Web-UI verteilt "Wünscheliste → ⚡ Automatisch verteilen"
--- sie gleichmäßig auf die Stadttage.
--- ---------------------------------------------------------------------------
-
 insert into public.places (id, trip_id, name, city, district, category, date, time_slot, start_time, duration_min, travel_time, notes, price_eur, price_note, booking_status, booking_url, priority, maps_query, lat, lng, image_url, sort_order)
 select 'pl27-' || gen_random_uuid()::text,
        'trip-2027',
        p.name, p.city, p.district, p.category,
-       -- Ort hatte in der Vorlage einen Tag -> um den Reiseabstand verschieben,
-       -- sonst leer lassen (= er startet in der Wünscheliste der neuen Reise)
        case when p.date is null then null
             else (p.date + (neu.start_date - alt.start_date))::date end,
        p.time_slot, p.start_time, p.duration_min, p.travel_time,
@@ -186,7 +186,7 @@ select 'ht27-' || gen_random_uuid()::text,
        (h.check_out + (neu.start_date - alt.start_date))::date,
        h.nights, h.price_total_eur, h.price_per_night_eur, h.address, h.lat, h.lng, h.booking_url,
        'offen',
-       'Aus der Vorjahresreise übernommen – Preis und Verfügbarkeit prüfen.'
+       'Aus der Vorlage übernommen – Preis und Verfügbarkeit neu prüfen.'
 from public.hotels h
 join public.trips alt on alt.id = h.trip_id
 join public.trips neu on neu.id = 'trip-2027'
@@ -207,12 +207,12 @@ where j.trip_id = 'trip-2025'
   and j.date is not null
   and not exists (select 1 from public.journeys x where x.trip_id = 'trip-2027');
 
-commit;
-
--- Kontrolle:
+-- Kontrolle (optional):
 --   select id, name, places, nights, total_cost from public.v_trip_summary;
 --   select * from public.v_day_load where trip_id = 'trip-2027' order by date;
-
--- Fall du die Beispielreisen hart zurücksetzen willst (überschreibt deine Arbeit!):
---   delete from public.trips where id in ('trip-2025', 'trip-2027');  -- kaskadiert
+--
+-- Hart zurücksetzen (überschreibt deine Arbeit!):
+--   delete from public.trips where id in ('trip-2025', 'trip-2027');   -- kaskadiert
 --   ... danach dieses File erneut ausführen.
+
+commit;
