@@ -83,7 +83,7 @@ export default function WishlistPage() {
           hint={filter.q || filter.city ? 'Filter anpassen – oder neue Einträge anlegen.' : 'Jeder Ort hat einen Tag. Neuen Wunsch unten anlegen, wenn doch noch etwas dazu soll.'}
           action={
             <Button variant="primary" onClick={() => open({ kind: 'place' })}>
-              ＋ Eintrag anlegen
+              ＋ Aktivität anlegen
             </Button>
           }
         />
@@ -102,7 +102,7 @@ export default function WishlistPage() {
             <Card key={city} className="p-3">
               <div className="mb-2 flex items-center gap-2">
                 <h3 className="text-[14px] font-semibold text-white">{city}</h3>
-                <span className="chip bg-white/[0.05] text-slate-300 ring-white/10">{plural(list.length, 'Ort', 'Orte')}</span>
+                <span className="chip bg-white/[0.05] text-slate-300 ring-white/10">{plural(list.length, 'Aktivität', 'Aktivitäten')}</span>
                 <span className="ml-auto flex flex-wrap gap-1 text-[11px] text-slate-500">
                   {Array.from(new Set(list.map((p) => categoryMeta(p.category).icon))).join(' ')}
                 </span>

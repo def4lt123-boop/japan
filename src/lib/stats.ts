@@ -33,8 +33,8 @@ export function costsOf(bundle: BundleLike): CostSummary {
   for (const e of bundle.expenses) catMap.set(e.category, (catMap.get(e.category) ?? 0) + (e.amount_eur || 0));
   const byCategory = [
     { label: 'Unterkunft', value: accommodation, count: bundle.hotels.length },
-    { label: 'Transport & Etappen', value: transport, count: bundle.journeys.length },
-    { label: 'Orte, Tickets, Essen', value: entries, count: bundle.places.filter((p) => p.price_eur).length },
+    { label: 'Flüge & Fahrten', value: transport, count: bundle.journeys.length },
+    { label: 'Aktivitäten, Tickets, Essen', value: entries, count: bundle.places.filter((p) => p.price_eur).length },
     ...Array.from(catMap.entries()).map(([label, value]) => ({ label, value, count: bundle.expenses.filter((e) => e.category === label).length })),
   ]
     .filter((c) => c.value > 0 || c.count > 0)

@@ -6,6 +6,8 @@ import { useParams } from 'next/navigation';
 import { useStore, useTrip } from '../../../../lib/store';
 import { useEditor } from '../../../../components/EditorProvider';
 import { PlaceCard } from '../../../../components/PlaceCard';
+import { MapPreview, RoutePreview } from '../../../../components/MapPreview';
+import { dayStops, hotelForDay, routeUrl } from '../../../../lib/maps';
 import { Button, Card, Empty, SectionTitle, TextInput, cx } from '../../../../components/ui';
 import { dayPlan, nightCoverage } from '../../../../lib/stats';
 import { categoryMeta } from '../../../../lib/categories';
@@ -30,6 +32,7 @@ export default function DaysPage() {
   const { open } = useEditor();
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [poolQ, setPoolQ] = useState('');
+  const [mapDay, setMapDay] = useState<string | null>(null);
 
   const days = bundle.trip ? dayPlan(bundle) : [];
   const pool = bundle.places.filter((p) => !p.date);
@@ -87,7 +90,7 @@ export default function DaysPage() {
               🖨 Drucken
             </Button>
             <Button size="sm" variant="primary" onClick={() => open({ kind: 'place' })}>
-              ＋ Eintrag
+              ＋ Aktivität
             </Button>
           </>
         }
@@ -103,7 +106,7 @@ export default function DaysPage() {
                 'flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] transition hover:bg-white/[0.07]',
                 d.places.length ? 'text-slate-200' : 'text-slate-500',
               )}
-              title={`${plural(d.places.length, 'Ort', 'Orte')} · ${d.hours.toFixed(1)} h`}
+              title={`${plural(d.places.length, 'Aktivität', 'Aktivitäten')} · ${d.hours.toFixed(1)} h`}
             >
               <span className="font-semibold">{fmtDate(d.date, { weekday: 'short' })}</span>
               <span className="tabular-nums">{fmtDate(d.date, { day: '2-digit', month: '2-digit' })}</span>
@@ -135,6 +138,11 @@ export default function DaysPage() {
         {days.map((d) => {
           const night = coverage.get(d.date);
           const over = d.hours > 8;
+          const stops = dayStops(d.places);
+          const hotel = hotelForDay(bundle.hotels, d.date, d.cities[0] ?? d.places[0]?.city ?? null);
+          const origin = hotel ?? stops[0] ?? null;
+          const destination = stops.length > 1 ? stops[stops.length - 1] : stops[0] ?? null;
+          const via = stops.length > 2 ? stops.slice(1, -1) : [];
           return (
             <Card
               key={d.date}
@@ -154,9 +162,30 @@ export default function DaysPage() {
                 </span>
                 <span className="ml-auto flex items-center gap-1.5 text-[11.5px] text-slate-400">
                   <span className={cx('chip ring-1', over ? 'bg-shu-500/15 text-shu-100 ring-shu-400/30' : 'bg-white/[0.05] text-slate-300 ring-white/10')}>
-                    {plural(d.places.length, 'Ort', 'Orte')} · {d.hours ? fmtDuration(d.hours * 60) : '0 Min'}
+                    {plural(d.places.length, 'Aktivität', 'Aktivitäten')} · {d.hours ? fmtDuration(d.hours * 60) : '0 Min'}
                   </span>
-                  <button className="btn-quiet !px-1.5" title="Ort an diesem Tag anlegen" onClick={() => open({ kind: 'place', defaults: { date: d.date } })}>
+                  {stops.length > 1 ? (
+                    <a
+                      className="btn-quiet !px-1.5"
+                      href={routeUrl({ origin: origin!, destination: destination!, stops: via, mode: 'transit' })}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Den Tag als Route bei Google Maps öffnen – mit Abfahrtszeiten"
+                    >
+                      🧭
+                    </a>
+                  ) : null}
+                  {stops.length ? (
+                    <button
+                      className={cx('btn-quiet !px-1.5', mapDay === d.date && '!bg-shu-500/25 !text-white')}
+                      title="Karte zu diesem Tag hier zeigen"
+                      aria-expanded={mapDay === d.date}
+                      onClick={() => setMapDay((cur) => (cur === d.date ? null : d.date))}
+                    >
+                      🗺️
+                    </button>
+                  ) : null}
+                  <button className="btn-quiet !px-1.5" title="Aktivität an diesem Tag anlegen" onClick={() => open({ kind: 'place', defaults: { date: d.date } })}>
                     ＋
                   </button>
                 </span>
@@ -185,6 +214,27 @@ export default function DaysPage() {
                 </div>
               )}
 
+              {mapDay === d.date && origin && destination ? (
+                <div className="border-b border-white/[0.07] p-2.5">
+                  {stops.length > 1 ? (
+                    <RoutePreview
+                      origin={origin}
+                      destination={destination}
+                      stops={via}
+                      mode="transit"
+                      height={230}
+                      heading={`${fmtDate(d.date, { weekday: 'short', day: '2-digit', month: '2-digit' })} · ${stops.length} Halte`}
+                    />
+                  ) : (
+                    <MapPreview place={destination} height={190} heading={destination?.name ?? 'Karte'} />
+                  )}
+                  <p className="mt-1 text-[11px] leading-snug text-slate-500">
+                    {hotel ? `Start an der Unterkunft „${hotel.name}“. ` : 'Keine Unterkunft für diesen Tag – erster Punkt ist der Start. '}
+                    Rechnerisch in geplanter Reihenfolge; „öffnen“ zeigt Fahrpläne und Umstiege.
+                  </p>
+                </div>
+              ) : null}
+
               <div className="space-y-2 p-2.5">
                 {d.places.length ? (
                   d.places.map((p) => <PlaceCard key={p.id} place={p} onMove={(dir) => moveDay(p.id, d.date, dir)} />)
@@ -192,7 +242,7 @@ export default function DaysPage() {
                   <div className="rounded-lg border border-dashed border-white/[0.12] px-3 py-5 text-center text-[12.5px] text-slate-500">
                     Noch nichts geplant – Karte hierher ziehen oder{' '}
                     <button className="text-shu-200 underline-offset-2 hover:underline" onClick={() => open({ kind: 'place', defaults: { date: d.date } })}>
-                      neuen Eintrag anlegen
+                      neue Aktivität anlegen
                     </button>
                     {pool.length ? (
                       <>
@@ -205,7 +255,7 @@ export default function DaysPage() {
                             if (candidate) store.patch('places', candidate.id, { date: d.date });
                           }}
                         >
-                          nächsten Pool-Ort hierher legen
+                          nächsten Wunsch hierher legen
                         </button>
                       </>
                     ) : null}

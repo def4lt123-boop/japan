@@ -153,7 +153,7 @@ export default function HomePage() {
       {duplicateSource ? (
         <Modal
           title="Reise duplizieren"
-          subtitle="Orte, Hotels und Etappen werden kopiert – Tage verschoben, Buchungsstatus zurückgesetzt."
+          subtitle="Aktivitäten, Unterkünfte und Fahrten werden kopiert – Tage verschoben, Buchungsstatus zurückgesetzt."
           onClose={() => setDuplicateSource(null)}
           width="max-w-md"
           footer={
@@ -233,7 +233,7 @@ function TripCard({ bundle, onEdit, onDuplicate, onDelete }: { bundle: TripBundl
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Stat label="Orte geplant" value={planned} hint={pool ? `${pool} in der Wünscheliste` : 'alles verplant'} tone={pool ? 'warn' : 'good'} />
+        <Stat label="Aktivitäten geplant" value={planned} hint={pool ? `${pool} in der Wünscheliste` : 'alles verplant'} tone={pool ? 'warn' : 'good'} />
         <Stat label="Unterkünfte" value={bundle.hotels.length} hint={`${bundle.hotels.reduce((a, h) => a + (h.nights ?? 0), 0)} Nächte`} />
         <Stat label="Kosten" value={fmtMoney(costs.total)} hint={bundle.trip.budget_eur ? `Budget ${fmtMoney(bundle.trip.budget_eur)}` : 'kein Budget hinterlegt'} tone={bundle.trip.budget_eur && costs.total > bundle.trip.budget_eur ? 'bad' : undefined} />
         <Stat label="Offene Punkte" value={openBookings} hint={gaps.length ? `${gaps.length} Nächte ohne Hotel` : 'Nächte abgedeckt'} tone={openBookings ? 'warn' : 'good'} />
@@ -278,7 +278,7 @@ function TipsCard() {
             <b>Tage</b>: Einträge zwischen Tagen ziehen, ✎ bearbeiten, ✓ erledigt.
           </li>
           <li>
-            <b>Übersicht</b>: Band mit Betten, Etappen und Tagesluft – darunter jeder Tag als Zeitbild.
+            <b>Übersicht</b>: Band mit Betten, Fahrten und Tagesluft – darunter jeder Tag als Zeitbild.
           </li>
           <li>
             <b>Tabelle</b>: alle Felder in einer Zeile – sortierbar, filterbar, als CSV.
@@ -287,7 +287,7 @@ function TipsCard() {
             <b>Karte</b>: Punkte aus den Koordinaten, fehlende lassen sich per Suche setzen.
           </li>
           <li>
-            <b>Kosten</b>: Unterkünfte + Etappen + Einträge + Ausgaben, pro Person und in ¥.
+            <b>Kosten</b>: Unterkünfte + Fahrten + Aktivitäten + Ausgaben, pro Person und in ¥.
           </li>
           <li>
             <b>Wünscheliste</b>: was noch keinen Tag hat – mit ⚡ automatisch verteilen.

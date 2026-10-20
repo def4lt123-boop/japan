@@ -84,7 +84,7 @@ export function EditorProvider({ tripId, children }: { tripId: string; children:
               ? async () => {
                   await store.remove('places', activePlace.id);
                   close();
-                  store.say('Eintrag gelöscht.');
+                  store.say('Aktivität gelöscht.');
                 }
               : undefined
           }
@@ -125,7 +125,7 @@ export function EditorProvider({ tripId, children }: { tripId: string; children:
           onSubmit={async (j) => {
             await store.upsert('journeys', j);
             close();
-            store.say(`Etappe „${j.title}“ gespeichert.`);
+            store.say(`Fahrt „${j.title}“ gespeichert.`);
           }}
           onDelete={
             activeJourney

@@ -12,7 +12,7 @@ import { STATUS_META } from '../../../../lib/categories';
 interface CostRow {
   id: string;
   date: string | null;
-  group: 'Unterkunft' | 'Transport' | 'Orte & Tickets' | 'Ausgaben';
+  group: 'Unterkunft' | 'Flug & Zug' | 'Aktivitäten & Tickets' | 'Ausgaben';
   source: string;
   label: string;
   amount: number;
@@ -33,9 +33,9 @@ export default function CostsPage() {
     for (const h of bundle.hotels)
       if (h.price_total_eur) out.push({ id: h.id, date: h.check_in, group: 'Unterkunft', source: h.name, label: `${h.nights ?? '?'} Nächte in ${h.city}`, amount: h.price_total_eur, status: h.booking_status, payer: null });
     for (const j of bundle.journeys)
-      if (j.price_eur) out.push({ id: j.id, date: j.date, group: 'Transport', source: j.mode ?? 'Etappe', label: j.title, amount: j.price_eur, status: j.booking_status, payer: null });
+      if (j.price_eur) out.push({ id: j.id, date: j.date, group: 'Flug & Zug', source: j.mode ?? 'Fahrt', label: j.title, amount: j.price_eur, status: j.booking_status, payer: null });
     for (const p of bundle.places)
-      if (p.price_eur) out.push({ id: p.id, date: p.date, group: 'Orte & Tickets', source: p.category ?? 'Ort', label: `${p.name}${p.price_note ? ` · ${p.price_note}` : ''}`, amount: p.price_eur, status: p.booking_status, payer: null });
+      if (p.price_eur) out.push({ id: p.id, date: p.date, group: 'Aktivitäten & Tickets', source: p.category ?? 'Aktivität', label: `${p.name}${p.price_note ? ` · ${p.price_note}` : ''}`, amount: p.price_eur, status: p.booking_status, payer: null });
     for (const e of bundle.expenses) out.push({ id: e.id, date: e.date, group: 'Ausgaben', source: e.category, label: e.description ?? 'Ausgabe', amount: e.amount_eur, status: 'erledigt', payer: e.payer });
     return out.sort((a, b) => (a.date ?? '9999').localeCompare(b.date ?? '9999') || a.group.localeCompare(b.group));
   }, [bundle]);
@@ -72,7 +72,7 @@ export default function CostsPage() {
       <SectionTitle
         title="Kosten & Budget"
         icon="💶"
-        hint="Hotels, Etappen, Ticket-Preise aus den Einträgen und zusätzliche Ausgaben – zusammengezählt."
+        hint="Unterkünfte, Fahrten, Ticket-Preise aus den Aktivitäten und zusätzliche Ausgaben – zusammengezählt."
         right={
           <>
             <Button size="sm" variant="ghost" onClick={() => window.print()}>
@@ -134,7 +134,7 @@ export default function CostsPage() {
         <Card className="p-0">
           <div className="flex flex-wrap items-center gap-1.5 border-b border-white/[0.07] px-3 py-2">
             <h3 className="text-[14px] font-semibold text-white">Alle Posten</h3>
-            {['Unterkunft', 'Transport', 'Orte & Tickets', 'Ausgaben'].map((g) => (
+            {['Unterkunft', 'Flug & Zug', 'Aktivitäten & Tickets', 'Ausgaben'].map((g) => (
               <button
                 key={g}
                 onClick={() => setOnly((v) => (v === g ? '' : g))}
@@ -155,7 +155,7 @@ export default function CostsPage() {
 
           {!filtered.length ? (
             <div className="p-4">
-              <Empty title="Keine Preise erfasst" hint="Preise gehören in die Einträge, Unterkünfte, Etappen oder Ausgaben." action={<Button variant="primary" onClick={() => open({ kind: 'expense' })}>＋ Erste Ausgabe</Button>} />
+              <Empty title="Keine Preise erfasst" hint="Preise gehören in Aktivitäten, Unterkünfte, Fahrten oder Ausgaben." action={<Button variant="primary" onClick={() => open({ kind: 'expense' })}>＋ Erste Ausgabe</Button>} />
             </div>
           ) : (
             <table className="w-full border-collapse text-left">
@@ -175,7 +175,7 @@ export default function CostsPage() {
                     <td className="px-3 py-1.5">
                       <button
                         className="text-left text-slate-100 underline-offset-2 hover:underline"
-                        onClick={() => open({ kind: r.group === 'Unterkunft' ? 'hotel' : r.group === 'Transport' ? 'journey' : r.group === 'Ausgaben' ? 'expense' : 'place', id: r.id })}
+                        onClick={() => open({ kind: r.group === 'Unterkunft' ? 'hotel' : r.group === 'Flug & Zug' ? 'journey' : r.group === 'Ausgaben' ? 'expense' : 'place', id: r.id })}
                       >
                         {r.label}
                       </button>
@@ -265,7 +265,7 @@ export default function CostsPage() {
             <h3 className="mb-1 text-[13px] font-semibold text-white">Preise ohne Angabe</h3>
             <p className="text-[12.5px] leading-relaxed text-slate-400">
               {bundle.places.filter((p) => !p.price_eur).length} von {bundle.places.length} Orten haben noch keinen Preis. {bundle.hotels.filter((h) => !h.price_total_eur).length} Unterkünfte ohne Preis.{' '}
-              {bundle.journeys.filter((j) => !j.price_eur).length} Etappen ohne Preis.
+              {bundle.journeys.filter((j) => !j.price_eur).length} Fahrten ohne Preis.
             </p>
             <Button size="sm" variant="ghost" className="mt-2" onClick={() => open({ kind: 'place' })}>
               ＋ Preis nachtragen

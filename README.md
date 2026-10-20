@@ -1,6 +1,6 @@
 # Urlaubsplaner – Japan 🗾
 
-Urlaubsplanung als richtige Web-App: Reisetage, Orte mit **Fahrzeit ab Hotel**, **Dauer**, **Tageszeit**, **Hinweisen**, **Preisen**, **Buchungsstatus** und **Google-Maps-Koordinaten** – plus Unterkünfte, Reiseverlauf, Budget und eine grafische Übersicht, die pro Tag zeigt, was geplant ist und was noch fehlt. Gebaut mit **Next.js + Tailwind**, gehostet auf **Vercel**, Daten optional in **Supabase (Postgres)**.
+Urlaubsplanung als richtige Web-App: Reisetage, Aktivitäten mit **Fahrzeit ab Hotel**, **Dauer**, **Tageszeit**, **Hinweisen**, **Preisen**, **Buchungsstatus** und **Google-Maps-Koordinaten** – plus Unterkünfte, Reiseverlauf, Budget und eine grafische Übersicht, die pro Tag zeigt, was geplant ist und was noch fehlt. Gebaut mit **Next.js + Tailwind**, gehostet auf **Vercel**, Daten optional in **Supabase (Postgres)**.
 
 Ohne Datenbank-Zugangsdaten läuft die App im **Demo-Modus**: alle Daten liegen im Browser (localStorage), die mitgelieferte Vorlage (Japan 2025 als Referenz, Japan 2027 als Planungsreise) ist eingebaut. Sobald `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` gesetzt sind, werden die gleichen Tabellen in Supabase gelesen/geschrieben. Auf der Seite selbst steht dazu nur der Status **„Datenbank verbunden"** – alle Einrichtungsdoku liegt hier im README, nicht im UI.
 
@@ -10,17 +10,28 @@ Ohne Datenbank-Zugangsdaten läuft die App im **Demo-Modus**: alle Daten liegen 
 
 | Bereich | Inhalt |
 | --- | --- |
-| 🏠 **Übersicht** | **grafische Reisekarte**: Band über alle Reisetage (Bett-Balken pro Unterkunft, Nächte mit/ohne Quartier, Etappen-Icons, Auslastungssäulen) · **jeder Tag als Zeitbild** auf der Achse 07–23 Uhr (Balken = Eintrag, gestrichelt = ohne feste Uhrzeit, rot umrandet = Muss noch offen) · **Ring „Planungsgrad“** mit Checklist „was noch fehlen würde" (Nächte, Termine, Tickets, Preise, Fahrzeiten, Koordinaten, Etappenzeiten, Budget) · **„was noch verfügbar ist"**: freie Tage, Luft pro Tag, Punkte/Nächte-Balance pro Stadt, ⚡ Wünsche auf freie Tage legen, offene Buchungen mit Link |
-| 🗓️ **Tage** | Tagesplan pro Reisetag, Einträge per **Drag & Drop** verschieben (mobil ◀ ▶), Tagesauslastung in Stunden, Hotel der Nacht + Etappen (Flug/Zug) direkt am Tag, ✓ erledigt |
+| 🏠 **Übersicht** | **grafische Reisekarte**: Band über alle Reisetage (Bett-Balken pro Unterkunft, Nächte mit/ohne Quartier, Fahrten-Icons, Auslastungssäulen) · **jeder Tag als Zeitbild** auf der Achse 07–23 Uhr (Balken = Eintrag, gestrichelt = ohne feste Uhrzeit, rot umrandet = Muss noch offen) · **Ring „Planungsgrad“** mit Checklist „was noch fehlen würde" (Nächte, Termine, Tickets, Preise, Fahrzeiten, Koordinaten, Fahrten mit Uhrzeit, Tickets, Budget) · **„was noch verfügbar ist"**: freie Tage, Luft pro Tag, Punkte/Nächte-Balance pro Stadt, ⚡ Wünsche auf freie Tage legen, offene Buchungen mit Link |
+| 🗓️ **Tage** | Tagesplan pro Reisetag, Einträge per **Drag & Drop** verschieben (mobil ◀ ▶), Tagesauslastung in Stunden, Hotel der Nacht + Fahrten (Flug/Zug) direkt am Tag · 🗺️ eingeblendete Google-Maps-Karte mit der Tagesroute, ✓ erledigt |
 | ✨ **Wünscheliste** | alles ohne Tag; pro Eintrag Tag zuweisen, **⚡ Automatisch verteilen**, Koordinaten nachziehen |
-| 📊 **Tabelle** | alle Felder als Zeilen: sortierbare Spalten, Inline-Edit (Datum/Status/Prio), Filter + Suche, **CSV-Export** (Semikolon, de-DE → in jedes Tabellenprogramm importierbar) |
-| 🗺️ **Karte** | Marker aus den Koordinaten (Farbe = Kategorie, hohl = ohne Tag), Route des gewählten Tages als Linie, Unterkünfte als 🏨-Marker, Popup mit Details + Maps/Route-Links |
+| 📊 **Tabelle** | alle Felder als Zeilen: sortierbare Spalten, Inline-Edit (Datum/Status/Ticket/Prio), Filter + Suche, **CSV-Export** (Semikolon, de-DE → in jedes Tabellenprogramm importierbar) |
+| 🗺️ **Karte** | Marker aus den Koordinaten (Farbe = Kategorie, hohl = ohne Tag), Route des gewählten Tages als Linie, Unterkünfte als 🏨-Marker, Popup mit Details · rechte Spalte: **dieselbe Ansicht bei Google Maps** (Einbettung ohne API-Key) für Auswahl oder Tagesroute, oben der Knopf **🧭 Route** |
 | 🏨 **Unterkünfte** | Nächte, Gesamtpreis, € / Nacht, € / Person / Nacht, **Nächte-Check** (welche Nacht hat kein Hotel?), Preisvergleich-Balken |
 | 💶 **Kosten** | Budgetauslastung, aufgeschlüsselt nach Unterkunft / Transport / Tickets / Ausgaben, Yen-Umrechnung mit einstellbarem Kurs, „wer hat vorgestreckt“ + Ausgleich |
-| 🚄 **Reiseverlauf** | Etappen (Ankunft, Shinkansen, Flüge, Hotelwechsel) inkl. Preis, Hotel und Nächten je Halt |
+| 🚄 **Reiseverlauf** | Fahrten (Ankunft, Shinkansen, Flüge, Hotelwechsel) inkl. Preis, Hotel und Nächten je Halt |
 | ⚙ **Reisen** | mehrere Reisen, **duplizieren** (neues Jahr = alte Reise als Vorlage, Wochentage bleiben gleich), archivieren, Budget/¥-Kurs/Personen |
 
-Jeder Eintrag speichert zusätzlich `maps_query`, `lat`, `lng`: Koordinaten lassen sich per **OpenStreetMap-Suche** füllen oder indem du einen **Google-Maps-Link einfügst** (`…/@35.6597,139.7007,17z`, `?query=lat,lng`, `!3d…!4d…`, rohe `35.6597, 139.7007`) – das Formular extrahiert die Zahlen automatisch.
+### Begriffe
+**Aktivität** = ein Punkt im Programm (sehen, essen, baden, Ticket lösen) · **Unterkunft** = Bett für eine oder mehrere Nächte ·
+**Fahrt** = der Weg von einer Stadt zur nächsten (Flug, Shinkansen, Fähre) · **Ausgabe** = Geld, das sonst geflossen ist.
+
+### Google Maps
+Jedes Formular zeigt beim Tippen die **Karte von Google Maps direkt im Formular** (Einbettung `maps.google.com/…&output=embed`, kein
+API-Key, keine Abrechnung): erst die Suche nach Name + Viertel + Stadt, sobald Koordinaten da sind der Punkt selbst. Einen
+**Google-Maps-Link** kannst du direkt einfügen (`…/@35.6597,139.7007,17z`, `?query=lat,lng`, `!3d…!4d…`, rohe `35.6597, 139.7007`) –
+die Zahlen werden automatisch extrahiert. „öffnen ↗“ führt in die große Ansicht (Adresse, Öffnungszeiten, Navi). Der Tagesplan und die
+Karte bieten zusätzlich die **Route über alle Punkte eines Tages** (Unterkunft → Stopps in geplanter Reihenfolge, bis zu 9 Zwischenhalte,
+Fahrplan über `travelmode=transit`), und der Export-Knopf schreibt eine **KML-Datei** für Google My Maps. Auf 🗺️-Symbol einer Karte
+erscheint die Google-Ansicht des Punktes auch inline, `maps_query`/`lat`/`lng` sitzen dafür pro Eintrag in der Datenbank.
 
 ## Lokal starten
 
@@ -93,7 +104,7 @@ Zwei Möglichkeiten – beide nutzen `supabase/migrations/`:
 ## Datenhaltung / Architektur
 
 ```
-data/seed.json            Vorlage-Reisen (Reisen, Orte, Hotels, Etappen, Ausgaben) – Quelle für Seed & SQL
+data/seed.json            Vorlage-Reisen (Reisen, Aktivitäten, Unterkünfte, Fahrten, Ausgaben) – Quelle für Seed & SQL
 src/lib/types.ts          Feldnamen = Datenbankspalten (snake_case) → kein Mapping nötig
 src/lib/supabase.ts       Client, Spaltenlisten, select/upsert/patch/delete
 src/lib/seed.ts           Seed + „Reise duplizieren“ (Tage verschieben, Status zurücksetzen)

@@ -50,28 +50,28 @@ export default function JourneyPage() {
       <SectionTitle
         title="Reiseverlauf"
         icon="🚄"
-        hint="Ankunft, Weiterzüge, Rückflug – die Kette mit Etappenpreis und Hotelwechsel."
+        hint="Ankunft, Weiterzüge, Rückflug – die Kette mit Preis für jede Fahrt und Hotelwechsel."
         right={
           <>
             {modes.length ? (
               <Select className="!w-auto" allowEmpty emptyLabel="Alle Verkehrsmittel" options={modes} value={mode} onChange={(e) => setMode(e.target.value)} />
             ) : null}
             <Button size="sm" variant="primary" onClick={() => open({ kind: 'journey' })}>
-              ＋ Etappe
+              ＋ Flug / Zug
             </Button>
           </>
         }
       />
 
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <Stat label="Etappen" value={journeys.length} hint={mode ? `${shown.length} gefiltert` : plural(modes.length, 'Verkehrsmittel', 'Verkehrsmittel')} />
+        <Stat label="Fahrten" value={journeys.length} hint={mode ? `${shown.length} gefiltert` : plural(modes.length, 'Verkehrsmittel', 'Verkehrsmittel')} />
         <Stat label="Transportkosten" value={fmtMoney(total)} hint={`${journeys.filter((j) => j.price_eur).length} mit Preis`} />
         <Stat label="Stationen" value={cityStops.length} hint={cityStops.map(([c]) => c).slice(0, 3).join(' · ')} />
-        <Stat label="Längste Etappe" value={longest ? fmtDuration(longest.duration_min) : '—'} hint={longest?.title ?? '—'} />
+        <Stat label="Längste Fahrt" value={longest ? fmtDuration(longest.duration_min) : '—'} hint={longest?.title ?? '—'} />
       </div>
 
       {!shown.length ? (
-        <Empty title="Noch keine Etappen" hint="Lege Ankunft, Zugfahrten und Rückflug an – das gibt dem Tagesplan seinen Rahmen." action={<Button variant="primary" onClick={() => open({ kind: 'journey' })}>＋ Erste Etappe</Button>} />
+        <Empty title="Noch keine Fahrten" hint="Lege Ankunft, Zugfahrten und Rückflug an – das gibt dem Tagesplan seinen Rahmen." action={<Button variant="primary" onClick={() => open({ kind: 'journey' })}>＋ Erste Fahrt</Button>} />
       ) : (
         <Card className="p-0">
           <ol className="divide-y divide-white/[0.06]">
@@ -131,7 +131,7 @@ export default function JourneyPage() {
                       <button className="btn-quiet !px-1" title="Bearbeiten" onClick={() => open({ kind: 'journey', id: j.id })}>
                         ✎
                       </button>
-                      <button className="btn-quiet !px-1 text-red-300/80 hover:!text-red-200" title="Löschen" onClick={() => window.confirm(`Etappe „${j.title}“ löschen?`) && store.remove('journeys', j.id)}>
+                      <button className="btn-quiet !px-1 text-red-300/80 hover:!text-red-200" title="Löschen" onClick={() => window.confirm(`Fahrt „${j.title}“ löschen?`) && store.remove('journeys', j.id)}>
                         🗑
                       </button>
                     </span>
@@ -145,7 +145,7 @@ export default function JourneyPage() {
 
       {cityStops.length ? (
         <Card className="p-4">
-          <SectionTitle title="Stationen dieser Reise" icon="📍" hint="Wie lange du wo bleibst – abgeleitet aus den Etappen." />
+          <SectionTitle title="Stationen dieser Reise" icon="📍" hint="Wie lange du wo bleibst – abgeleitet aus den Fahrten." />
           <div className="flex flex-wrap items-center gap-1.5">
             {cityStops.map(([city, info], i) => (
               <React.Fragment key={city}>
@@ -161,7 +161,7 @@ export default function JourneyPage() {
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5 text-[12px] text-slate-400">
             <span>
-              <Money value={total} /> für {journeys.filter((j) => j.price_eur).length} Etappen mit Preis
+              <Money value={total} /> für {journeys.filter((j) => j.price_eur).length} Fahrten mit Preis
             </span>
           </div>
         </Card>

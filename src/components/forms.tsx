@@ -9,6 +9,7 @@ import { DateField, DateRangeField } from './dates';
 import type { TicketStatus } from '../lib/types';
 import { CATEGORY_SUGGESTIONS } from '../lib/categories';
 import { geocode, parseMapsUrl, queryFor } from '../lib/geocode';
+import { MapPreview } from './MapPreview';
 
 const statusOptions = BOOKING_STATUSES.map((s) => ({ value: s, label: STATUS_META[s].label }));
 const priorityOptions = PRIORITIES.map((p) => ({ value: p, label: `${PRIORITY_META[p].icon} ${PRIORITY_META[p].label}` }));
@@ -30,6 +31,7 @@ function GeoFields({
   const [mapsInput, setMapsInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [showMap, setShowMap] = useState(true);
 
   const runGeocode = async () => {
     setBusy(true);
@@ -82,12 +84,33 @@ function GeoFields({
           📌 Google-Maps-Link übernehmen
         </Button>
         <TextInput className="min-w-[220px] flex-1" placeholder="https://www.google.com/maps/place/…/…/@35.65,139.70,17z" value={mapsInput} onChange={(e) => setMapsInput(e.target.value)} />
-        {lat !== null && lng !== null ? (
-          <a className="btn-quiet" href={mapsUrl({ lat, lng, name: '', city: '', maps_query: query ?? null })} target="_blank" rel="noreferrer">
-            In Google Maps öffnen ↗
-          </a>
-        ) : null}
+        <a
+          className="btn-quiet"
+          href={mapsUrl({ lat, lng, name: suggest, city: '', maps_query: query ?? null })}
+          target="_blank"
+          rel="noreferrer"
+          title="Marker, Adresse und Route bei Google Maps"
+        >
+          In Google Maps öffnen ↗
+        </a>
+        <Button size="sm" variant="ghost" onClick={() => setShowMap((v) => !v)} aria-expanded={showMap}>
+          {showMap ? 'Vorschau zu' : '🗺️ Vorschau'}
+        </Button>
       </div>
+      {showMap ? (
+        <div className="mt-2">
+          <MapPreview
+            place={{ lat, lng, name: suggest, city: null, district: null, maps_query: query }}
+            query={query?.trim() || suggest}
+            zoom={lat !== null && lng !== null ? 16 : 13}
+            height={200}
+            heading={lat !== null && lng !== null ? 'Kartenpunkt' : 'Suchvorschau'}
+          />
+          <p className="mt-1 text-[11px] leading-snug text-slate-500">
+            Die Karte folgt dem Suchbegriff – bei jedem Tipp, auch bevor etwas gespeichert ist. Ein Google-Maps-Link oben rein setzt den Marker direkt.
+          </p>
+        </div>
+      ) : null}
       {msg ? <p className="mt-1.5 text-[11.5px] text-slate-400">{msg}</p> : null}
     </Card>
   );
@@ -214,8 +237,8 @@ export function PlaceForm({
 
   return (
     <Modal
-      title={isNew ? 'Neuer Eintrag' : 'Eintrag bearbeiten'}
-      subtitle={isNew ? 'Ort anlegen – Datum ist optional, ohne Datum liegt er in der Wünscheliste.' : draft.name}
+      title={isNew ? 'Aktivität anlegen' : 'Aktivität bearbeiten'}
+      subtitle={isNew ? 'Name, Stadt, Ticket, Preis – der Tag kommt später. Ohne Tag liegt die Aktivität in der Wünscheliste.' : draft.name}
       onClose={onCancel}
       footer={
         <>
@@ -550,7 +573,7 @@ export function JourneyForm({
 
   return (
     <Modal
-      title={isNew ? 'Neue Etappe' : 'Etappe bearbeiten'}
+      title={isNew ? 'Flug / Zug anlegen' : 'Fahrt bearbeiten'}
       subtitle="Flüge, Shinkansen, Fähren – der Reiseverlauf"
       onClose={onCancel}
       footer={
@@ -669,7 +692,7 @@ export function ExpenseForm({
   return (
     <Modal
       title={isNew ? 'Ausgabe erfassen' : 'Ausgabe bearbeiten'}
-      subtitle="Alles, was nicht schon bei Hotels/Eintritten/Etappen steht"
+      subtitle="Alles, was nicht schon in Unterkunft, Aktivitäten oder Fahrten steht"
       onClose={onCancel}
       footer={
         <>

@@ -385,7 +385,7 @@ export function gapList(bundle: BundleLike): GapItem[] {
         dated.length + bundle.hotels.length,
       ),
       href: '/kosten',
-      hint: `${dated.filter((p) => p.price_eur === null && !p.price_note).length} Orte und ${bundle.hotels.filter((h) => h.price_total_eur === null).length} Unterkünfte ohne Betrag`,
+      hint: `${dated.filter((p) => p.price_eur === null && !p.price_note).length} Aktivitäten und ${bundle.hotels.filter((h) => h.price_total_eur === null).length} Unterkünfte ohne Betrag`,
       samples: dated
         .filter((p) => p.price_eur === null && !p.price_note && p.priority !== 'kann')
         .slice(0, 4)
@@ -422,12 +422,12 @@ export function gapList(bundle: BundleLike): GapItem[] {
     {
       key: 'journeys',
       icon: '🚄',
-      label: 'Etappen mit Uhrzeit',
+      label: 'Fahrten mit Uhrzeit',
       done: bundle.journeys.filter((j) => j.departure_time).length,
       total: bundle.journeys.length,
       severity: ratio(bundle.journeys.filter((j) => j.departure_time).length, bundle.journeys.length),
       href: '/verlauf',
-      hint: `${bundle.journeys.filter((j) => !j.departure_time).length} Etappen ohne Abfahrtszeit`,
+      hint: `${bundle.journeys.filter((j) => !j.departure_time).length} Fahrten ohne Abfahrtszeit`,
       samples: bundle.journeys
         .filter((j) => !j.departure_time)
         .slice(0, 4)

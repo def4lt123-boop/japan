@@ -97,7 +97,7 @@ export default function TablePage() {
               ⇩ CSV
             </Button>
             <Button size="sm" variant="primary" onClick={() => open({ kind: 'place' })}>
-              ＋ Zeile
+              ＋ Aktivität
             </Button>
           </>
         }
@@ -115,7 +115,7 @@ export default function TablePage() {
       />
 
       {!rows.length ? (
-        <Empty title="Keine Zeilen" hint="Filter anpassen oder neuen Eintrag anlegen." action={<Button variant="primary" onClick={() => open({ kind: 'place' })}>＋ Eintrag</Button>} />
+        <Empty title="Keine Zeilen" hint="Filter anpassen oder neue Aktivität anlegen." action={<Button variant="primary" onClick={() => open({ kind: 'place' })}>＋ Aktivität</Button>} />
       ) : (
         <Card className="overflow-x-auto p-0">
           <table className="w-full min-w-[1320px] border-collapse text-left">
