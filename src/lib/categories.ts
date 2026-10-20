@@ -1,4 +1,4 @@
-import type { BookingStatus, Place, Priority } from './types';
+import type { BookingStatus, Place, Priority, TicketStatus } from './types';
 
 /** Kategorie-Bezeichnungen → Icon + Farbe für Liste, Karte und Übersicht */
 const RULES: { test: RegExp; label: string; icon: string; color: string }[] = [
@@ -63,6 +63,21 @@ export const STATUS_META: Record<BookingStatus, { label: string; color: string; 
   gebucht: { label: 'gebucht', color: 'text-emerald-200 bg-emerald-500/15 ring-emerald-400/30', dot: '#22c55e' },
   erledigt: { label: 'erledigt', color: 'text-sky-200 bg-sky-500/15 ring-sky-400/30', dot: '#38bdf8' },
 };
+
+/** Ticket-Frage pro Ort – ein Klick auf den Chip schaltet weiter */
+export const TICKET_META: Record<TicketStatus, { label: string; short: string; icon: string; chip: string; dot: string }> = {
+  unklar: { label: 'Ticket noch ungeklärt', short: 'Ticket?', icon: '🎟️', chip: 'bg-white/[0.05] text-slate-400 ring-white/10', dot: '#94a3b8' },
+  noetig: { label: 'Ticket nötig – noch nicht gekauft', short: 'Ticket offen', icon: '🎟️', chip: 'bg-shu-500/15 text-shu-100 ring-shu-400/40', dot: '#f04e23' },
+  gekauft: { label: 'Ticket gekauft', short: 'Ticket ✓', icon: '✅', chip: 'bg-emerald-500/15 text-emerald-100 ring-emerald-400/40', dot: '#22c55e' },
+  keins: { label: 'Hier braucht man kein Ticket', short: 'kein Ticket', icon: '🚪', chip: 'bg-white/[0.05] text-slate-300 ring-white/10', dot: '#64748b' },
+};
+
+export const TICKET_ORDER: TicketStatus[] = ['unklar', 'noetig', 'gekauft', 'keins'];
+
+export function nextTicket(current?: TicketStatus | null): TicketStatus {
+  const i = TICKET_ORDER.indexOf((current ?? 'unklar') as TicketStatus);
+  return TICKET_ORDER[(i + 1) % TICKET_ORDER.length];
+}
 
 export const PRIORITY_META: Record<Priority, { label: string; icon: string }> = {
   muss: { label: 'Muss', icon: '★' },

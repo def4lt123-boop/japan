@@ -56,7 +56,7 @@ export default function WishlistPage() {
       <SectionTitle
         title="Wünscheliste & Pool"
         icon="✨"
-        hint="Alle Orte ohne Tag warten hier. Per Dropdown einem Tag zuweisen, insel-weise ziehen oder automatisch verteilen lassen."
+        hint="Neuer Eintrag → erst Name, Stadt, Preis, Ticket und Maps-Punkt. Den Tag setzt du später: per Dropdown hier, auf der Tages-Seite per Drag & Drop oder mit ⚡ automatisch verteilen."
         right={
           <>
             <Button size="sm" variant="ghost" onClick={() => setGrouped((g) => !g)}>

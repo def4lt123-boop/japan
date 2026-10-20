@@ -48,6 +48,7 @@ const PLACE_COLS = [
   'district',
   'category',
   'date',
+  'end_date',
   'time_slot',
   'start_time',
   'duration_min',
@@ -58,6 +59,7 @@ const PLACE_COLS = [
   'booking_status',
   'booking_url',
   'priority',
+  'ticket_status',
   'maps_query',
   'lat',
   'lng',
@@ -85,6 +87,7 @@ const JOURNEY_COLS = [
   'id',
   'trip_id',
   'date',
+  'end_date',
   'title',
   'from_city',
   'to_city',
@@ -104,8 +107,8 @@ const HOTEL_BODY = HOTEL_COLS.filter((c) => c !== 'id' && c !== 'trip_id');
 const JOURNEY_BODY = JOURNEY_COLS.filter((c) => c !== 'id' && c !== 'trip_id');
 
 /** Zeiten für die `time`-Spalten in Postgres-Form bringen */
-const places = seed.places.map((p) => ({ ...p, start_time: p.start_time ? `${p.start_time}:00` : null }));
-const journeys = seed.journeys.map((j) => ({ ...j, departure_time: j.departure_time ? `${j.departure_time}:00` : null }));
+const places = seed.places.map((p) => ({ ticket_status: 'unklar', ticket_note: null, end_date: null, ...p, start_time: p.start_time ? `${p.start_time}:00` : null }));
+const journeys = seed.journeys.map((j) => ({ end_date: null, ...j, departure_time: j.departure_time ? `${j.departure_time}:00` : null }));
 
 const shiftExpr = '(neu.start_date - alt.start_date)';
 
@@ -127,9 +130,11 @@ select 'pl27-' || gen_random_uuid()::text,
        p.name, p.city, p.district, p.category,
        case when p.date is null then null
             else (p.date + ${shiftExpr})::date end,
+       case when p.end_date is null then null
+            else (p.end_date + ${shiftExpr})::date end,
        p.time_slot, p.start_time, p.duration_min, p.travel_time,
        p.notes, p.price_eur, p.price_note,
-       'offen', p.booking_url, p.priority, p.maps_query, p.lat, p.lng, p.image_url, p.sort_order
+       'offen', p.booking_url, p.priority, 'unklar', p.maps_query, p.lat, p.lng, p.image_url, p.sort_order
 from public.places p
 join public.trips alt on alt.id = p.trip_id
 join public.trips neu on neu.id = '${NEW_TRIP}'
@@ -155,6 +160,7 @@ insert into public.journeys (id, trip_id, ${JOURNEY_BODY.join(', ')})
 select 'jn27-' || gen_random_uuid()::text,
        '${NEW_TRIP}',
        (j.date + ${shiftExpr})::date,
+       case when j.end_date is null then null else (j.end_date + ${shiftExpr})::date end,
        j.title, j.from_city, j.to_city, j.mode, j.departure_time, j.duration_min, j.price_eur, j.hotel_name, j.nights,
        'offen',
        'Verschobener Reiseverlauf aus der Vorlage – Uhrzeiten und Preise aktualisieren.'

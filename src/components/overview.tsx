@@ -11,8 +11,8 @@ import React, { useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { useEditor } from './EditorProvider';
 import { Button, Card, Empty, LinkTag, Money, ProgressBar, SectionTitle, cx } from './ui';
-import { AXIS_SPAN, AXIS_START, type CityLoad, type DayCell, type GapItem, type Sample, type Stay, cityLoad, loadTone, minToTime } from '../lib/overview';
-import { STATUS_META, categoryMeta } from '../lib/categories';
+import { AXIS_SPAN, AXIS_START, type CityLoad, type DayCell, type GapItem, type Sample, type Stay, bestDaysFor, cityLoad, loadTone, minToTime } from '../lib/overview';
+import { STATUS_META, TICKET_META, categoryMeta } from '../lib/categories';
 import { fmtDate, fmtDuration, fmtMoney, plural } from '../lib/format';
 import type { Place } from '../lib/types';
 
@@ -191,6 +191,18 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
   const store = useStore();
   const { open } = useEditor();
   const [onlyGaps, setOnlyGaps] = useState(false);
+  const [dragOver, setDragOver] = useState<string | null>(null);
+
+  const drop = (date: string) => (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(null);
+    const id = e.dataTransfer.getData('text/plain');
+    if (!id) return;
+    const moved = store.places.find((x) => x.id === id);
+    if (!moved || moved.date === date) return;
+    store.patch('places', id, { date });
+    store.say(`„${moved.name}“ → ${fmtDate(date, { weekday: 'short', day: '2-digit', month: '2-digit' })}`);
+  };
 
   const shown = useMemo(() => (onlyGaps ? cells.filter((c) => c.empty || c.nightGap || c.issues.length) : cells), [cells, onlyGaps]);
   const noDates = !cells.length;
@@ -205,7 +217,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
       <SectionTitle
         title="Jeder Tag im Bild"
         icon="🗓️"
-        hint={`Zeitachse 07–23 Uhr · gestrichelt = ohne feste Uhrzeit · grau = noch Luft`}
+        hint="Zeitachse 07–23 Uhr · gestrichelt = ohne feste Uhrzeit · rot umrandet = Muss noch offen · Karten sind Ablage-Ziele"
         right={
           <>
             <Button size="sm" variant={onlyGaps ? 'primary' : 'ghost'} onClick={() => setOnlyGaps((v) => !v)} title="Nur Tage zeigen, die leer oder voll sind">
@@ -217,6 +229,40 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
           </>
         }
       />
+      {pool.length && !noDates ? (
+        <div className="no-print mb-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.05] p-2">
+          <p className="mb-1.5 px-1 text-[11.5px] text-amber-100/90">
+            <b>Ziehen &amp; fallen lassen:</b> {plural(pool.length, 'Wunsch', 'Wünsche')} noch ohne Tag – auf eine Tageskarte ablegen. Ein Klick legt ihn auf den Tag mit der meisten Luft.
+          </p>
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            {pool.map((item) => {
+              const meta = categoryMeta(item.category);
+              return (
+                <button
+                  key={item.id}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('text/plain', item.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
+                  onClick={() => {
+                    const best = bestDaysFor(item, cells)[0];
+                    if (!best) return;
+                    store.patch('places', item.id, { date: best.date });
+                    store.say(`„${item.name}“ → ${fmtDate(best.date, { weekday: 'short', day: '2-digit', month: '2-digit' })} · ${fmtDuration(best.freeMin)} frei`);
+                  }}
+                  title={`${meta.label}${item.city ? ` · ${item.city}` : ''} – hierher ziehen oder klicken`}
+                  className="flex shrink-0 cursor-grab items-center gap-1.5 rounded-lg border border-white/10 bg-ink-800/80 px-2 py-1 text-[12px] text-slate-200 transition hover:border-amber-400/40 hover:bg-ink-700 active:cursor-grabbing"
+                >
+                  <span aria-hidden>{meta.icon}</span>
+                  <span className="max-w-[190px] truncate">{item.name}</span>
+                  {item.priority === 'muss' ? <span className="text-[10px] text-shu-300">★</span> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
       {noDates ? (
         <Empty
           title="Noch kein Reise-Zeitraum"
@@ -236,7 +282,21 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
             const matching = pool.filter((p) => c.city && norm(p.city) === norm(c.city));
             const tips = hasRoom ? (matching.length ? matching.slice(0, 2) : pool.slice(0, 2)) : [];
             return (
-              <div key={c.date} id={`day-${c.date}`} className={cx('print-block scroll-mt-24 rounded-xl border bg-black/[0.18] p-2.5', c.nightGap ? 'border-shu-400/40' : c.empty ? 'border-dashed border-white/[0.14]' : 'border-white/[0.08]')}>
+              <div
+                key={c.date}
+                id={`day-${c.date}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(c.date);
+                }}
+                onDragLeave={() => setDragOver((cur) => (cur === c.date ? null : cur))}
+                onDrop={drop(c.date)}
+                className={cx(
+                  'print-block scroll-mt-24 rounded-xl border bg-black/[0.18] p-2.5 transition',
+                  c.nightGap ? 'border-shu-400/40' : c.empty ? 'border-dashed border-white/[0.14]' : 'border-white/[0.08]',
+                  dragOver === c.date && 'drop-live',
+                )}
+              >
                 <div className="flex items-start gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="text-[12.5px] font-semibold text-white">
@@ -262,7 +322,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
                       <button
                         key={b.id}
                         onClick={() => open({ kind: 'place', id: b.id })}
-                        title={`${b.name} · ${minToTime(b.start)}–${minToTime(b.end)}${b.timed ? '' : ' (geschätzt)'}${b.price_eur ? ` · ${fmtMoney(b.price_eur)}` : ''}`}
+                        title={`${b.name} · ${minToTime(b.start)}–${minToTime(b.end)}${b.timed ? '' : ' (geschätzt)'}${b.span > 1 ? ` · ${b.span} Tage` : ''}${b.price_eur ? ` · ${fmtMoney(b.price_eur)}` : ''} · ${(TICKET_META[(b.place.ticket_status ?? 'unklar') as keyof typeof TICKET_META] ?? TICKET_META.unklar).label}`}
                         className={cx('absolute top-1 flex h-[26px] items-center overflow-hidden rounded px-1 text-[10px] font-medium text-white/95 transition hover:z-10 hover:brightness-125', !b.timed && 'border border-dashed border-white/40', b.priority === 'muss' && b.booking_status === 'offen' && 'ring-1 ring-inset ring-shu-300/80')}
                         style={{ left: `${left}%`, width: `${width}%`, background: `${b.color}${b.timed ? 'd9' : '66'}` }}
                       >
@@ -270,6 +330,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
                           {b.icon}
                         </span>
                         <span className="truncate">{b.name}</span>
+                        {b.span > 1 ? <span className="ml-1 shrink-0 rounded bg-black/30 px-1 text-[9px] tabular-nums">{b.span}T</span> : null}
                       </button>
                     );
                   })}

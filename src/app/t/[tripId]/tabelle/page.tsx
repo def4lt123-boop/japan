@@ -6,12 +6,12 @@ import { useStore, useTrip } from '../../../../lib/store';
 import { useEditor } from '../../../../components/EditorProvider';
 import { FilterBar, EMPTY_FILTER, applyFilter, type PlaceFilter } from '../../../../components/filters';
 import { Button, Card, Empty, Pill, Select, SectionTitle, TextInput, cx } from '../../../../components/ui';
-import { STATUS_META, categoryMeta, mapsUrl } from '../../../../lib/categories';
-import { BOOKING_STATUSES, PRIORITIES, type Place } from '../../../../lib/types';
+import { STATUS_META, TICKET_META, TICKET_ORDER, categoryMeta, mapsUrl } from '../../../../lib/categories';
+import { BOOKING_STATUSES, PRIORITIES, TICKET_STATUSES, type Place } from '../../../../lib/types';
 import { fmtDate, fmtMoney } from '../../../../lib/format';
 import { download, placeCsv } from '../../../../lib/export';
 
-type SortKey = 'date' | 'city' | 'name' | 'category' | 'duration' | 'travel' | 'price' | 'status' | 'prio';
+type SortKey = 'date' | 'city' | 'name' | 'category' | 'duration' | 'travel' | 'price' | 'status' | 'prio' | 'ticket';
 
 const COLS: { key: SortKey | null; label: string; hint?: string; className?: string }[] = [
   { key: 'date', label: 'Tag', hint: 'Datum des Eintrags – leer = Wünscheliste' },
@@ -24,6 +24,7 @@ const COLS: { key: SortKey | null; label: string; hint?: string; className?: str
   { key: null, label: 'Hinweise' },
   { key: 'price', label: 'Preis' },
   { key: 'status', label: 'Status' },
+  { key: 'ticket', label: 'Ticket', hint: 'brauche ich dort ein Ticket – und ist es schon gekauft?' },
   { key: 'prio', label: 'Prio' },
   { key: null, label: 'Karte' },
   { key: null, label: '' },
@@ -59,6 +60,8 @@ export default function TablePage() {
           return p.price_eur ?? 0;
         case 'status':
           return p.booking_status;
+        case 'ticket':
+          return p.ticket_status ?? 'unklar';
         case 'prio':
           return 3 - PRIORITIES.indexOf(p.priority);
       }
@@ -115,7 +118,7 @@ export default function TablePage() {
         <Empty title="Keine Zeilen" hint="Filter anpassen oder neuen Eintrag anlegen." action={<Button variant="primary" onClick={() => open({ kind: 'place' })}>＋ Eintrag</Button>} />
       ) : (
         <Card className="overflow-x-auto p-0">
-          <table className="w-full min-w-[1180px] border-collapse text-left">
+          <table className="w-full min-w-[1320px] border-collapse text-left">
             <thead className="sticky top-0 z-10 bg-ink-800/95 backdrop-blur">
               <tr>
                 {COLS.map((c) => (
@@ -187,6 +190,15 @@ export default function TablePage() {
                     <td className="cell whitespace-nowrap">
                       <Select
                         className="!w-auto !border-transparent !bg-transparent !px-1 !py-0.5 !text-[12px]"
+                        options={TICKET_STATUSES.map((v) => ({ value: v, label: TICKET_META[v].short }))}
+                        value={p.ticket_status ?? 'unklar'}
+                        onChange={(e) => store.patch('places', p.id, { ticket_status: e.target.value as Place['ticket_status'] })}
+                        title={TICKET_META[(p.ticket_status ?? 'unklar') as keyof typeof TICKET_META]?.label}
+                      />
+                    </td>
+                    <td className="cell whitespace-nowrap">
+                      <Select
+                        className="!w-auto !border-transparent !bg-transparent !px-1 !py-0.5 !text-[12px]"
                         options={PRIORITIES.map((v) => ({ value: v, label: v }))}
                         value={p.priority}
                         onChange={(e) => store.patch('places', p.id, { priority: e.target.value as Place['priority'] })}
@@ -220,7 +232,7 @@ export default function TablePage() {
             </tbody>
             <tfoot>
               <tr className="border-t border-white/10 bg-white/[0.03] text-[12px] text-slate-300">
-                <td className="px-2 py-1.5" colSpan={8}>
+                <td className="px-2 py-1.5" colSpan={9}>
                   {rows.length} Zeilen · {rows.filter((p) => p.date).length} mit Tag · Ø {rows.length ? Math.round(totalMin / rows.length) : 0} Min pro Eintrag
                 </td>
                 <td className="px-2 py-1.5 tabular-nums font-semibold">{fmtMoney(totalCost)}</td>

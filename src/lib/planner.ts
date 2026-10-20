@@ -115,6 +115,8 @@ export function clonePlaces(places: Place[], opts: CloneOptions): Place[] {
       trip_id: targetTripId,
       date,
       booking_status: resetForNewTrip ? 'offen' : p.booking_status,
+      // ein Ticket vom Vorjahr gilt nicht für die neue Reise
+      ticket_status: resetForNewTrip ? 'unklar' : (p.ticket_status ?? 'unklar'),
       created_at: undefined,
     };
     if (resetForNewTrip && !clone.notes) clone.notes = null;

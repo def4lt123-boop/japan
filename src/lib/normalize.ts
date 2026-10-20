@@ -44,12 +44,15 @@ export const normalizeExpense = (r: Expense) => normalizeRow<Expense>('expenses'
 /** Spalten, die in der DB NOT NULL sind – leere Texte hier behalten */
 const KEEP_EMPTY = new Set(['id', 'trip_id', 'name', 'city', 'category', 'booking_status', 'priority', 'date']);
 
+/** Spalten mit NOT NULL + CHECK – leere Eingabe fällt auf den Anfangswert zurück */
+const ENUM_DEFAULT: Record<string, string> = { booking_status: 'offen', priority: 'soll', ticket_status: 'unklar' };
+
 /** Für den Insert/Update-Pfad: leere Texte → null, Zahlen sauber */
 export function cleanForSave<T extends Record<string, any>>(table: keyof typeof NUMERIC_FIELDS, row: T): T {
   const out: Record<string, unknown> = { ...row };
   for (const key of Object.keys(out)) {
     const v = out[key];
-    if (typeof v === 'string' && v.trim() === '') out[key] = KEEP_EMPTY.has(key) ? '' : null;
+    if (typeof v === 'string' && v.trim() === '') out[key] = ENUM_DEFAULT[key] ?? (KEEP_EMPTY.has(key) ? '' : null);
     else if (NUMERIC_FIELDS[table].includes(key)) out[key] = toNumber(v);
   }
   return out as T;
