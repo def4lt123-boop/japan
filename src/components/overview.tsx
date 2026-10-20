@@ -71,8 +71,10 @@ export function TripRibbon({ tripId, cells, stays }: { tripId: string; cells: Da
       <div className="overflow-x-auto px-2 pb-2 pt-1">
         <div className="grid gap-[3px]" style={{ gridTemplateColumns: `148px repeat(${n}, minmax(27px, 1fr))`, minWidth: 148 + n * 27 }}>
           {/* Kopf: Tage */}
-          <div className="flex items-end pb-1 pl-1 text-[10.5px] font-semibold uppercase tracking-wider text-slate-500" style={{ gridRow: 1, gridColumn: 1 }}>
-            {fmtDate(cells[0].date, { month: 'long', year: 'numeric' })}
+          <div className="flex items-end gap-1 pb-1 pl-1 text-[10.5px] font-semibold uppercase tracking-wider text-slate-500" style={{ gridRow: 1, gridColumn: 1 }}>
+            <span className="truncate normal-case tracking-normal text-slate-400">
+              {fmtDate(cells[0].date, { day: '2-digit', month: '2-digit' })} – {fmtDate(cells[n - 1].date, { day: '2-digit', month: '2-digit', year: 'numeric' })}
+            </span>
           </div>
           {cells.map((c, i) => (
             <a
@@ -191,6 +193,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
   const [onlyGaps, setOnlyGaps] = useState(false);
 
   const shown = useMemo(() => (onlyGaps ? cells.filter((c) => c.empty || c.nightGap || c.issues.length) : cells), [cells, onlyGaps]);
+  const noDates = !cells.length;
 
   const placeFromPool = (p: Place, date: string) => {
     store.patch('places', p.id, { date });
@@ -214,7 +217,17 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
           </>
         }
       />
-      {!shown.length ? (
+      {noDates ? (
+        <Empty
+          title="Noch kein Reise-Zeitraum"
+          hint="Start- und Enddatum oben rechts in den Reise-Einstellungen eintragen – dann erscheinen Band und Tageskarten automatisch."
+          action={
+            <Button size="sm" variant="primary" onClick={() => open({ kind: 'trip', id: tripId })}>
+              Zeitraum setzen
+            </Button>
+          }
+        />
+      ) : !shown.length ? (
         <Empty title="Kein Tag mit Lücken 🎉" hint="Jeder Tag hat ein Bett und Programm. Nimm die Ansicht raus, um alles zu sehen." action={<Button size="sm" onClick={() => setOnlyGaps(false)}>alle Tage zeigen</Button>} />
       ) : (
         <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
