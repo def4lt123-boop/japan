@@ -112,7 +112,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           supaSelect<Expense>('expenses'),
         ]);
         if (!trips.length) {
-          // Leere Datenbank → Vorlage aus der Tabelle laden
+          // Leere Datenbank → Vorlage (Referenz- und Planungsreise) übernehmen
           const snapshot = seedSnapshot();
           await Promise.all([
             ...snapshot.trips.map((t) => supaUpsert('trips', t)),
@@ -122,7 +122,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             ...snapshot.expenses.map((e) => supaUpsert('expenses', e)),
           ]);
           setData(snapshot);
-          say('Leere Datenbank erkannt – Vorlage „Japan 2025/2026“ wurde geladen.');
+          say('Leere Datenbank erkannt – die Vorlage-Reisen wurden übernommen.');
           return;
         }
         setData({
@@ -314,7 +314,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     window.localStorage.removeItem(LS_KEY);
     const snapshot = seedSnapshot();
     persist(snapshot);
-    say('Demo-Daten auf den Stand der Tabelle zurückgesetzt.');
+    say('Vorlage wiederhergestellt – alle Einträge entsprechen wieder dem Auslieferungszustand.');
   }, [persist, say]);
 
   const value = useMemo<StoreValue>(

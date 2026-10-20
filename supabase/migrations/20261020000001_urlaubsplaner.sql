@@ -4,7 +4,7 @@
 -- ============================================================================
 -- Urlaubsplaner – Schema für Supabase (Postgres)
 -- Ausführen im Supabase Dashboard → SQL Editor (oder: supabase db reset)
--- afterwards optional: supabase/seed.sql einspielen (Daten aus der Vorjahres-Tabelle)
+-- afterwards optional: supabase/seed.sql einspielen (Beispieldaten des Vorjahres)
 -- ============================================================================
 
 create extension if not exists pgcrypto;
@@ -28,7 +28,7 @@ create table if not exists public.trips (
 );
 
 -- ---------------------------------------------------------------------------
--- Orte / Programmpunkte – eine Zeile = eine Zeile in der alten Tabelle
+-- Orte / Programmpunkte – eine Zeile = ein Punkt an einem Tag (date null = Wünscheliste)
 -- ---------------------------------------------------------------------------
 create table if not exists public.places (
   id            text primary key,

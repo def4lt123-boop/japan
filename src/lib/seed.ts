@@ -3,8 +3,8 @@ import { cityDates, cloneHotels, cloneJourneys, clonePlaces, dayDiff } from './p
 import type { Snapshot, Trip } from './types';
 
 /**
- * Startdaten: die alte Urlaubstabelle (data/seed.json) + eine neue Reise,
- * deren Inhalte aus der Vorlage abgeleitet werden.
+ * Startdaten: die Referenz-Reise (data/seed.json) + eine neue Reise,
+ * deren Inhalte aus dieser Vorlage abgeleitet werden.
  */
 export function seedSnapshot(): Snapshot {
   const raw = (seedJson as { default?: unknown })?.default ?? seedJson;

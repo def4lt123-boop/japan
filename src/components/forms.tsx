@@ -657,7 +657,7 @@ export function TripForm({ value, onSubmit, onCancel, onDelete }: { value?: Part
       <div className="space-y-3">
         <div className="grid gap-2 sm:grid-cols-[2fr_1fr]">
           <Field label="Name *">
-            <TextInput value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="Japan 2026" autoFocus />
+            <TextInput value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="Fernreise 2028" autoFocus />
           </Field>
           <Field label="Land / Ziel">
             <TextInput value={draft.destination} onChange={(e) => set({ destination: e.target.value })} placeholder="Japan" />

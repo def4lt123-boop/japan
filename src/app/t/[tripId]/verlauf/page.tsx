@@ -50,7 +50,7 @@ export default function JourneyPage() {
       <SectionTitle
         title="Reiseverlauf"
         icon="🚄"
-        hint="Ankunft, Weiterzüge, Rückflug – die Kette aus der alten Tabelle, jetzt mit Etappenpreis und Hotelwechsel."
+        hint="Ankunft, Weiterzüge, Rückflug – die Kette mit Etappenpreis und Hotelwechsel."
         right={
           <>
             {modes.length ? (

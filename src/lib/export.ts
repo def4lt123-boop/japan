@@ -1,7 +1,7 @@
 import type { Hotel, Journey, Place } from './types';
 import { categoryMeta } from './categories';
 
-/** CSV-Export – so kann man den Plan wieder in eine Tabelle (Google Sheets) laden */
+/** CSV-Export – Semikolon + de-DE, damit sich die Pläne überall sauber importieren lassen */
 export function toCsv(headers: string[], rows: (string | number | null | undefined)[][]): string {
   const esc = (v: string | number | null | undefined) => {
     const s = v === null || v === undefined ? '' : String(v);

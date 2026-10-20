@@ -1,6 +1,6 @@
 import type { BookingStatus, Place, Priority } from './types';
 
-/** Kategorien (aus der alten Tabelle übernommen) → Icon + Farbe für Liste & Karte */
+/** Kategorie-Bezeichnungen → Icon + Farbe für Liste, Karte und Übersicht */
 const RULES: { test: RegExp; label: string; icon: string; color: string }[] = [
   { test: /freizeitpark|park.*disney|disney|universal|nintendo|nijigen|theme/i, label: 'Freizeitpark', icon: '🎢', color: '#f04e23' },
   { test: /tempel|schrein|shrine|jinja|torii| buddhist|kannon|dojo/i, label: 'Tempel & Schrein', icon: '⛩️', color: '#e0483d' },

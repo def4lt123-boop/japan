@@ -135,7 +135,7 @@ async function render(name, Page, tripId) {
       console.log(`✅ ${page.name}  (${text.length} Zeichen Text)`);
     }
     errors.filter((e) => /Each child in a list|unique "key"/.test(e)).forEach((e) => warnings.push(`${page.name}: ${e.slice(0, 160)}`));
-    const tech = /NEXT_PUBLIC[A-Z_]*|https?:\/\/[a-z0-9]+\.supabase\.co|schema\.sql|seed\.sql|anon[- ]?key/i.exec(text);
+    const tech = /NEXT_PUBLIC[A-Z_]*|https?:\/\/[a-z0-9]+\.supabase\.co|schema\.sql|seed\.sql|anon[- ]?key|google[- ]tabelle|google sheets|excel|spreadsheet|reiseplan/i.exec(text);
     if (tech) techLeaks.push(`${page.name}: „${tech[0]}“`);
 
   }
@@ -270,11 +270,11 @@ async function render(name, Page, tripId) {
     [...new Set(warnings)].slice(0, 8).forEach((w) => console.log('   ' + w));
   }
   if (techLeaks.length) {
-    failures.push('Technik-Hinweise im UI');
-    console.log('❌ Seite zeigt technische Hinweise:');
+    failures.push('Technik-/Herkunfts-Hinweise im UI');
+    console.log('❌ Seite zeigt technische oder Herkunfts-Hinweise:');
     techLeaks.forEach((l) => console.log('   ' + l));
   } else {
-    console.log('✅ Kein Hinweis auf Datenbank-Zugangsdaten, .env-Dateien oder SQL-Dateien im UI');
+    console.log('✅ UI frei von Setup-Details (Keys/.env/SQL) und Herkunfts-Vermerken');
   }
   console.log(failures.length ? `\n❌ ${failures.length} Seiten mit Problem: ${failures.join(', ')}` : '\n🎉 Alle Seiten gerendert (inkl. datenabhängiger Zweige)');
   process.exit(failures.length ? 1 : 0);

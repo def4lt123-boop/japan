@@ -81,7 +81,7 @@ export default function TablePage() {
       <SectionTitle
         title="Tabelle"
         icon="📊"
-        hint="Wie in der Google-Tabelle – Spalten sind sortierbar, Tag/Status/Prio lassen sich direkt ändern."
+        hint="Alle Felder in einer Zeile – Spalten sortierbar, Tag/Status/Prio direkt änderbar."
         right={
           <>
             <Button size="sm" variant="ghost" onClick={() => setWideNotes((v) => !v)}>
@@ -232,7 +232,7 @@ export default function TablePage() {
       )}
 
       <p className="no-print text-[11.5px] text-slate-500">
-        Tipp: Mit „⇩ CSV“ bekommst du alles wieder in eine Tabelle (Semikolon-getrennt, de-DE) – zurück nach Google Sheets oder Excel inklusive.
+        Tipp: Mit „⇩ CSV“ bekommst du den ganzen Plan als Datei (Semikolon-getrennt, de-DE) – fürs Backup, die Weitergabe oder den Import in jedes Tabellenprogramm.
       </p>
     </div>
   );

@@ -5,7 +5,7 @@ import { AppShell } from '../components/AppShell';
 
 export const metadata: Metadata = {
   title: 'Urlaubsplaner – Japan',
-  description: 'Reiseplanung wie eine Tabelle, aber im Web: Tage, Orte, Google-Maps-Koordinaten, Hotels, Preise und Budget.',
+  description: 'Urlaubsplanung pro Tag: Orte mit Uhrzeit, Dauer und Fahrzeit, Google-Maps-Koordinaten, Hotels, Preise und Budget.',
   applicationName: 'Urlaubsplaner',
 };
 

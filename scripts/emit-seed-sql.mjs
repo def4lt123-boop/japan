@@ -110,7 +110,7 @@ const journeys = seed.journeys.map((j) => ({ ...j, departure_time: j.departure_t
 const shiftExpr = '(neu.start_date - alt.start_date)';
 
 const seedBody = `-- ---------------------------------------------------------------------------
--- Beispieldaten aus der Google-Tabelle (Reise ${OLD_YEAR}) + Übernahme in die
+-- Beispieldaten (Reise ${OLD_YEAR}) + Übernahme in die
 -- neue Reise '${NEW_TRIP}'. Tage: Orte mit Datum werden um den Abstand der
 -- Reisestarts verschoben, Orte ohne Datum starten in der Wünscheliste
 -- (im UI: "Wünscheliste → ⚡ Automatisch verteilen").
