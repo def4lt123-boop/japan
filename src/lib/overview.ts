@@ -5,6 +5,7 @@
  */
 import { categoryMeta } from './categories';
 import { addDays, eachDate, weekdayShort } from './format';
+import { SLOT_START } from './dayplan';
 import { type BundleLike, emptyDays, nightCoverage } from './stats';
 import type { Hotel, Journey, Place } from './types';
 
@@ -14,15 +15,6 @@ export const AXIS_END = 23 * 60;
 export const AXIS_SPAN = AXIS_END - AXIS_START;
 /** ab so vielen Programm-Minuten gilt ein Tag als voll */
 export const FULL_DAY_MIN = 8 * 60;
-
-const SLOT_START: Record<string, number> = {
-  Vormittag: 9 * 60,
-  Mittag: 12 * 60,
-  Nachmittag: 15 * 60,
-  Abend: 18 * 60 + 30,
-  Nachts: 21 * 60 + 30,
-  'Ganzer Tag': AXIS_START,
-};
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
@@ -317,8 +309,8 @@ export function gapList(bundle: BundleLike): GapItem[] {
       done: dated.length,
       total: bundle.places.length,
       severity: ratio(dated.length, bundle.places.length),
-      href: '/wuenscheliste',
-      hint: pool.length ? `${pool.length} liegen noch in der Wünscheliste` : 'Alles verplant',
+      href: '/aktivitaeten',
+      hint: pool.length ? `${pool.length} stehen noch ohne Tag da` : 'Alles verplant',
       samples: pool.filter((p) => p.priority !== 'kann').slice(0, 4).map((p) => ({ kind: 'place' as const, id: p.id, label: p.name })),
     },
     {
@@ -328,7 +320,7 @@ export function gapList(bundle: BundleLike): GapItem[] {
       done: musts.filter((p) => p.date).length,
       total: musts.length,
       severity: ratio(musts.filter((p) => p.date).length, musts.length),
-      href: '/wuenscheliste',
+      href: '/aktivitaeten',
       hint: musts.length ? `${musts.filter((p) => !p.date).length} Muss-Punkte ohne Tag` : 'Keine Muss-Punkte markiert',
       samples: musts.filter((p) => !p.date).slice(0, 4).map((p) => ({ kind: 'place' as const, id: p.id, label: p.name })),
     },

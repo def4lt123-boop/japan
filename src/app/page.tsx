@@ -184,7 +184,7 @@ export default function HomePage() {
             </div>
           </div>
           <p className="mt-2 text-[12px] leading-relaxed text-slate-400">
-            Die Quelle ist „{store.trips.find((t) => t.id === duplicateSource)?.name}“. Neu angelegte Einträge starten in der <b>Wünscheliste</b> (ohne Tag), damit du selbst planen kannst – oder du lässt sie
+            Die Quelle ist „{store.trips.find((t) => t.id === duplicateSource)?.name}“. Neu angelegte Aktivitäten starten in der <b>Liste</b> (ohne Tag), damit du selbst planen kannst – oder du lässt sie
             automatisch auf die Stadttage verteilen.
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -233,7 +233,7 @@ function TripCard({ bundle, onEdit, onDuplicate, onDelete }: { bundle: TripBundl
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Stat label="Aktivitäten geplant" value={planned} hint={pool ? `${pool} in der Wünscheliste` : 'alles verplant'} tone={pool ? 'warn' : 'good'} />
+        <Stat label="Aktivitäten geplant" value={planned} hint={pool ? `${pool} noch ohne Tag` : 'alles verplant'} tone={pool ? 'warn' : 'good'} />
         <Stat label="Unterkünfte" value={bundle.hotels.length} hint={`${bundle.hotels.reduce((a, h) => a + (h.nights ?? 0), 0)} Nächte`} />
         <Stat label="Kosten" value={fmtMoney(costs.total)} hint={bundle.trip.budget_eur ? `Budget ${fmtMoney(bundle.trip.budget_eur)}` : 'kein Budget hinterlegt'} tone={bundle.trip.budget_eur && costs.total > bundle.trip.budget_eur ? 'bad' : undefined} />
         <Stat label="Offene Punkte" value={openBookings} hint={gaps.length ? `${gaps.length} Nächte ohne Hotel` : 'Nächte abgedeckt'} tone={openBookings ? 'warn' : 'good'} />
@@ -290,7 +290,7 @@ function TipsCard() {
             <b>Kosten</b>: Unterkünfte + Fahrten + Aktivitäten + Ausgaben, pro Person und in ¥.
           </li>
           <li>
-            <b>Wünscheliste</b>: was noch keinen Tag hat – mit ⚡ automatisch verteilen.
+            <b>Aktivitäten</b>: alles als Liste – was noch keinen Tag hat, oben separiert, mit ⚡ automatisch verteilen.
           </li>
         </ul>
       </Card>

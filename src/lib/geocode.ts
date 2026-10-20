@@ -36,46 +36,71 @@ export function queryFor(place: Pick<Place, 'name' | 'city' | 'district' | 'maps
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Kurzer Google-Maps-Link (maps.app.goo.gl/…) – sein Ziel kennt nur der Server */
+export const isShortMapsLink = (input: string) => /(maps\.app\.goo\.gl|goo\.gl|g\.co\/)\S*/i.test(input.trim());
+
+/** Name aus dem Pfad eines Maps-Links: /place/Nara+Park/… · /search/nara+park · ?q=… */
+export const mapsUrlName = (input: string): string | null => extractPlaceName(input.trim());
+
+/** Holt die echte Ziel-URL eines Kurzlinks (über /api/maps-resolve, sonst der Text selbst). */
+export async function resolveMapsLink(input: string): Promise<string> {
+  const text = input.trim();
+  if (!isShortMapsLink(text)) return text;
+  try {
+    const res = await fetch(`/api/maps-resolve?url=${encodeURIComponent(text)}`);
+    if (!res.ok) return text;
+    const data = (await res.json()) as { url?: string };
+    return data.url && /google\.[a-z.]+\/maps/i.test(data.url) ? data.url : text;
+  } catch {
+    return text;
+  }
+}
+
 /**
- * Google-Maps-URL → Koordinaten. Unterstützt u. a.:
- *  /maps/place/Ramen/@35.6597,139.7007,17z
- *  /maps/place/.../@35.65,139.70,17z/data=!3m1!4b1
- *  /maps?api=1&query=35.6597,139.7007
- *  /maps/dir/.../35.6597,139.7007
- *  /maps/search/Name+Name
- *  "35.6597, 139.7007" (rohe Koordinaten)
+ * Google-Maps-URL → Kartenpunkt (+ Name, falls der Link einen mitbringt). Unterstützt u. a.:
+ *  /maps/place/Ramen/@35.6597,139.7007,17z     (auch mit /data=!3m1!4b1)
+ *  /maps?api=1&query=35.6597,139.7007          /maps/dir/…/35.6597,139.7007
+ *  /maps/search/Nara+Park                      "34.6851, 135.8434" (rohe Koordinaten)
  */
-export function parseMapsUrl(input: string): { lat: number; lng: number; query: string | null } | null {
+export function parseMapsUrl(input: string): { lat: number; lng: number; query: string | null; zoom: number | null } | null {
   const text = input.trim();
   if (!text) return null;
 
+  const zoom = /@-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?,(\d{1,3})z/.exec(text);
+  const z = zoom ? Math.max(3, Math.min(20, Number(zoom[1]))) : null;
+
   const at = text.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
-  if (at) return { lat: Number(at[1]), lng: Number(at[2]), query: extractPlaceName(text) };
+  if (at) return { lat: Number(at[1]), lng: Number(at[2]), query: extractPlaceName(text), zoom: z };
 
   const q = text.match(/[?&]query=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/i);
-  if (q) return { lat: Number(q[1]), lng: Number(q[2]), query: extractPlaceName(text) };
+  if (q) return { lat: Number(q[1]), lng: Number(q[2]), query: extractPlaceName(text), zoom: z };
 
   const dest = text.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
-  if (dest) return { lat: Number(dest[1]), lng: Number(dest[2]), query: extractPlaceName(text) };
+  if (dest) return { lat: Number(dest[1]), lng: Number(dest[2]), query: extractPlaceName(text), zoom: z };
 
   const ll = text.match(/!2m1!1e3?[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
-  if (ll) return { lat: Number(ll[1]), lng: Number(ll[2]), query: null };
+  if (ll) return { lat: Number(ll[1]), lng: Number(ll[2]), query: null, zoom: z };
 
   const bare = text.match(/^(-?\d{1,3}(?:[.,]\d{2,})?)\s*[,;/]\s*(-?\d{1,3}(?:[.,]\d{2,})?)$/);
   if (bare) {
     const lat = Number(bare[1].replace(',', '.'));
     const lng = Number(bare[2].replace(',', '.'));
-    if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng, query: null };
+    if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng, query: null, zoom: null };
   }
   return null;
 }
 
 function extractPlaceName(text: string): string | null {
-  const m = text.match(/\/maps\/(?:place|search)\/([^/?]+)/);
+  const m =
+    text.match(/\/maps\/(?:place|search)\/([^/?]+)/) ??
+    text.match(/[?&](?:q|query)=([^&]+)/i) ??
+    text.match(/\/maps\/@[^/]*\/(?:place|data)?\/?([^/?#]+)\//);
   if (!m) return null;
   try {
-    const name = decodeURIComponent(m[1]).replace(/\+/g, ' ').trim();
-    return name && name !== 'data' ? name : null;
+    let name = decodeURIComponent(m[1]).replace(/\+/g, ' ').trim();
+    name = name.replace(/\s*@\d.*$/, '').replace(/\/data.*$/, '').replace(/\s*\/+$/, '').trim();
+    if (!name || name === 'data' || /^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(name)) return null;
+    return name.length > 1 ? name : null;
   } catch {
     return null;
   }

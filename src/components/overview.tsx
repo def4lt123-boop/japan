@@ -3,7 +3,7 @@
 /**
  * Grafische Bausteine der Reise-Übersicht:
  *  TripRibbon   – Band über alle Reisetage (Unterkünfte, Nächte, Etappen, Auslastung)
- *  DayBoard     – Karte pro Tag mit Zeitachse 07–23 und Vorschlägen aus der Wünscheliste
+ *  DayBoard     – Karte pro Tag mit Zeitachse 07–23, Ablageziel für Punkte ohne Tag
  *  GapPanel     – "was noch fehlen würde" inkl. Planungsgrad-Ring
  *  CapacityPanel– "was noch frei / verfügbar ist" (Tagesluft, Stadt-Balance, offene Buchungen)
  */
@@ -13,6 +13,7 @@ import { useEditor } from './EditorProvider';
 import { Button, Card, Empty, LinkTag, Money, ProgressBar, SectionTitle, cx } from './ui';
 import { AXIS_SPAN, AXIS_START, type CityLoad, type DayCell, type GapItem, type Sample, type Stay, bestDaysFor, cityLoad, loadTone, minToTime } from '../lib/overview';
 import { STATUS_META, TICKET_META, categoryMeta } from '../lib/categories';
+import { assign } from '../lib/dayplan';
 import { fmtDate, fmtDuration, fmtMoney, plural } from '../lib/format';
 import type { Place } from '../lib/types';
 
@@ -200,8 +201,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
     if (!id) return;
     const moved = store.places.find((x) => x.id === id);
     if (!moved || moved.date === date) return;
-    store.patch('places', id, { date });
-    store.say(`„${moved.name}“ → ${fmtDate(date, { weekday: 'short', day: '2-digit', month: '2-digit' })}`);
+    assign(store, store.places, moved, { date });
   };
 
   const shown = useMemo(() => (onlyGaps ? cells.filter((c) => c.empty || c.nightGap || c.issues.length) : cells), [cells, onlyGaps]);
@@ -232,7 +232,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
       {pool.length && !noDates ? (
         <div className="no-print mb-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.05] p-2">
           <p className="mb-1.5 px-1 text-[11.5px] text-amber-100/90">
-            <b>Ziehen &amp; fallen lassen:</b> {plural(pool.length, 'Wunsch', 'Wünsche')} noch ohne Tag – auf eine Tageskarte ablegen. Ein Klick legt ihn auf den Tag mit der meisten Luft.
+            <b>Ziehen &amp; fallen lassen:</b> {plural(pool.length, 'Punkt', 'Punkte')} noch ohne Tag – auf eine Tageskarte ablegen. Ein Klick legt ihn auf den Tag mit der meisten Luft – die komplette Liste ist unter „Aktivitäten“.
           </p>
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             {pool.map((item) => {
@@ -248,8 +248,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
                   onClick={() => {
                     const best = bestDaysFor(item, cells)[0];
                     if (!best) return;
-                    store.patch('places', item.id, { date: best.date });
-                    store.say(`„${item.name}“ → ${fmtDate(best.date, { weekday: 'short', day: '2-digit', month: '2-digit' })} · ${fmtDuration(best.freeMin)} frei`);
+                    assign(store, store.places, item, { date: best.date });
                   }}
                   title={`${meta.label}${item.city ? ` · ${item.city}` : ''} – hierher ziehen oder klicken`}
                   className="flex shrink-0 cursor-grab items-center gap-1.5 rounded-lg border border-white/10 bg-ink-800/80 px-2 py-1 text-[12px] text-slate-200 transition hover:border-amber-400/40 hover:bg-ink-700 active:cursor-grabbing"
@@ -375,7 +374,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
                   </button>
                 ))}
 
-                {/* Vorschläge von der Wünscheliste */}
+                {/* Punkte ohne Tag – hier ablegen */}
                 {tips.length ? (
                   <div className="mt-1.5 flex flex-wrap gap-1">
                     <span className="text-[10.5px] text-slate-500">passt hier:</span>
@@ -570,7 +569,7 @@ export function CapacityPanel({
               value: fmtDuration(cells.reduce((a, c) => a + c.freeMin, 0)) || '0 Min',
               hint: `${plural(cells.length, 'Tag', 'Tage')} à 8 h Ziel`,
             },
-            { label: 'Wünsche offen', value: pool.length, hint: pool.length ? 'aus der Wünscheliste' : 'nichts mehr' },
+            { label: 'Ohne Tag', value: pool.length, hint: pool.length ? 'in der Aktivitätsliste' : 'alles platziert' },
           ].map((s) => (
             <div key={s.label} className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-2">
               <p className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-500">{s.label}</p>
@@ -616,7 +615,7 @@ export function CapacityPanel({
               ))}
             </ul>
             <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
-              Punkte pro Stadt geteilt durch geplante Tage. <b className="text-matcha-200/90">Unter 1,6 pro Tag</b> ist noch Raum für die Wünscheliste, <b className="text-shu-200">über 3,5</b> wird es ein Hetz-Programm. „Bett?“ heißt: Stadt ohne Unterkunft eingetragen.
+              Punkte pro Stadt geteilt durch geplante Tage. <b className="text-matcha-200/90">Unter 1,6 pro Tag</b> ist noch Raum für die Liste, <b className="text-shu-200">über 3,5</b> wird es ein Hetz-Programm. „Bett?“ heißt: Stadt ohne Unterkunft eingetragen.
             </p>
           </div>
 

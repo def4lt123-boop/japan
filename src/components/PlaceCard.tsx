@@ -6,6 +6,7 @@ import { useStore } from '../lib/store';
 import { useEditor } from './EditorProvider';
 import { PRIORITY_META, STATUS_META, TICKET_META, categoryMeta, mapsUrl, nextTicket, routeUrl } from '../lib/categories';
 import { fmtDuration, fmtDate } from '../lib/format';
+import { fmtWindow, windowOf } from '../lib/dayplan';
 import { Button, Card, LinkTag, Money, Pill, cx } from './ui';
 import { MapPreview } from './MapPreview';
 
@@ -81,8 +82,12 @@ export function PlaceCard({
             {place.city ? <span className="text-slate-300">{place.city}</span> : null}
             {place.district ? <span className="text-slate-500">· {place.district}</span> : null}
             {place.time_slot ? <span>· {place.time_slot}</span> : null}
-            {place.start_time ? <span className="tabular-nums text-slate-300">· {place.start_time} Uhr</span> : null}
-            {place.duration_min ? <span>· {fmtDuration(place.duration_min)}</span> : null}
+            {place.start_time && place.duration_min ? (
+              <span className="tabular-nums text-slate-300">· {fmtWindow(windowOf(place)!.start, windowOf(place)!.end)}</span>
+            ) : place.start_time ? (
+              <span className="tabular-nums text-slate-300">· {place.start_time} Uhr</span>
+            ) : null}
+            {place.duration_min && !place.start_time ? <span>· {fmtDuration(place.duration_min)}</span> : null}
             {place.travel_time ? <span title="Fahrzeit vom Hotel">· 🚈 {place.travel_time}</span> : null}
             {place.category && !place.category.startsWith(meta.label) ? <span className="text-slate-500">· {place.category}</span> : null}
           </div>
@@ -150,7 +155,7 @@ export function PlaceCard({
           <Button
             size="sm"
             variant="quiet"
-            title="Duplizieren (neuer Eintrag ohne Tag, liegt danach in der Wünscheliste)"
+            title="Duplizieren (neue Aktivität ohne Tag – liegt danach in der Liste)"
             onClick={() =>
               open({
                 kind: 'place',
@@ -161,7 +166,7 @@ export function PlaceCard({
             ⧉
           </Button>
           {place.date ? (
-            <Button size="sm" variant="quiet" title="Von diesem Tag lösen → Wünscheliste" onClick={() => store.patch('places', place.id, { date: null })}>
+            <Button size="sm" variant="quiet" title="Von diesem Tag lösen → zurück in die Liste" onClick={() => store.patch('places', place.id, { date: null })}>
               ⤓
             </Button>
           ) : null}

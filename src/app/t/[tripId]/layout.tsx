@@ -15,7 +15,7 @@ import { costsOf } from '../../../lib/stats';
 const TABS = [
   { href: '', label: 'Übersicht', icon: '🏠' },
   { href: '/tage', label: 'Tage', icon: '🗓️' },
-  { href: '/wuenscheliste', label: 'Wünscheliste', icon: '✨' },
+  { href: '/aktivitaeten', label: 'Aktivitäten', icon: '🗂️' },
   { href: '/tabelle', label: 'Tabelle', icon: '📊' },
   { href: '/karte', label: 'Karte', icon: '🗺️' },
   { href: '/unterkuenfte', label: 'Unterkünfte', icon: '🏨' },

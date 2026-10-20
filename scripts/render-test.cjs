@@ -65,7 +65,7 @@ const PAGES = [
   { name: 'Reisen', path: '/', file: '../src/app/page.tsx', expect: [/Urlaubsplanung/, /Japan 2027/, /Japan 2025/] },
   { name: 'Übersicht', path: '/t/trip-2027', file: '../src/app/t/[tripId]/page.tsx', expect: [/Reisedauer/, /Reise auf einem Blick/, /Jeder Tag im Bild/, /Was noch fehlen würde/, /Was noch verfügbar ist/, /Bett pro Nacht/] },
   { name: 'Tage', path: '/t/trip-2027/tage', file: '../src/app/t/[tripId]/tage/page.tsx', expect: [/Tagesplan/, /Samstag/] },
-  { name: 'Wünscheliste', path: '/t/trip-2027/wuenscheliste', file: '../src/app/t/[tripId]/wuenscheliste/page.tsx', expect: [/Wünscheliste/] },
+  { name: 'Aktivitäten', path: '/t/trip-2027/aktivitaeten', file: '../src/app/t/[tripId]/aktivitaeten/page.tsx', expect: [/Noch ohne Tag/, /Aktivität/] },
   { name: 'Tabelle', path: '/t/trip-2027/tabelle', file: '../src/app/t/[tripId]/tabelle/page.tsx', expect: [/Fahrzeit ab Hotel/, /Standort/] },
   { name: 'Karte', path: '/t/trip-2027/karte', file: '../src/app/t/[tripId]/karte/page.tsx', expect: [/Karte/, /Legende/] },
   { name: 'Unterkünfte', path: '/t/trip-2027/unterkuenfte', file: '../src/app/t/[tripId]/unterkuenfte/page.tsx', expect: [/Nächte-Check/, /Hotel Tokio/] },
@@ -188,7 +188,7 @@ async function render(name, Page, tripId) {
     await new Promise((r) => setTimeout(r, 60));
   });
   const layoutText = container.textContent || '';
-  const tabsOk = /Übersicht/.test(layoutText) && /Wünscheliste/.test(layoutText) && /Kosten/.test(layoutText) && /Samstag/.test(layoutText) && /Nach rechts auf einen Tag ziehen/.test(layoutText);
+  const tabsOk = /Übersicht/.test(layoutText) && /Aktivitäten/.test(layoutText) && /Kosten/.test(layoutText) && /Samstag/.test(layoutText) && /Nach rechts auf einen Tag ziehen/.test(layoutText);
   console.log((tabsOk ? '✅' : '❌') + ' Reise-Layout: Tabs + Tagesplan mit Daten');
   if (!tabsOk) {
     failures.push('Layout');
@@ -267,7 +267,7 @@ async function render(name, Page, tripId) {
   const dateInputs = [...c2.querySelectorAll('input[type=date]')].map((i) => i.name + '=' + i.value).join(',');
   const det = c2.querySelector('details');
   const hasDate = clicked && /2027-[0-9]{2}-[0-9]{2}/.test(dateInputs);
-  console.log((clicked && hasDate ? '✅' : '❌') + ' Klick „Ort an diesem Tag anlegen“ öffnet Formular mit vorbelegtem Datum');
+  console.log((clicked && hasDate ? '✅' : '❌') + ' Klick „Aktivität an diesem Tag anlegen“ öffnet Formular mit vorbelegtem Datum');
   if (!(clicked && hasDate)) { failures.push('Klick Test'); console.log('   clicked=' + clicked + ' hasDate=' + hasDate); clickErr.filter(e=>/Error|not a function|Cannot read/.test(e)).slice(0,3).forEach(e=>console.log('   '+e.slice(0,240))); }
   console.error = oe2;
   const mapBtn = [...c2.querySelectorAll('button')].find((b) => (b.title || '').includes('Karte zu diesem Tag'));
