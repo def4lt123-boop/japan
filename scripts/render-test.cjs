@@ -63,15 +63,16 @@ const { StoreProvider } = require('../src/lib/store.tsx');
 
 const PAGES = [
   { name: 'Reisen', path: '/', file: '../src/app/page.tsx', expect: [/Urlaubsplanung/, /Japan 2027/, /Japan 2025/] },
-  { name: 'Übersicht', path: '/t/trip-2027', file: '../src/app/t/[tripId]/page.tsx', expect: [/Reisedauer/, /Reise auf einem Blick/, /Jeder Tag im Bild/, /Was noch fehlen würde/, /Was noch verfügbar ist/, /Bett pro Nacht/] },
-  { name: 'Tage', path: '/t/trip-2027/tage', file: '../src/app/t/[tripId]/tage/page.tsx', expect: [/Tagesplan/, /Samstag/] },
+  { name: 'Übersicht', path: '/t/trip-2027/uebersicht', file: '../src/app/t/[tripId]/uebersicht/page.tsx', expect: [/Reisedauer/, /Reise auf einem Blick/, /Jeder Tag im Bild/, /Was noch fehlen würde/, /Was noch verfügbar ist/, /Bett pro Nacht/] },
+  { name: 'Tage', path: '/t/trip-2027/tage', file: '../src/app/t/[tripId]/tage/page.tsx', expect: [/Tagesplan/, /Sa06\.03\./, /noch frei|Aktivitäten/] },
   { name: 'Aktivitäten', path: '/t/trip-2027/aktivitaeten', file: '../src/app/t/[tripId]/aktivitaeten/page.tsx', expect: [/Noch ohne Tag/, /Aktivität/] },
   { name: 'Tabelle', path: '/t/trip-2027/tabelle', file: '../src/app/t/[tripId]/tabelle/page.tsx', expect: [/Fahrzeit ab Hotel/, /Standort/] },
   { name: 'Karte', path: '/t/trip-2027/karte', file: '../src/app/t/[tripId]/karte/page.tsx', expect: [/Karte/, /Legende/] },
   { name: 'Unterkünfte', path: '/t/trip-2027/unterkuenfte', file: '../src/app/t/[tripId]/unterkuenfte/page.tsx', expect: [/Nächte-Check/, /Hotel Tokio/] },
   { name: 'Kosten', path: '/t/trip-2027/kosten', file: '../src/app/t/[tripId]/kosten/page.tsx', expect: [/Budgetauslastung/, /Alle Posten/] },
   { name: 'Reiseverlauf', path: '/t/trip-2027/verlauf', file: '../src/app/t/[tripId]/verlauf/page.tsx', expect: [/Reiseverlauf/, /Ankunft/] },
-  { name: 'Referenz 2025', path: '/t/trip-2025', file: '../src/app/t/[tripId]/page.tsx', expect: [/Japan 2025|Reisedauer/] },
+  { name: 'Referenz 2025', path: '/t/trip-2025/uebersicht', file: '../src/app/t/[tripId]/uebersicht/page.tsx', expect: [/Japan 2025|Reisedauer/] },
+  { name: 'Reise', path: '/t/trip-2027/reise', file: '../src/app/t/[tripId]/reise/page.tsx', expect: [/Unterkünfte/, /Fahrten/, /Dateien/] },
 ];
 
 const failures = [];
@@ -188,7 +189,7 @@ async function render(name, Page, tripId) {
     await new Promise((r) => setTimeout(r, 60));
   });
   const layoutText = container.textContent || '';
-  const tabsOk = /Übersicht/.test(layoutText) && /Aktivitäten/.test(layoutText) && /Kosten/.test(layoutText) && /Samstag/.test(layoutText) && /Nach rechts auf einen Tag ziehen/.test(layoutText);
+  const tabsOk = /Übersicht/.test(layoutText) && /Aktivitäten/.test(layoutText) && /Reise/.test(layoutText) && /06\.03\./.test(layoutText) && /Anlegen/.test(layoutText) && /⋯/.test(layoutText);
   console.log((tabsOk ? '✅' : '❌') + ' Reise-Layout: Tabs + Tagesplan mit Daten');
   if (!tabsOk) {
     failures.push('Layout');
@@ -270,7 +271,17 @@ async function render(name, Page, tripId) {
   console.log((clicked && hasDate ? '✅' : '❌') + ' Klick „Aktivität an diesem Tag anlegen“ öffnet Formular mit vorbelegtem Datum');
   if (!(clicked && hasDate)) { failures.push('Klick Test'); console.log('   clicked=' + clicked + ' hasDate=' + hasDate); clickErr.filter(e=>/Error|not a function|Cannot read/.test(e)).slice(0,3).forEach(e=>console.log('   '+e.slice(0,240))); }
   console.error = oe2;
-  const mapBtn = [...c2.querySelectorAll('button')].find((b) => (b.title || '').includes('Karte zu diesem Tag'));
+  // Die Tages-Aktionen stecken jetzt im ⋯-Menü: erst öffnen, dann suchen
+  const openMenu = async () => {
+    for (const t of [...c2.querySelectorAll('button')].filter((b) => (b.textContent || '').trim().startsWith('⋯')).slice(0, 8)) {
+      await act(async () => { t.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+      await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+      if ([...c2.querySelectorAll('button')].some((b) => (b.textContent || '').includes('Karte zu diesem Tag'))) return true;
+    }
+    return false;
+  };
+  await openMenu();
+  const mapBtn = [...c2.querySelectorAll('button')].find((b) => (b.textContent || '').includes('Karte zu diesem Tag') || (b.title || '').includes('Karte zu diesem Tag'));
   let routeFrame = false;
   if (mapBtn) {
     await act(async () => { mapBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });

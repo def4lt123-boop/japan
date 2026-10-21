@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Card, Field, Modal, Select, TextArea, TextInput, cx } from './ui';
+import { Button, Card, Disclosure, Field, Modal, Select, TextArea, TextInput, cx } from './ui';
 import { BOOKING_STATUSES, EXPENSE_CATEGORIES, JOURNEY_MODES, PRIORITIES, TIME_SLOTS, type Expense, type Hotel, type Journey, type Place, type Trip } from '../lib/types';
 import { PRIORITY_META, STATUS_META, TICKET_META, TICKET_ORDER, mapsUrl } from '../lib/categories';
 import { eachDate, fmtDate, fmtDuration, num, parseDuration, uid } from '../lib/format';
@@ -240,6 +240,16 @@ function TicketPicker({
 }
 
 /** Reisezeitraum für Kalender-Grenzen + Schnellwahl der Reisetage */
+/** Überschrift über einer Feldgruppe im Formular */
+function Group({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-2">
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
 function useTripDays(tripStart?: string | null, tripEnd?: string | null) {
   const days = eachDate(tripStart ?? null, tripEnd ?? null);
   return { days, bounds: [tripStart ?? null, tripEnd ?? null] as [string | null, string | null] };
@@ -360,161 +370,178 @@ export function PlaceForm({
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-3">
-        <div className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr]">
+      <form onSubmit={submit} className="space-y-4">
+        <Group title="Was und wo">
           <Field label="Was ist es? *">
             <TextInput id="place-name-input" value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="z. B. Nara-Park" />
           </Field>
-          <Field label="Stadt">
-            <TextInput list="city-list" value={draft.city} onChange={(e) => set({ city: e.target.value })} placeholder="Nara" />
-            <datalist id="city-list">
-              {cities.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
-          </Field>
-          <Field label="Stadtteil / Viertel">
-            <TextInput value={draft.district ?? ''} onChange={(e) => set({ district: e.target.value })} placeholder="Higashiyama" />
-          </Field>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-[1fr_1.3fr]">
-          <Field label="Kategorie">
-            <TextInput list="cat-list" value={draft.category ?? ''} onChange={(e) => set({ category: e.target.value })} placeholder="Park, Tempel, Ramen …" />
-            <datalist id="cat-list">
-              {CATEGORY_SUGGESTIONS.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
-          </Field>
-          <div>
-            <span className="label">Ticket</span>
-            <TicketPicker value={draft.ticket_status} note={draft.ticket_note} onChange={(patch) => set(patch)} />
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Field label="Stadt">
+              <TextInput list="city-list" value={draft.city} onChange={(e) => set({ city: e.target.value })} placeholder="Nara" />
+              <datalist id="city-list">
+                {cities.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+            </Field>
+            <Field label="Stadtteil / Viertel">
+              <TextInput value={draft.district ?? ''} onChange={(e) => set({ district: e.target.value })} placeholder="Higashiyama" />
+            </Field>
+            <Field label="Kategorie">
+              <TextInput list="cat-list" value={draft.category ?? ''} onChange={(e) => set({ category: e.target.value })} placeholder="Park, Tempel, Ramen …" />
+              <datalist id="cat-list">
+                {CATEGORY_SUGGESTIONS.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+            </Field>
           </div>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_1.4fr_0.8fr]">
-          <Field label="Preis in € (gesamt)">
-            <TextInput type="number" step="0.01" min="0" value={draft.price_eur ?? ''} onChange={(e) => set({ price_eur: num(e.target.value) })} placeholder="16,00" />
+          <Field label="Notizen" hint="was du dir merken willst – Öffnungszeiten, Warteschlange, geschlossene Tage …">
+            <TextArea value={draft.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} placeholder="früh da sein, Ticket am Schalter, geschlossen Mo …" />
           </Field>
-          <Field label="Preis in ¥" hint="beim Verlassen → € mit aktuellem Kurs">
-            <TextInput
-              inputMode="numeric"
-              defaultValue=""
-              placeholder="2.700 ¥"
-              onBlur={(e) => {
-                const yen = num(e.target.value);
-                if (yen !== null) set({ price_note: `${yen.toLocaleString('de-DE')} ¥`, price_eur: Math.round((yen / (jpyRate || 175)) * 100) / 100 });
-              }}
+        </Group>
+
+        <Group title="Wann">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <DateField
+              name="date"
+              label="Tag der Reise"
+              value={draft.date}
+              onChange={(v) => set({ date: v, end_date: v && draft.end_date && draft.end_date < v ? null : draft.end_date })}
+              hint={draft.date ? undefined : 'leer = Aktivität kommt in die Liste'}
+              quickDates={tripDays}
+              tripBounds={bounds}
             />
-          </Field>
-          <Field label="Preis-Hinweis">
-            <TextInput value={draft.price_note ?? ''} onChange={(e) => set({ price_note: e.target.value })} placeholder="online günstiger / 2 Personen" />
-          </Field>
-          <Field label="Prio">
-            <Select options={priorityOptions} value={draft.priority} onChange={(e) => set({ priority: e.target.value as Place['priority'] })} />
-          </Field>
-        </div>
-
-        <GeoFields
-          lat={draft.lat}
-          lng={draft.lng}
-          query={draft.maps_query}
-          suggest={queryFor(draft)}
-          name={draft.name}
-          onName={(value) => set({ name: value })}
-          onChange={(patch) => set(patch)}
-        />
-
-        <Field label="Hinweise">
-          <TextArea value={draft.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} placeholder="früh da sein, Ticket am Schalter, geschlossen Mo …" />
-        </Field>
-
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Field label="Link (Buchung/Website)">
-            <TextInput value={draft.booking_url ?? ''} onChange={(e) => set({ booking_url: e.target.value })} placeholder="https://…" />
-          </Field>
-          <Field label="Bild-URL (optional)">
-            <TextInput value={draft.image_url ?? ''} onChange={(e) => set({ image_url: e.target.value })} placeholder="https://…" />
-          </Field>
-        </div>
-
-        <details className="rounded-xl border border-white/[0.08] bg-black/20 p-2.5" open={Boolean(draft.date || draft.start_time || draft.duration_min || draft.time_slot)}>
-          <summary className="cursor-pointer select-none text-[12.5px] font-semibold text-slate-200">
-            Wann? – <span className="font-normal text-slate-500">können wir später auch per Drag &amp; Drop auf einen Tag ziehen</span>
-          </summary>
-          <div className="mt-2.5 space-y-2.5">
-            <div className="grid gap-2 sm:grid-cols-2">
-              <DateField
-                name="date"
-                label="Tag der Reise"
-                value={draft.date}
-                onChange={(v) => set({ date: v, end_date: v && draft.end_date && draft.end_date < v ? null : draft.end_date })}
-                hint={draft.date ? undefined : 'leer = Liste ohne Tag'}
-                quickDates={tripDays}
-                tripBounds={bounds}
-              />
-              <DateField
-                name="end_date"
-                label="bis (Mehrtages-Ausflug)"
-                value={draft.end_date}
-                onChange={(v) => set({ end_date: v })}
-                hint={draft.date && draft.end_date ? `${Math.max(1, eachDate(draft.date, draft.end_date).length)} Tage` : 'optional'}
-                minDate={draft.date}
-                maxDate={tripEnd ?? null}
-                startHint={draft.date ? 'Endtag wählen' : 'erst Tag wählen'}
-              />
+            <DateField
+              name="end_date"
+              label="bis (Mehrtages-Ausflug)"
+              value={draft.end_date}
+              onChange={(v) => set({ end_date: v })}
+              hint={draft.date && draft.end_date ? `${Math.max(1, eachDate(draft.date, draft.end_date).length)} Tage` : 'optional'}
+              minDate={draft.date}
+              maxDate={tripEnd ?? null}
+              startHint={draft.date ? 'Endtag wählen' : 'erst Tag wählen'}
+            />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Field label="Tageszeit">
+              <Select allowEmpty options={TIME_SLOTS} value={draft.time_slot ?? ''} onChange={(e) => set({ time_slot: (e.target.value || null) as Place['time_slot'] })} emptyLabel="—" />
+            </Field>
+            <Field label="Uhrzeit">
+              <TextInput type="time" value={draft.start_time ?? ''} onChange={(e) => set({ start_time: e.target.value || null })} />
+            </Field>
+            <Field label="Dauer" hint='"2h", "1:30", "45 min"'>
+              <TextInput value={durationText} onChange={(e) => setDurationText(e.target.value)} placeholder="2 h" />
+            </Field>
+          </div>
+          {dayInfo ? (
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg bg-black/25 px-2 py-1.5 text-[11.5px] ring-1 ring-inset ring-white/[0.07]">
+              {dayInfo.start !== null ? (
+                <>
+                  <span className="tabular-nums text-emerald-100">{fmtWindow(dayInfo.start, dayInfo.start + dayInfo.len)}</span>
+                  <span className="text-slate-400">wäre an diesem Tag verplant</span>
+                  {dayInfo.moved && dayInfo.wanted !== null ? (
+                    <span className="text-amber-200">· {fmtWindow(dayInfo.wanted, dayInfo.wanted + dayInfo.len)} ist schon belegt</span>
+                  ) : null}
+                </>
+              ) : (
+                <span className="text-slate-400">
+                  ohne Uhrzeit zählt nur die Tageszeit · erste Lücke: <span className="tabular-nums text-emerald-100">{fmtWindow(dayInfo.nextFree, dayInfo.nextFree + dayInfo.len)}</span>
+                </span>
+              )}
+              {dayInfo.free.length ? <span className="text-slate-500">· frei bleibt {fmtWindows(dayInfo.free)}</span> : <span className="text-shu-200">· Tag wäre voll</span>}
+              <button
+                type="button"
+                className="btn-quiet ml-auto !px-1.5 !py-0.5 !text-[11px]"
+                onClick={() => set({ start_time: minToTime(dayInfo.start ?? dayInfo.nextFree) })}
+                title="Uhrzeit in das Fenster setzen"
+              >
+                ⏱ {minToTime(dayInfo.start ?? dayInfo.nextFree)} setzen
+              </button>
             </div>
-            <div className="grid gap-2 sm:grid-cols-3">
-              <Field label="Tageszeit">
-                <Select allowEmpty options={TIME_SLOTS} value={draft.time_slot ?? ''} onChange={(e) => set({ time_slot: (e.target.value || null) as Place['time_slot'] })} emptyLabel="—" />
-              </Field>
-              <Field label="Uhrzeit">
-                <TextInput type="time" value={draft.start_time ?? ''} onChange={(e) => set({ start_time: e.target.value || null })} />
-              </Field>
-              <Field label="Dauer" hint='"2h", "1:30", "45 min"'>
-                <TextInput value={durationText} onChange={(e) => setDurationText(e.target.value)} placeholder="2 h" />
-              </Field>
-            </div>
-            {dayInfo ? (
-              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg bg-black/25 px-2 py-1.5 text-[11.5px] ring-1 ring-inset ring-white/[0.07]">
-                {dayInfo.start !== null ? (
-                  <>
-                    <span className="tabular-nums text-emerald-100">{fmtWindow(dayInfo.start, dayInfo.start + dayInfo.len)}</span>
-                    <span className="text-slate-400">wäre an diesem Tag verplant</span>
-                    {dayInfo.moved && dayInfo.wanted !== null ? (
-                      <span className="text-amber-200">· {fmtWindow(dayInfo.wanted, dayInfo.wanted + dayInfo.len)} ist schon belegt</span>
-                    ) : null}
-                  </>
-                ) : (
-                  <span className="text-slate-400">
-                    ohne Uhrzeit zählt nur die Tageszeit · erste Lücke: <span className="tabular-nums text-emerald-100">{fmtWindow(dayInfo.nextFree, dayInfo.nextFree + dayInfo.len)}</span>
-                  </span>
-                )}
-                {dayInfo.free.length ? <span className="text-slate-500">· frei bleibt {fmtWindows(dayInfo.free)}</span> : <span className="text-shu-200">· Tag wäre voll</span>}
-                <button
-                  type="button"
-                  className="btn-quiet ml-auto !px-1.5 !py-0.5 !text-[11px]"
-                  onClick={() => set({ start_time: minToTime(dayInfo.start ?? dayInfo.nextFree) })}
-                  title="Uhrzeit in das Fenster setzen"
-                >
-                  ⏱ {minToTime(dayInfo.start ?? dayInfo.nextFree)} setzen
-                </button>
+          ) : (
+            <p className="text-[11.5px] leading-snug text-slate-500">
+              Ohne Tag bleibt die Aktivität in der Liste – das Zeitfenster ergibt sich, wenn du sie auf den Tag ziehst.
+            </p>
+          )}
+          <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <Field label="Fahrzeit vom Hotel">
+              <TextInput value={draft.travel_time ?? ''} onChange={(e) => set({ travel_time: e.target.value })} placeholder="Ca 30 Min" />
+            </Field>
+            <div>
+              <span className="label">Wie wichtig?</span>
+              <div className="flex gap-1">
+                {priorityOptions.map((o) => (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => set({ priority: o.value as Place['priority'] })}
+                    aria-pressed={draft.priority === o.value}
+                    className={cx(
+                      'chip flex-1 justify-center',
+                      draft.priority === o.value ? 'bg-shu-500/20 text-white' : 'bg-white/[0.04] text-slate-400 hover:bg-white/[0.08]',
+                    )}
+                  >
+                    {o.label}
+                  </button>
+                ))}
               </div>
-            ) : (
-              <p className="text-[11px] leading-snug text-slate-500">Ohne Tag bleibt die Aktivität in der Liste – ein Zeitfenster ergibt sich mit dem Tag. {dayInfo === null ? 'Dauer nicht vergessen, sonst rechnet der Tag mit 1,5 h.' : ''}</p>
-            )}
+            </div>
+            <Field label="Status">
+              <Select className="!w-auto" options={statusOptions} value={draft.booking_status} onChange={(e) => set({ booking_status: e.target.value as Place['booking_status'] })} />
+            </Field>
+          </div>
+        </Group>
 
+        <Group title="Ticket & Preis">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div>
+              <span className="label">Ticket</span>
+              <TicketPicker value={draft.ticket_status} note={draft.ticket_note} onChange={(patch) => set(patch)} />
+            </div>
             <div className="grid gap-2 sm:grid-cols-2">
-              <Field label="Fahrzeit vom Hotel">
-                <TextInput value={draft.travel_time ?? ''} onChange={(e) => set({ travel_time: e.target.value })} placeholder="Ca 30 Min" />
+              <Field label="Preis in € (gesamt)">
+                <TextInput type="number" step="0.01" min="0" value={draft.price_eur ?? ''} onChange={(e) => set({ price_eur: num(e.target.value) })} placeholder="16,00" />
               </Field>
-              <Field label="Buchungsstatus">
-                <Select options={statusOptions} value={draft.booking_status} onChange={(e) => set({ booking_status: e.target.value as Place['booking_status'] })} />
+              <Field label="Preis in ¥" hint="→ € mit Kurs">
+                <TextInput
+                  inputMode="numeric"
+                  defaultValue=""
+                  placeholder="2.700 ¥"
+                  onBlur={(e) => {
+                    const yen = num(e.target.value);
+                    if (yen !== null) set({ price_note: `${yen.toLocaleString('de-DE')} ¥`, price_eur: Math.round((yen / (jpyRate || 175)) * 100) / 100 });
+                  }}
+                />
               </Field>
             </div>
           </div>
-        </details>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Field label="Preis-Hinweis">
+              <TextInput value={draft.price_note ?? ''} onChange={(e) => set({ price_note: e.target.value })} placeholder="online günstiger / 2 Personen" />
+            </Field>
+            <GeoFields
+              lat={draft.lat}
+              lng={draft.lng}
+              query={draft.maps_query}
+              suggest={queryFor(draft)}
+              name={draft.name}
+              onName={(value) => set({ name: value })}
+              onChange={(patch) => set(patch)}
+            />
+          </div>
+        </Group>
+
+        <Disclosure title="Noch optional" hint="Links für Buchung und Bild">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Field label="Link (Buchung / Website)">
+              <TextInput value={draft.booking_url ?? ''} onChange={(e) => set({ booking_url: e.target.value })} placeholder="https://…" />
+            </Field>
+            <Field label="Bild-URL">
+              <TextInput value={draft.image_url ?? ''} onChange={(e) => set({ image_url: e.target.value })} placeholder="https://…" />
+            </Field>
+          </div>
+        </Disclosure>
       </form>
     </Modal>
   );

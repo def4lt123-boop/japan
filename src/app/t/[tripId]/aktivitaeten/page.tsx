@@ -15,7 +15,7 @@ import { FilterBar, EMPTY_FILTER, applyFilter, type PlaceFilter } from '../../..
 import { Button, Card, Empty, SectionTitle, cx } from '../../../../components/ui';
 import { distributePool } from '../../../../lib/planner';
 import { eachDate, fmtDate, plural } from '../../../../lib/format';
-import { plannedMinutes } from '../../../../lib/dayplan';
+import { assign, minToTime, plannedMinutes } from '../../../../lib/dayplan';
 
 type View = 'alle' | 'offen' | 'platziert';
 
@@ -73,7 +73,7 @@ export default function ActivitiesPage() {
       <SectionTitle
         title="Aktivitäten"
         icon="🗂️"
-        hint="Liste aller Punkte: oben, was noch an keinem Tag liegt, darunter die Tage. Tag, Uhrzeit und Dauer stehen in der Zeile – der belegte Abschnitt ist sofort zu sehen."
+        hint="Was noch keinen Tag hat, steht oben – ziehen, ⚡ verteilen oder in der Zeile auf einen Tag legen"
         right={
           <>
             {tabs.map((t) => (
@@ -85,30 +85,21 @@ export default function ActivitiesPage() {
                 {t.label}
               </button>
             ))}
-            <Button size="sm" variant="ghost" onClick={() => void geocodeAll()} title="Fehlende Kartenpunkte über OpenStreetMap suchen">
-              🌍 Koordinaten
-            </Button>
             {open_.length ? (
               <Button size="sm" variant="ghost" onClick={runAutoPlan}>
                 ⚡ {open_.length} verteilen
               </Button>
             ) : null}
-            <Button size="sm" variant="primary" onClick={() => open({ kind: 'place' })}>
-              ＋ Aktivität
-            </Button>
           </>
         }
       />
 
       <FilterBar value={filter} onChange={setFilter} places={bundle.places} />
 
-      <div className="flex flex-wrap gap-2 text-[11.5px] text-slate-400">
-        <span className="chip bg-white/[0.04] ring-1 ring-white/10">
-          offen: {plural(open_.length, 'Aktivität', 'Aktivitäten')} · {Math.round(openMinutes / 60)} h zu verteilen
-        </span>
-        <span className="chip bg-white/[0.04] ring-1 ring-white/10">platziert: {placed.length} auf {byDay.length} Tagen</span>
-        <span className="chip bg-white/[0.04] ring-1 ring-white/10">doppelte Tage werden abgewiesen</span>
-      </div>
+      <p className="-mt-1 text-[11.5px] text-slate-500">
+        {open_.length ? <>{open_.length} ohne Tag · {Math.round(openMinutes / 60)} h zu verteilen · </> : 'jeder Punkt hat einen Tag · '}
+        {placed.length} platziert auf {byDay.length} {plural(byDay.length, 'Tag', 'Tagen')}
+      </p>
 
       {!shown.length ? (
         <Empty
@@ -136,7 +127,7 @@ export default function ActivitiesPage() {
               {open_.length ? (
                 <div className="space-y-1.5 p-2">
                   {(folded.offen ? open_.slice(0, 6) : open_).map((p) => (
-                    <ActivityRow key={p.id} place={p} all={bundle.places} dayOptions={dayOptions} />
+                    <ActivityRow key={p.id} place={p} all={bundle.places} dayOptions={dayOptions} tripStart={bundle.trip?.start_date} tripEnd={bundle.trip?.end_date} />
                   ))}
                   {folded.offen && open_.length > 6 ? (
                     <p className="px-1 text-[11px] text-slate-500">… {open_.length - 6} weitere – „alle zeigen“.</p>
@@ -155,6 +146,10 @@ export default function ActivitiesPage() {
                   <DayRowHeader
                     date={date}
                     places={list}
+                    onPickSlot={(m) => {
+                      const candidate = open_[0];
+                      if (candidate) assign(store, bundle.places, candidate, { date, start_time: minToTime(m) });
+                    }}
                     note={
                       <span className="text-slate-400">
                         {plural(list.length, 'Aktivität', 'Aktivitäten')} · {Math.round(plannedMinutes(list) / 60)} h verplant
@@ -166,7 +161,7 @@ export default function ActivitiesPage() {
                       .slice()
                       .sort((a, b) => (a.start_time ?? '99').localeCompare(b.start_time ?? '99'))
                       .map((p) => (
-                        <ActivityRow key={p.id} place={p} all={bundle.places} dayOptions={dayOptions} dense />
+                        <ActivityRow key={p.id} place={p} all={bundle.places} dayOptions={dayOptions} dense tripStart={bundle.trip?.start_date} tripEnd={bundle.trip?.end_date} />
                       ))}
                   </div>
                 </Card>

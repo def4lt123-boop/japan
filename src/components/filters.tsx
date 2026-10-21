@@ -2,10 +2,14 @@
 
 import React, { useMemo } from 'react';
 import type { Place } from '../lib/types';
-import { STATUS_META, TICKET_META, TICKET_ORDER, categoryMeta } from '../lib/categories';
+import { STATUS_META, TICKET_META, TICKET_ORDER } from '../lib/categories';
 import { Select, TextInput, cx } from './ui';
 import { BOOKING_STATUSES } from '../lib/types';
 
+/**
+ * Filter, die man versteht: ein Suchfeld und vier Knöpfe.
+ * (Die Tabellen-Seite kann zusätzlich die feinen Dropdowns einblenden.)
+ */
 export interface PlaceFilter {
   q: string;
   city: string;
@@ -38,86 +42,82 @@ export function FilterBar({
   onChange,
   places,
   right,
+  detailed = false,
 }: {
   value: PlaceFilter;
   onChange: (f: PlaceFilter) => void;
   places: Place[];
   right?: React.ReactNode;
+  /** Extra-Dropdowns (Status, Priorität, Ticket) – nur für die Tabellen-Ansicht */
+  detailed?: boolean;
 }) {
   const cities = useMemo(() => Array.from(new Set(places.map((p) => p.city).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'de')), [places]);
   const set = (patch: Partial<PlaceFilter>) => onChange({ ...value, ...patch });
-  const active = value.q || value.city || value.status || value.prio || value.ticket || value.missing !== 'alle';
+  const active = Boolean(value.q || value.city || value.status || value.prio || value.ticket || value.missing !== 'alle');
+
+  const count = (fn: (p: Place) => boolean) => places.filter(fn).length;
+  const pills: { key: string; label: string; n: number; on: boolean; only: Partial<PlaceFilter> }[] = [
+    { key: 'tag', label: 'ohne Tag', n: count((p) => !p.date), on: value.missing === 'ohne-termin', only: { missing: 'ohne-termin' } },
+    { key: 'ticket', label: 'Ticket offen', n: count((p) => !p.ticket_status || p.ticket_status === 'unklar' || p.ticket_status === 'noetig'), on: value.missing === 'ohne-ticket', only: { missing: 'ohne-ticket' } },
+    { key: 'muss', label: '★ Muss', n: count((p) => p.priority === 'muss'), on: value.prio === 'muss', only: { prio: 'muss' } },
+    { key: 'geo', label: 'ohne Kartenpunkt', n: count((p) => p.lat === null || p.lng === null), on: value.missing === 'ohne-koordinaten', only: { missing: 'ohne-koordinaten' } },
+  ];
 
   return (
-    <div className="no-print mb-3 flex flex-wrap items-center gap-1.5">
-      <div className="relative min-w-[190px] flex-1">
-        <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-slate-500">🔎</span>
-        <TextInput
-          value={value.q}
-          onChange={(e) => set({ q: e.target.value })}
-          placeholder="Suchen: Ort, Hinweis, Kategorie, Preis …"
-          className="pl-8"
-        />
+    <div className="no-print mb-3 space-y-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <div className="relative min-w-[200px] flex-1">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-slate-500">🔎</span>
+          <TextInput value={value.q} onChange={(e) => set({ q: e.target.value })} placeholder="Suchen – Name, Stadt, Hinweis, Kategorie …" className="pl-9" />
+        </div>
+        {cities.length > 1 ? (
+          <Select className={cx('!w-auto', value.city && 'border-shu-400/60')} allowEmpty emptyLabel="Alle Städte" options={cities} value={value.city} onChange={(e) => set({ city: e.target.value })} />
+        ) : null}
+        {right}
       </div>
-      <Select
-        className={cx('!w-auto', value.city && 'border-shu-400/60')}
-        allowEmpty
-        emptyLabel="Alle Städte"
-        options={cities}
-        value={value.city}
-        onChange={(e) => set({ city: e.target.value })}
-      />
-      <Select
-        className={cx('!w-auto', value.status && 'border-shu-400/60')}
-        allowEmpty
-        emptyLabel="Alle Status"
-        options={BOOKING_STATUSES.map((s) => ({ value: s, label: STATUS_META[s].label }))}
-        value={value.status}
-        onChange={(e) => set({ status: e.target.value })}
-      />
-      <Select
-        className={cx('!w-auto', value.prio && 'border-shu-400/60')}
-        allowEmpty
-        emptyLabel="Alle Prios"
-        options={[
-          { value: 'muss', label: '★ Muss' },
-          { value: 'soll', label: '☆ Soll' },
-          { value: 'kann', label: '· Kann' },
-        ]}
-        value={value.prio}
-        onChange={(e) => set({ prio: e.target.value })}
-      />
-      <Select
-        className={cx('!w-auto', value.ticket && 'border-shu-400/60')}
-        allowEmpty
-        emptyLabel="Alle Tickets"
-        options={TICKET_ORDER.map((t) => ({ value: t, label: `${TICKET_META[t].icon} ${TICKET_META[t].short}` }))}
-        value={value.ticket}
-        onChange={(e) => set({ ticket: e.target.value })}
-      />
-      <Select
-        className={cx('!w-auto', value.missing !== 'alle' && 'border-shu-400/60')}
-        options={[
-          { value: 'alle', label: 'Alle Einträge' },
-          { value: 'ohne-termin', label: 'Ohne Tag (Pool)' },
-          { value: 'ohne-ticket', label: 'Ticket fehlt noch' },
-          { value: 'ohne-koordinaten', label: 'Ohne Koordinaten' },
-        ]}
-        value={value.missing}
-        onChange={(e) => set({ missing: e.target.value as PlaceFilter['missing'] })}
-      />
-      {active ? (
-        <button className="btn-quiet" onClick={() => onChange({ ...EMPTY_FILTER, q: '' })} title="Filter zurücksetzen">
-          ✕ zurücksetzen
-        </button>
-      ) : null}
-      {right}
-      <span className="ml-auto text-[12px] text-slate-500">
-        {places.length} Einträge · {places.filter((p) => p.lat === null || p.lng === null).length} ohne Koordinaten
-      </span>
-      <span className="hidden lg:block text-[11px] text-slate-600">
-        {[...new Set(places.map((p) => categoryMeta(p.category).label))].slice(0, 6).join(' · ')}
-      </span>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        {pills.map((pill) => (
+          <button
+            key={pill.key}
+            type="button"
+            aria-pressed={pill.on}
+            className={cx(
+              'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium transition',
+              pill.on ? 'bg-shu-500/20 text-white ring-1 ring-inset ring-shu-400/40' : 'bg-white/[0.045] text-slate-300 hover:bg-white/[0.08]',
+            )}
+            onClick={() => onChange({ ...value, ...(pill.on ? { missing: 'alle', prio: '' } : { missing: 'alle', prio: '', ...pill.only }) })}
+          >
+            {pill.label}
+            <span className="tabular-nums text-slate-400">{pill.n}</span>
+          </button>
+        ))}
+        {active ? (
+          <button className="text-[11.5px] text-slate-400 underline-offset-2 hover:text-white hover:underline" onClick={() => onChange({ ...EMPTY_FILTER })} title="Alle Filter zurücksetzen">
+            zurücksetzen
+          </button>
+        ) : null}
+        {detailed ? (
+          <>
+            <Select
+              className={cx('!w-auto !py-1 !text-[12px]', value.status && 'border-shu-400/60')}
+              allowEmpty
+              emptyLabel="Alle Status"
+              options={BOOKING_STATUSES.map((s) => ({ value: s, label: STATUS_META[s].label }))}
+              value={value.status}
+              onChange={(e) => set({ status: e.target.value })}
+            />
+            <Select
+              className={cx('!w-auto !py-1 !text-[12px]', value.ticket && 'border-shu-400/60')}
+              allowEmpty
+              emptyLabel="Alle Tickets"
+              options={TICKET_ORDER.map((t) => ({ value: t, label: `${TICKET_META[t].icon} ${TICKET_META[t].short}` }))}
+              value={value.ticket}
+              onChange={(e) => set({ ticket: e.target.value })}
+            />
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }

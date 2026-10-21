@@ -8,17 +8,19 @@ Ohne Datenbank-Zugangsdaten läuft die App im **Demo-Modus**: alle Daten liegen 
 
 ## Was die App kann
 
-| Bereich | Inhalt |
+Fünf Reiter, alles Wichtige vorn, der Rest hinter `⋯`:
+
+| Reiter | Inhalt |
 | --- | --- |
-| 🏠 **Übersicht** | **grafische Reisekarte**: Band über alle Reisetage (Bett-Balken pro Unterkunft, Nächte mit/ohne Quartier, Fahrten-Icons, Auslastungssäulen) · **jeder Tag als Zeitbild** auf der Achse 07–23 Uhr (Balken = Eintrag, gestrichelt = ohne feste Uhrzeit, rot umrandet = Muss noch offen) · **Ring „Planungsgrad“** mit Checklist „was noch fehlen würde" (Nächte, Termine, Tickets, Preise, Fahrzeiten, Koordinaten, Fahrten mit Uhrzeit, Tickets, Budget) · **„was noch verfügbar ist"**: freie Tage, Luft pro Tag, Punkte/Nächte-Balance pro Stadt, ⚡ Wünsche auf freie Tage legen, offene Buchungen mit Link |
-| 🗓️ **Tage** | Tagesplan pro Reisetag, Einträge per **Drag & Drop** verschieben (mobil ◀ ▶), Tagesband mit den verplanten Abschnitten (Lücke anklicken = oberster Wunsch rutscht dorthin), Hotel der Nacht + Fahrten (Flug/Zug) direkt am Tag · 🗺️ eingeblendete Google-Maps-Karte mit der Tagesroute, ✓ erledigt |
-| 🗂️ **Aktivitäten** | alles als Liste untereinander: oben, was noch **ohne Tag** ist, darunter die Tage mit ihrem belegten Zeitfenster · Tag, Uhrzeit und Dauer direkt in der Zeile · **Doppelplanung wird abgewiesen**, belegte Zeiten rutschen in die nächste Lücke · ⚡ automatisch verteilen |
-| 📊 **Tabelle** | alle Felder als Zeilen: sortierbare Spalten, Inline-Edit (Datum/Status/Ticket/Prio), Filter + Suche, **CSV-Export** (Semikolon, de-DE → in jedes Tabellenprogramm importierbar) |
-| 🗺️ **Karte** | Marker aus den Koordinaten (Farbe = Kategorie, hohl = ohne Tag), Route des gewählten Tages als Linie, Unterkünfte als 🏨-Marker, Popup mit Details · rechte Spalte: **dieselbe Ansicht bei Google Maps** (Einbettung ohne API-Key) für Auswahl oder Tagesroute, oben der Knopf **🧭 Route** |
-| 🏨 **Unterkünfte** | Nächte, Gesamtpreis, € / Nacht, € / Person / Nacht, **Nächte-Check** (welche Nacht hat kein Hotel?), Preisvergleich-Balken |
-| 💶 **Kosten** | Budgetauslastung, aufgeschlüsselt nach Unterkunft / Transport / Tickets / Ausgaben, Yen-Umrechnung mit einstellbarem Kurs, „wer hat vorgestreckt“ + Ausgleich |
-| 🚄 **Reiseverlauf** | Fahrten (Ankunft, Shinkansen, Flüge, Hotelwechsel) inkl. Preis, Hotel und Nächten je Halt |
-| ⚙ **Reisen** | mehrere Reisen, **duplizieren** (neues Jahr = alte Reise als Vorlage, Wochentage bleiben gleich), archivieren, Budget/¥-Kurs/Personen |
+| 🗓️ **Tage** (Startseite der Reise) | ein Kartenstapel pro Reisetag: Datum, Stadt, Aktivitätenzahl und Programmstunden oben in der Zeile, darunter die Einträge. Das **Zeitband 07–23 Uhr** zeigt den belegten Tag; eine **Lücke anklicken** holt den obersten Wunsch aus der Leiste rechts. Im `⋯` des Tages: 🗺️ Karte inline, 🧭 die Tagesroute bei Google Maps, ✨ nächsten Wunsch hierher legen |
+| 🗂️ **Aktivitäten** | alles als Liste untereinander: oben, was noch **ohne Tag** ist, darunter die Tage. Tag, Zeitfenster und Dauer direkt in der Zeile, **Doppelplanung wird abgewiesen**, belegte Zeiten rutschen in die nächste Lücke, ⚡ verteilt automatisch |
+| 🗺️ **Karte** | Marker aus den Koordinaten (Farbe = Kategorie, hohl = ohne Tag), Route des Tages als Linie, 🏨 Unterkünfte · rechte Spalte die gleiche Ansicht bei Google Maps, fehlende Punkte per Suche setzbar |
+| 🧳 **Reise** | Unterkünfte · Fahrten · Kosten in einem Screen (Umschalter oben), darunter alle Downloads: CSV, JSON, KML |
+| 📊 **Übersicht** | grafische Reisekarte: Bett-Band über alle Tage, jeder Tag als Zeitbild, Ring „Planungsgrad“, Checklist „was noch fehlt“ und „was noch frei ist“ |
+
+Immer nur zwei Knöpfe oben rechts: **＋ Anlegen** (Aktivität, Unterkunft, Fahrt, Ausgabe – mit kurzer Erklärung, was die Kachel tut) und
+**⋯** (Reise bearbeiten, Koordinaten nachziehen, als Tabelle öffnen, exportieren, drucken). Feinfilter, Tabellenansicht,
+Einzel screens (`/tabelle`, `/unterkuenfte`, `/kosten`, `/verlauf`) und der Druckbogen hängen dahinter bzw. unter denselben Deep-Links.
 
 ### Begriffe
 **Aktivität** = ein Punkt im Programm (sehen, essen, baden, Ticket lösen) · **Unterkunft** = Bett für eine oder mehrere Nächte ·

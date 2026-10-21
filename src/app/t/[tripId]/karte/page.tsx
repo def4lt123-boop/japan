@@ -176,9 +176,6 @@ export default function MapPage() {
           <Card className="max-h-[40vh] overflow-y-auto p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
               <h3 className="text-[13px] font-semibold text-white">Sichtbare Aktivitäten</h3>
-              <Button size="sm" variant="ghost" onClick={() => void geocodeAll()} title="Fehlende Koordinaten über OpenStreetMap suchen">
-                🌍 alle nachziehen
-              </Button>
             </div>
             <ul className="space-y-1">
               {onMap.map((p) => (

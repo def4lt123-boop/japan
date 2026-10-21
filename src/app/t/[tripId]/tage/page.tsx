@@ -10,7 +10,7 @@ import { MapPreview, RoutePreview } from '../../../../components/MapPreview';
 import { dayStops, hotelForDay, routeUrl } from '../../../../lib/maps';
 import { assign, minToTime } from '../../../../lib/dayplan';
 import { DayBar } from '../../../../components/daybar';
-import { Button, Card, Empty, SectionTitle, TextInput, cx } from '../../../../components/ui';
+import { Button, Card, Empty, Menu, SectionTitle, TextInput, cx } from '../../../../components/ui';
 import { dayPlan, nightCoverage } from '../../../../lib/stats';
 import { categoryMeta } from '../../../../lib/categories';
 import { fmtDate, fmtDuration, plural } from '../../../../lib/format';
@@ -90,17 +90,7 @@ export default function DaysPage() {
       <SectionTitle
         title="Tagesplan"
         icon="🗓️"
-        hint="Neue Einträge entstehen ohne Tag und warten rechts in der Leiste – von dort auf einen Tag ziehen (Touch: ◀ ▶ am Karteikasten). Ein Tag gilt als voll über 8 h Programm."
-        right={
-          <>
-            <Button size="sm" variant="ghost" onClick={() => window.print()}>
-              🖨 Drucken
-            </Button>
-            <Button size="sm" variant="primary" onClick={() => open({ kind: 'place' })}>
-              ＋ Aktivität
-            </Button>
-          </>
-        }
+        hint="Ziehen zum Planen · Lücke im Band = freie Zeit · über 8 h gilt ein Tag als voll"
       />
 
       <div className="no-print sticky top-0 z-20 -mx-1 overflow-x-auto rounded-xl border border-white/[0.07] bg-ink-950/85 px-1 py-1 backdrop-blur">
@@ -122,7 +112,7 @@ export default function DaysPage() {
           ))}
           {pool.length ? (
             <a href="#pool" className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[12px] text-amber-100 ring-1 ring-inset ring-amber-400/25 hover:bg-amber-500/20">
-              ✨ Pool <span className="tabular-nums">{pool.length}</span>
+              ✨ ohne Tag <span className="tabular-nums">{pool.length}</span>
             </a>
           ) : null}
         </div>
@@ -131,7 +121,7 @@ export default function DaysPage() {
       {!days.length ? (
         <Empty
           title="Für diese Reise ist noch kein Zeitraum gesetzt"
-          hint="Oben rechts auf ⚙ klicken und Start-/Enddatum eintragen. Danach erscheinen hier die Tage zum Befüllen."
+          hint="Oben rechts auf ⋯ → „Reise bearbeiten“ und Start-/Enddatum eintragen. Danach erscheinen hier die Tage zum Befüllen."
           action={
             <Button variant="primary" onClick={() => open({ kind: 'trip', id: tripId })}>
               Reise-Datum setzen
@@ -140,7 +130,7 @@ export default function DaysPage() {
         />
       ) : null}
 
-      <div className={cx('grid items-start gap-3', pool.length ? '2xl:grid-cols-[minmax(0,1fr)_312px]' : '')}>
+      <div className={cx('grid items-start gap-4', pool.length ? '2xl:grid-cols-[minmax(0,1fr)_320px]' : '')}>
         <div className="grid gap-3 2xl:grid-cols-2">
         {days.map((d) => {
           const night = coverage.get(d.date);
@@ -162,39 +152,44 @@ export default function DaysPage() {
               onDrop={drop(d.date)}
               className={cx('print-block scroll-mt-16 p-0 transition', dropTarget === d.date && 'drop-live', over && 'border-shu-400/30')}
             >
-              <header className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-white/[0.07] px-3 py-2">
-                <span className="text-[13px] font-semibold text-white">{fmtDate(d.date, { weekday: 'long', day: 'numeric', month: 'long' })}</span>
-                <span className="text-[12px] text-slate-400">
-                  {d.cities.length ? `· ${d.cities.join(' / ')}` : d.journeys[0]?.to_city ? `· ${d.journeys[0].to_city}` : ''}
-                </span>
-                <span className="ml-auto flex items-center gap-1.5 text-[11.5px] text-slate-400">
-                  <span className={cx('chip ring-1', over ? 'bg-shu-500/15 text-shu-100 ring-shu-400/30' : 'bg-white/[0.05] text-slate-300 ring-white/10')}>
-                    {plural(d.places.length, 'Aktivität', 'Aktivitäten')} · {d.hours ? fmtDuration(d.hours * 60) : '0 Min'}
+              <header className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-white/[0.06] px-3 py-2">
+                <span className="text-[13.5px] font-semibold text-white">{fmtDate(d.date, { weekday: 'short', day: 'numeric', month: 'long' })}</span>
+                {d.cities.length || d.journeys[0]?.to_city ? (
+                  <span className="text-[12px] text-slate-400">{d.cities.length ? d.cities.join(' / ') : d.journeys[0]?.to_city}</span>
+                ) : null}
+                <span className="ml-auto flex items-center gap-1 text-[11.5px] text-slate-400">
+                  <span className={cx('chip', over ? 'bg-shu-500/20 text-shu-100' : d.places.length ? 'bg-white/[0.06] text-slate-300' : 'bg-transparent text-slate-500')}>
+                    {d.places.length ? `${plural(d.places.length, 'Aktivität', 'Aktivitäten')} · ${fmtDuration(d.hours * 60)}` : 'noch frei'}
                   </span>
-                  {stops.length > 1 ? (
-                    <a
-                      className="btn-quiet !px-1.5"
-                      href={routeUrl({ origin: origin!, destination: destination!, stops: via, mode: 'transit' })}
-                      target="_blank"
-                      rel="noreferrer"
-                      title="Den Tag als Route bei Google Maps öffnen – mit Abfahrtszeiten"
-                    >
-                      🧭
-                    </a>
-                  ) : null}
-                  {stops.length ? (
-                    <button
-                      className={cx('btn-quiet !px-1.5', mapDay === d.date && '!bg-shu-500/25 !text-white')}
-                      title="Karte zu diesem Tag hier zeigen"
-                      aria-expanded={mapDay === d.date}
-                      onClick={() => setMapDay((cur) => (cur === d.date ? null : d.date))}
-                    >
-                      🗺️
-                    </button>
-                  ) : null}
-                  <button className="btn-quiet !px-1.5" title="Aktivität an diesem Tag anlegen" onClick={() => open({ kind: 'place', defaults: { date: d.date } })}>
+                  <button className="icon-btn" title="Aktivität an diesem Tag anlegen" onClick={() => open({ kind: 'place', defaults: { date: d.date } })}>
                     ＋
                   </button>
+                  <Menu
+                    align="right"
+                    variant="quiet"
+                    icon="⋯"
+                    title="Mehr für diesen Tag"
+                    items={[
+                      ...(stops.length > 1
+                        ? [{ icon: '🧭', label: 'Tag als Route bei Google Maps', hint: `${stops.length} Halte, mit Fahrplan`, href: routeUrl({ origin: origin!, destination: destination!, stops: via, mode: 'transit' }) }]
+                        : []),
+                      ...(stops.length ? [{ icon: '🗺️', label: mapDay === d.date ? 'Karte ausblenden' : 'Karte zu diesem Tag zeigen', run: () => setMapDay((cur) => (cur === d.date ? null : d.date)) }] : []),
+                      ...(pool.length
+                        ? [
+                            {
+                              icon: '✨',
+                              label: 'Obersten Wunsch hierher legen',
+                              hint: pool[0].name,
+                              run: () => {
+                                const candidate = pool.find((x) => x.city === d.places[0]?.city) ?? pool[0];
+                                if (candidate) assign(store, bundle.places, candidate, { date: d.date });
+                              },
+                            },
+                          ]
+                        : []),
+                      { icon: '🗓️', label: 'Alle Aktivitäten der Reise', href: `/t/${tripId}/aktivitaeten` },
+                    ]}
+                  />
                 </span>
               </header>
 
@@ -236,8 +231,8 @@ export default function DaysPage() {
                     <MapPreview place={destination} height={190} heading={destination?.name ?? 'Karte'} />
                   )}
                   <p className="mt-1 text-[11px] leading-snug text-slate-500">
-                    {hotel ? `Start an der Unterkunft „${hotel.name}“. ` : 'Keine Unterkunft für diesen Tag – erster Punkt ist der Start. '}
-                    Rechnerisch in geplanter Reihenfolge; „öffnen“ zeigt Fahrpläne und Umstiege.
+                    {hotel ? `Start an der Unterkunft „${hotel.name}“ · ` : 'Erster Punkt ist der Start · '}
+                    Reihenfolge wie geplant, „öffnen“ zeigt Fahrpläne und Umstiege.
                   </p>
                 </div>
               ) : null}
@@ -256,7 +251,6 @@ export default function DaysPage() {
                         : undefined
                     }
                   />
-                  {pool.length ? <p className="mt-0.5 text-[10.5px] text-slate-500">Lücke anklicken = oberster Wunsch der Liste rutscht dorthin</p> : null}
                 </div>
               ) : null}
 
@@ -264,26 +258,11 @@ export default function DaysPage() {
                 {d.places.length ? (
                   d.places.map((p) => <PlaceCard key={p.id} place={p} onMove={(dir) => moveDay(p.id, d.date, dir)} />)
                 ) : (
-                  <div className="rounded-lg border border-dashed border-white/[0.12] px-3 py-5 text-center text-[12.5px] text-slate-500">
-                    Noch nichts geplant – Karte hierher ziehen oder{' '}
+                  <div className="rounded-xl border border-dashed border-white/[0.12] px-3 py-4 text-center text-[12.5px] text-slate-500">
+                    Noch frei – Punkt aus der Leiste hierher ziehen oder{' '}
                     <button className="text-shu-200 underline-offset-2 hover:underline" onClick={() => open({ kind: 'place', defaults: { date: d.date } })}>
                       neue Aktivität anlegen
                     </button>
-                    {pool.length ? (
-                      <>
-                        {' '}
-                        oder{' '}
-                        <button
-                          className="text-shu-200 underline-offset-2 hover:underline"
-                          onClick={() => {
-                            const candidate = pool.find((p) => p.priority === 'muss') ?? pool[0];
-                            if (candidate) assign(store, bundle.places, candidate, { date: d.date });
-                          }}
-                        >
-                          nächsten Wunsch hierher legen
-                        </button>
-                      </>
-                    ) : null}
                   </div>
                 )}
               </div>
@@ -294,7 +273,8 @@ export default function DaysPage() {
 
       {pool.length ? (
         <aside
-          className="no-print sticky top-2 max-h-[calc(100vh-1.5rem)] overflow-y-auto rounded-xl border border-white/[0.07] bg-ink-900/70 p-2.5 backdrop-blur"
+          id="pool"
+          className="no-print sticky top-2 max-h-[calc(100vh-1.5rem)] overflow-y-auto rounded-2xl border border-white/[0.07] bg-ink-900/80 p-2.5 backdrop-blur"
           onDragOver={(e) => {
             e.preventDefault();
             setDropTarget('pool');
@@ -308,7 +288,7 @@ export default function DaysPage() {
               Liste →
             </Link>
           </div>
-          <p className="mb-1.5 text-[11px] leading-snug text-slate-500">Nach rechts auf einen Tag ziehen. Das Pfeil-Symbol legt den Punkt auf den Tag mit der meisten Luft.</p>
+          <p className="mb-1.5 text-[11px] leading-snug text-slate-500">Auf einen Tag ziehen – der Pfeil rechts setzt ihn auf den Tag mit der meisten Luft.</p>
           <TextInput className="!py-1 !text-[12px]" value={poolQ} onChange={(e) => setPoolQ(e.target.value)} placeholder="suchen …" />
           <ul className={cx('mt-1.5 space-y-1', dropTarget === 'pool' && 'drop-live rounded-lg')}>
             {poolShown.slice(0, 40).map((item) => {
@@ -351,7 +331,7 @@ export default function DaysPage() {
               );
             })}
           </ul>
-          {poolShown.length > 40 ? <p className="mt-1 text-[11px] text-slate-500">… {poolShown.length - 40} weitere – „alle“ oben.</p> : null}
+          {poolShown.length > 40 ? <p className="mt-1 text-[11px] text-slate-500">… {poolShown.length - 40} weitere – die Suche oben reduziert die Liste.</p> : null}
           {!poolShown.length ? <p className="px-1 py-3 text-center text-[12px] text-slate-500">Keine Treffer für „{poolQ}“.</p> : null}
         </aside>
       ) : null}

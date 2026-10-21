@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0b0d12;
-  --grid: rgba(255, 255, 255, 0.045);
+  --bg: #0b0e14;
+  --line: rgba(255, 255, 255, 0.07);
 }
 
 html,
@@ -15,10 +15,8 @@ body {
 }
 
 body {
-  background-image: radial-gradient(1200px 600px at 15% -10%, rgba(240, 78, 35, 0.16), transparent 60%),
-    radial-gradient(900px 500px at 95% 0%, rgba(63, 95, 150, 0.22), transparent 65%), linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: auto, auto, 42px 42px, 42px 42px;
+  background-image: radial-gradient(1100px 540px at 10% -14%, rgba(240, 78, 35, 0.13), transparent 62%),
+    radial-gradient(950px 500px at 94% -8%, rgba(63, 95, 150, 0.2), transparent 62%);
   background-attachment: fixed;
 }
 
@@ -36,36 +34,52 @@ body {
 
 @layer components {
   .card {
-    @apply rounded-xl border border-white/10 bg-ink-900/70 shadow-card backdrop-blur-[2px];
+    @apply rounded-2xl border border-white/[0.07] bg-white/[0.035] shadow-card backdrop-blur-[2px];
   }
   .label {
-    @apply mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400;
+    @apply mb-1 block text-[11.5px] font-medium text-slate-400;
   }
   .input {
-    @apply w-full rounded-lg border border-white/10 bg-black/25 px-2.5 py-1.5 text-sm text-slate-100 outline-none transition
-      placeholder:text-slate-500 focus:border-shu-400/70 focus:ring-2 focus:ring-shu-500/25;
+    @apply w-full rounded-xl border border-white/[0.09] bg-black/20 px-3 py-2 text-[13.5px] text-slate-100 outline-none transition
+      placeholder:text-slate-500 focus:border-shu-400/60 focus:ring-2 focus:ring-shu-500/20;
   }
   .chip {
-    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset;
+    @apply inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] font-medium;
   }
   .btn {
-    @apply inline-flex select-none items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold transition
-      disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex select-none items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-[13px] font-semibold transition
+      disabled:cursor-not-allowed disabled:opacity-45;
   }
   .btn-primary {
-    @apply btn bg-shu-500 text-white shadow-[0_6px_20px_-8px_rgba(240,78,35,0.9)] hover:bg-shu-400 active:translate-y-px;
+    @apply btn bg-shu-500 text-white shadow-[0_8px_22px_-10px_rgba(240,78,35,0.9)] hover:bg-shu-400 active:translate-y-px;
   }
   .btn-ghost {
-    @apply btn border border-white/[0.12] bg-white/[0.04] text-slate-200 hover:border-white/25 hover:bg-white/[0.08];
+    @apply btn border border-white/[0.09] bg-white/[0.04] text-slate-200 hover:border-white/20 hover:bg-white/[0.07];
   }
   .btn-quiet {
     @apply btn text-slate-400 hover:bg-white/[0.06] hover:text-slate-100;
   }
+  .icon-btn {
+    @apply grid h-7 w-7 shrink-0 cursor-pointer place-items-center rounded-lg text-[13px] text-slate-400 transition
+      hover:bg-white/[0.08] hover:text-white disabled:opacity-40;
+  }
   .tab {
-    @apply whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-100;
+    @apply whitespace-nowrap rounded-xl px-3 py-2 text-[13px] font-medium text-slate-400 transition hover:bg-white/[0.05] hover:text-slate-100;
   }
   .tab-active {
-    @apply bg-white/[0.1] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)];
+    @apply bg-shu-500/15 text-white ring-1 ring-inset ring-shu-400/30;
+  }
+  .seg {
+    @apply inline-flex items-center gap-0.5 rounded-xl bg-white/[0.045] p-0.5;
+  }
+  .seg > button {
+    @apply rounded-[10px] px-2.5 py-1 text-[12.5px] font-medium text-slate-400 transition hover:text-slate-100;
+  }
+  .seg > .seg-on {
+    @apply bg-ink-700 text-white shadow-[0_1px_0_rgba(255,255,255,0.06)_inset];
+  }
+  .menu-pop {
+    @apply pop-in absolute right-0 z-50 mt-1 w-60 rounded-xl border border-white/10 bg-ink-800/95 p-1 text-left shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] backdrop-blur;
   }
   .cell {
     @apply px-2 py-1 align-top text-[13px] leading-snug;
