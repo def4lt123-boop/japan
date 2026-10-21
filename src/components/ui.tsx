@@ -1,10 +1,165 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import clsx from 'clsx';
 
 export function cx(...parts: (string | false | null | undefined)[]) {
   return clsx(parts);
+}
+
+/** Aufklappbarer Block für alles, was nicht beim ersten Blick stören muss */
+export function Disclosure({ title, children, open = false, hint }: { title: React.ReactNode; children: React.ReactNode; open?: boolean; hint?: React.ReactNode }) {
+  return (
+    <details open={open} className="group/disclosure rounded-xl border border-white/[0.07] bg-white/[0.02] px-2.5 py-2">
+      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[12.5px] font-medium text-slate-300 [&::-webkit-details-marker]:hidden">
+        <span aria-hidden className="text-[10px] text-slate-500 transition group-open/disclosure:rotate-90">
+          ▸
+        </span>
+        {title}
+        {hint ? <span className="font-normal text-slate-500">· {hint}</span> : null}
+      </summary>
+      <div className="mt-2.5 space-y-2.5">{children}</div>
+    </details>
+  );
+}
+
+/** Kleine eckige Icon-Aktionen, die im Ruhezustand leise bleiben */
+export function IconBtn({ children, className, ...rest }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button type="button" className={cx('icon-btn', className)} {...rest}>
+      {children}
+    </button>
+  );
+}
+
+/** Segmented control: wenige, klar beschriftete choices statt Dropdown-Liste */
+export function Seg<T extends string>({
+  options,
+  value,
+  onChange,
+  className,
+  title,
+}: {
+  options: { value: T; label: React.ReactNode; title?: string }[];
+  value: T | '' | null;
+  onChange: (v: T) => void;
+  className?: string;
+  title?: string;
+}) {
+  return (
+    <div className={cx('seg', className)} title={title} role="group">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          title={o.title}
+          aria-pressed={value === o.value}
+          className={cx(value === o.value && 'seg-on')}
+          onClick={() => onChange(o.value)}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export interface MenuItem {
+  label: React.ReactNode;
+  hint?: string;
+  icon?: React.ReactNode;
+  run?: () => void;
+  href?: string;
+  danger?: boolean;
+}
+
+/** Ein Knopf, der Aktionen erst zeigt, wenn man sie braucht */
+export function Menu({
+  items,
+  label,
+  icon,
+  title,
+  variant = 'ghost',
+  align = 'right',
+}: {
+  items: MenuItem[];
+  label?: React.ReactNode;
+  icon?: React.ReactNode;
+  title?: string;
+  variant?: 'primary' | 'ghost' | 'quiet';
+  align?: 'left' | 'right';
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    window.addEventListener('mousedown', away);
+    window.addEventListener('keydown', esc);
+    return () => {
+      window.removeEventListener('mousedown', away);
+      window.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+
+  const cls = variant === 'primary' ? 'btn-primary' : variant === 'quiet' ? 'btn-quiet' : 'btn-ghost';
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        className={cls}
+        title={title}
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {icon ? <span aria-hidden>{icon}</span> : null}
+        {label}
+        <span aria-hidden className={cx('text-[9px] opacity-60 transition', open && 'rotate-180')}>
+          ▾
+        </span>
+      </button>
+      {open ? (
+        <div className={cx('menu-pop', align === 'left' && '!left-0 !right-auto')}>
+          {items.map((item, i) =>
+            item.href ? (
+              <Link
+                key={i}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className="flex items-start gap-2 rounded-lg px-2 py-1.5 text-[13px] text-slate-200 transition hover:bg-white/[0.07] hover:text-white"
+              >
+                {item.icon ? <span aria-hidden className="mt-px">{item.icon}</span> : null}
+                <span className="min-w-0 flex-1">
+                  <span className="block">{item.label}</span>
+                  {item.hint ? <span className="block text-[11px] text-slate-500">{item.hint}</span> : null}
+                </span>
+              </Link>
+            ) : (
+              <button
+                key={i}
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  item.run?.();
+                }}
+                className={cx('flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] transition hover:bg-white/[0.07]', item.danger ? 'text-red-200/90 hover:text-red-100' : 'text-slate-200 hover:text-white')}
+              >
+                {item.icon ? <span aria-hidden className="mt-px">{item.icon}</span> : null}
+                <span className="min-w-0 flex-1">
+                  <span className="block">{item.label}</span>
+                  {item.hint ? <span className="block text-[11px] text-slate-500">{item.hint}</span> : null}
+                </span>
+              </button>
+            ),
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function Card({ className, children, ...rest }: React.HTMLAttributes<HTMLDivElement>) {

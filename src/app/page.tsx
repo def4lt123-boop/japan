@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useStore } from '../lib/store';
 import { TripForm } from '../components/forms';
-import { Button, Card, Field, Modal, Money, SectionTitle, Stat, TextInput, cx } from '../components/ui';
+import { Button, Card, Field, Menu, Modal, Money, SectionTitle, Stat, TextInput, cx } from '../components/ui';
 import { costsOf, nightCoverage, tripLengthLabel } from '../lib/stats';
 import { addDays, fmtDate, fmtMoney, fmtRange, plural } from '../lib/format';
 import type { Trip, TripBundle } from '../lib/types';
@@ -67,22 +67,21 @@ export default function HomePage() {
         <h1 className="max-w-3xl text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl">
           Urlaubsplanung – jeder Tag, jedes Hotel, jeder offene Punkt
         </h1>
-        <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-slate-300">
-          Jeder Ort mit <b>Tageszeit</b>, <b>Dauer</b>, <b>Fahrzeit vom Hotel</b>, <b>Hinweisen</b>, <b>Status</b>, <b>Preis</b> und <b>Google-Maps-Koordinaten</b>. Tage lassen sich planen, Einträge anlegen,
-          verschieben, filtern, auf der Karte ansehen und als CSV exportieren.
+        <p className="mt-2 max-w-xl text-[13.5px] leading-relaxed text-slate-300">
+          Jeder Ort mit Tageszeit, Dauer, Fahrzeit vom Hotel, Hinweis, Ticket, Preis und Kartenpunkt – Tag für Tag geplant.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Button variant="primary" onClick={() => setCreating(true)}>
-            ＋ Neue Reise anlegen
-          </Button>
-          <Button variant="ghost" onClick={() => openDuplicate(store.trips[store.trips.length - 1] ?? store.trips[0])}>
-            ⧉ Alte Reise als Vorlage duplizieren
-          </Button>
           {bundles[0] ? (
-            <Link href={`/t/${bundles[0].trip.id}`} className="btn-ghost">
+            <Link href={`/t/${bundles[0].trip.id}/tage`} className="btn-primary">
               Weiter zu „{bundles[0].trip.name}“ →
             </Link>
           ) : null}
+          <Button variant="quiet" onClick={() => setCreating(true)}>
+            ＋ Neue Reise
+          </Button>
+          <Button variant="quiet" onClick={() => openDuplicate(store.trips[store.trips.length - 1] ?? store.trips[0])}>
+            ⧉ Als Vorlage duplizieren
+          </Button>
         </div>
       </section>
 
@@ -217,7 +216,7 @@ function TripCard({ bundle, onEdit, onDuplicate, onDelete }: { bundle: TripBundl
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="truncate text-[17px] font-semibold text-white">
-              <Link href={`/t/${bundle.trip.id}`} className="underline-offset-2 hover:underline">
+              <Link href={`/t/${bundle.trip.id}/tage`} className="underline-offset-2 hover:underline">
                 {bundle.trip.name}
               </Link>
             </h3>
@@ -227,7 +226,7 @@ function TripCard({ bundle, onEdit, onDuplicate, onDelete }: { bundle: TripBundl
             {bundle.trip.destination || '—'} · {fmtRange(bundle.trip.start_date, bundle.trip.end_date)} · {tripLengthLabel(bundle.trip)} · {plural(bundle.trip.travelers, 'Person', 'Personen')}
           </p>
         </div>
-        <Link href={`/t/${bundle.trip.id}`} className="btn-primary shrink-0">
+        <Link href={`/t/${bundle.trip.id}/tage`} className="btn-primary shrink-0">
           Planen →
         </Link>
       </div>
@@ -251,16 +250,23 @@ function TripCard({ bundle, onEdit, onDuplicate, onDelete }: { bundle: TripBundl
         <span className="text-[11.5px] text-slate-500">
           <Money value={costs.accommodation} /> Unterkunft · <Money value={costs.transport} /> Transport · <Money value={costs.entries} /> Einträge
         </span>
-        <span className="ml-auto flex gap-1.5">
-          <Button size="sm" variant="ghost" onClick={onEdit} title="Zeitraum, Budget, Personen, ¥-Kurs">
-            ⚙ Reise bearbeiten
-          </Button>
-          <Button size="sm" variant="ghost" onClick={onDuplicate}>
-            ⧉ Duplizieren
-          </Button>
-          <Button size="sm" variant="ghost" onClick={onDelete} title="Reise löschen">
-            🗑
-          </Button>
+        <span className="ml-auto flex items-center gap-1.5">
+          <Link href={`/t/${bundle.trip.id}/kosten`} className="chip bg-white/[0.05] text-slate-300 ring-white/10 hover:bg-white/[0.09]">
+            Kosten im Detail
+          </Link>
+          <Menu
+            align="right"
+            variant="quiet"
+            icon="⋯"
+            title="Mit dieser Reise"
+            items={[
+              { icon: '✎', label: 'Reise bearbeiten', hint: 'Zeitraum, Budget, Personen, ¥-Kurs', run: onEdit },
+              { icon: '🗓️', label: 'Tage ansehen', href: `/t/${bundle.trip.id}/tage` },
+              { icon: '🌐', label: 'Übersicht ansehen', href: `/t/${bundle.trip.id}/uebersicht` },
+              { icon: '⧉', label: 'Duplizieren', hint: 'Vorlage für eine nächste Reise', run: onDuplicate },
+              { icon: '🗑', label: 'Reise löschen', danger: true, run: onDelete },
+            ]}
+          />
         </span>
       </div>
     </Card>
@@ -275,22 +281,19 @@ function TipsCard() {
         <SectionTitle title="So arbeitest du" icon="💡" hint="Plane pro Tag, sieh was fehlt, und behalte Betten und Kosten im Blick." />
         <ul className="grid gap-1.5 text-[13px] leading-relaxed text-slate-300 sm:grid-cols-2">
           <li>
-            <b>Tage</b>: Einträge zwischen Tagen ziehen, ✎ bearbeiten, ✓ erledigt.
+            <b>Tage</b>: Aktivität aus der Leiste links auf einen Tag ziehen – oder eine Lücke im Zeitband anklicken.
           </li>
           <li>
-            <b>Übersicht</b>: Band mit Betten, Fahrten und Tagesluft – darunter jeder Tag als Zeitbild.
+            <b>Aktivitäten</b>: was noch keinen Tag hat, steht oben; ⚡ verteilt sie auf freie Zeit.
           </li>
           <li>
-            <b>Tabelle</b>: alle Felder in einer Zeile – sortierbar, filterbar, als CSV.
+            <b>Karte</b>: alles, was einen Punkt hat, plus Suche für die fehlenden Koordinaten.
           </li>
           <li>
-            <b>Karte</b>: Punkte aus den Koordinaten, fehlende lassen sich per Suche setzen.
+            <b>Reise</b>: Unterkünfte, Fahrten, Kosten und alle Downloads an einem Ort.
           </li>
-          <li>
-            <b>Kosten</b>: Unterkünfte + Fahrten + Aktivitäten + Ausgaben, pro Person und in ¥.
-          </li>
-          <li>
-            <b>Aktivitäten</b>: alles als Liste – was noch keinen Tag hat, oben separiert, mit ⚡ automatisch verteilen.
+          <li className="sm:col-span-2 text-[12.5px] text-slate-400">
+            In jedem Screen steckt oben rechts ein <b>⋯</b> – dort liegen Bearbeiten, Nachziehen, Export und Drucken.
           </li>
         </ul>
       </Card>

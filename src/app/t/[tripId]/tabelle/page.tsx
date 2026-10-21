@@ -107,6 +107,7 @@ export default function TablePage() {
         value={filter}
         onChange={setFilter}
         places={bundle.places}
+        detailed
         right={
           <span className="chip bg-white/[0.05] text-slate-300 ring-white/10">
             {fmtMoney(totalCost)} · {Math.round(totalMin / 60)} h
