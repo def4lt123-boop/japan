@@ -214,5 +214,38 @@ export function assign(
   return true;
 }
 
+/**
+ * Zeit im Tagesband setzen – ohne Umwege über das Formular.
+ * `start` in Minuten ab Mitternacht, `duration` in Minuten. Überschneidet sich der
+ * Punkt mit etwas anderem, bleibt er trotzdem liegen (der Mensch weiß es besser),
+ * aber der Hinweis sagt es.
+ */
+export function setSlot(store: AssignStore, all: Place[], place: Place, next: { start?: number | null; duration?: number | null }): void {
+  const win = windowOf(place);
+  const span = win ? win.end - win.start : null;
+  const duration = Math.max(15, Math.min(DAY_SPAN, next.duration ?? span ?? DEFAULT_DURATION));
+  const wanted = next.start ?? win?.start ?? 9 * 60;
+  const start = Math.max(DAY_START, Math.min(DAY_END - duration, Math.round(wanted / 15) * 15));
+  const clash = collide(
+    all.filter((p) => p.date === place.date),
+    start,
+    duration,
+    place.id,
+  ).map((p) => p.name);
+  const whole = place.time_slot === 'Ganzer Tag' || Boolean(place.end_date && place.date && place.end_date > place.date);
+  if (whole) {
+    // Ein Mehrtages- oder Ganztages-Ausflug füllt den Tag – am Band gibt es nichts zu schieben.
+    store.say(`„${place.name}“ bleibt der ganze Tag – im Formular (✎) lässt sich eine feste Uhrzeit eintragen.`);
+    return;
+  }
+  void store.patch('places', place.id, { start_time: minToTime(start), duration_min: duration, time_slot: null });
+  const label = place.date ? pretty(place.date) : null;
+  store.say(
+    clash.length
+      ? `„${place.name}“ ${fmtWindow(start, start + duration)}${label ? ` am ${label}` : ''} – überschneidet sich mit ${clash.slice(0, 2).join(' und ')}${clash.length > 2 ? ` (+${clash.length - 2})` : ''}.`
+      : `„${place.name}“ ${fmtWindow(start, start + duration)}${label ? ` am ${label}` : ''}.`,
+  );
+}
+
 /** Dauer-Eingabe akzeptiert „2", „2 h", „90", „1:30" */
 export const parseLen = (input: string): number | null => parseDuration(input);

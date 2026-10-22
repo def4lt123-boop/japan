@@ -9,7 +9,7 @@ import { PendingList } from '../../../../components/PendingList';
 import { PlaceCard } from '../../../../components/PlaceCard';
 import { MapPreview, RoutePreview } from '../../../../components/MapPreview';
 import { dayStops, hotelForDay, routeUrl } from '../../../../lib/maps';
-import { assign, minToTime } from '../../../../lib/dayplan';
+import { assign, minToTime, setSlot } from '../../../../lib/dayplan';
 import { DayBar } from '../../../../components/daybar';
 import { Button, Card, Empty, Menu, SectionTitle, cx } from '../../../../components/ui';
 import { dayPlan, nightCoverage } from '../../../../lib/stats';
@@ -229,7 +229,7 @@ export default function DaysPage() {
                 <div className="border-b border-white/[0.05] px-3 pb-1.5 pt-2">
                   <DayBar
                     places={d.places}
-                    height={8}
+                    height={14}
                     onPickSlot={
                       pool.length
                         ? (m) => {
@@ -238,6 +238,14 @@ export default function DaysPage() {
                           }
                         : undefined
                     }
+                    onMove={(id, minute) => {
+                      const moving = bundle.places.find((x) => x.id === id);
+                      if (moving) setSlot(store, bundle.places, moving, { start: minute });
+                    }}
+                    onResize={(id, minutes) => {
+                      const moving = bundle.places.find((x) => x.id === id);
+                      if (moving) setSlot(store, bundle.places, moving, { duration: minutes });
+                    }}
                   />
                 </div>
               ) : null}

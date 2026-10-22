@@ -5,6 +5,7 @@
 import {
   assign,
   busyWindows,
+  setSlot,
   collide,
   duplicateOnDay,
   fmtWindow,
@@ -89,6 +90,37 @@ writes.length = 0;
 notes.length = 0;
 const off = assign(fake as any, [park], park as any, { date: null });
 step('Vom Tag lösen geht immer', off === true && writes[0]?.patch.date === null, writes[0]);
+
+// ── Ziehen im Tagesband (setSlot) ───────────────────────────────────────────
+writes.length = 0;
+notes.length = 0;
+setSlot(fake as any, [park], place({ id: 'pX', name: 'Kasuga Taisha', start_time: '15:00', duration_min: 60 }) as any, { start: min('10:00') });
+step('Ziehen setzt die Uhrzeit auf 15-Minuten-Schritt', writes[0]?.patch.start_time === '10:00', writes[0]);
+
+writes.length = 0;
+notes.length = 0;
+setSlot(fake as any, [park], place({ id: 'pX', name: 'Kasuga Taisha', start_time: '15:00', duration_min: 60 }) as any, { start: min('10:07') });
+step('Unrunde Zeit wird gerundet (10:07 → 10:00)', writes[0]?.patch.start_time === '10:00', writes[0]);
+
+writes.length = 0;
+notes.length = 0;
+setSlot(fake as any, both, place({ id: 'pX', name: 'Todai-ji', date: '2027-03-08', start_time: '15:00', duration_min: 60 }) as any, { start: min('12:30') });
+step('Überlappung bleibt liegen, wird aber gemeldet', writes[0]?.patch.start_time === '12:30' && /überschneidet sich mit Nara Park/.test(notes[0] || ''), notes[0]);
+
+writes.length = 0;
+notes.length = 0;
+setSlot(fake as any, [park], place({ id: 'pX', name: 'Spät', start_time: '15:00', duration_min: 120 }) as any, { start: min('23:40') });
+step('Über 23:00 wird ans Tagesende geklemmt', writes[0]?.patch.start_time === '21:00', writes[0]);
+
+writes.length = 0;
+notes.length = 0;
+setSlot(fake as any, [park], place({ id: 'pX', name: 'Früh', start_time: '08:00', duration_min: 90 }) as any, { duration: 150 });
+step('Am Rand gezogen = neue Dauer, Anfang bleibt', writes[0]?.patch.duration_min === 150 && writes[0]?.patch.start_time === '08:00', writes[0]);
+
+writes.length = 0;
+notes.length = 0;
+setSlot(fake as any, [park], place({ id: 'pX', name: 'Ganztags', time_slot: 'Ganzer Tag', start_time: null }) as any, { start: min('09:00') });
+step('Ganztages-Ausflug lässt sich am Band nicht verbiegen', writes.length === 0 && /ganzer? Tag/.test(notes[0] || ''), notes[0]);
 
 console.log(errors.length ? `\n❌ ${errors.length} Probe(n) fehlgeschlagen` : '\n🎉 Tageszeit-Rechnung passt');
 if (errors.length) process.exit(1);

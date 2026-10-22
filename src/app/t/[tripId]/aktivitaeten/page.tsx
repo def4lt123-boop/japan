@@ -15,7 +15,7 @@ import { FilterBar, EMPTY_FILTER, applyFilter, type PlaceFilter } from '../../..
 import { Button, Card, Empty, SectionTitle, cx } from '../../../../components/ui';
 import { distributePool } from '../../../../lib/planner';
 import { eachDate, fmtDate, plural } from '../../../../lib/format';
-import { assign, minToTime, plannedMinutes } from '../../../../lib/dayplan';
+import { assign, minToTime, plannedMinutes, setSlot } from '../../../../lib/dayplan';
 
 type View = 'alle' | 'offen' | 'platziert';
 
@@ -149,6 +149,14 @@ export default function ActivitiesPage() {
                     onPickSlot={(m) => {
                       const candidate = open_[0];
                       if (candidate) assign(store, bundle.places, candidate, { date, start_time: minToTime(m) });
+                    }}
+                    onMove={(id, minute) => {
+                      const moving = bundle.places.find((x) => x.id === id);
+                      if (moving) setSlot(store, bundle.places, moving, { start: minute });
+                    }}
+                    onResize={(id, minutes) => {
+                      const moving = bundle.places.find((x) => x.id === id);
+                      if (moving) setSlot(store, bundle.places, moving, { duration: minutes });
                     }}
                     note={
                       <span className="text-slate-400">

@@ -127,6 +127,17 @@ body {
 .leaflet-control-attribution a {
   color: #cbd5e1 !important;
 }
+/*
+ * Dunkelmodus für die offenen OpenStreetMap-Kacheln: nur die Bildkacheln werden
+ * invertiert – Marker, Linien, Popups und Beschriftungen der App bleiben so, wie sie sind.
+ * Kein Key, keine Registrierung, keine Kosten.
+ */
+.tiles-dark {
+  filter: invert(1) hue-rotate(180deg) brightness(0.93) contrast(0.92) saturate(0.72);
+}
+.tiles-dark--soft {
+  filter: invert(1) hue-rotate(180deg) brightness(1.02) contrast(0.78) saturate(0.35);
+}
 .marker-clusterish {
   display: grid;
   place-items: center;

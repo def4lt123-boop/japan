@@ -249,16 +249,30 @@ export function ActivityRow({
   );
 }
 
-/** Kopf über einem Tagesblock: Datum, Städte, Band des Tages (Lücke klicken = oberster Wunsch rutscht dorthin) */
-export function DayRowHeader({ date, places, note, onPickSlot }: { date: string; places: Place[]; note?: React.ReactNode; onPickSlot?: (minute: number) => void }) {
+/** Kopf über einem Tagesblock: Datum, Städte, Band des Tages (ziehen = Zeit, Lücke klicken = oberster Wunsch rutscht dorthin) */
+export function DayRowHeader({
+  date,
+  places,
+  note,
+  onPickSlot,
+  onMove,
+  onResize,
+}: {
+  date: string;
+  places: Place[];
+  note?: React.ReactNode;
+  onPickSlot?: (minute: number) => void;
+  onMove?: (placeId: string, minute: number) => void;
+  onResize?: (placeId: string, minutes: number) => void;
+}) {
   const cities = Array.from(new Set(places.map((p) => p.city).filter(Boolean))) as string[];
   return (
     <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-t-xl border-b border-white/[0.06] bg-black/25 px-3 py-2">
       <span className="text-[13px] font-semibold text-white">{fmtDate(date, { weekday: 'short', day: '2-digit', month: '2-digit' })}</span>
       {cities.length ? <span className="text-[11.5px] text-slate-400">{cities.join(' / ')}</span> : null}
       {note ? <span className="text-[11px] text-slate-500">{note}</span> : null}
-      <span className="ml-auto w-[220px] max-w-[55%]">
-        <DayBar places={places} height={9} onPickSlot={onPickSlot} />
+      <span className="ml-auto w-[260px] max-w-[58%]">
+        <DayBar places={places} height={12} onPickSlot={onPickSlot} onMove={onMove} onResize={onResize} />
       </span>
     </div>
   );

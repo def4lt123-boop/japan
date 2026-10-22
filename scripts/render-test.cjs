@@ -323,6 +323,58 @@ async function render(name, Page, tripId) {
   console.log((popFixed ? '✅' : '❌') + ' ⋯-Menü: im body verankert, am Viewport positioniert');
   if (!popFixed) failures.push('Menü-Position');
 
+  // Tagesband: Block ziehen = neue Uhrzeit, Rand ziehen = neue Dauer
+  const { DayBar } = require('../src/components/daybar.tsx');
+  const cDb = document.createElement('div');
+  document.body.appendChild(cDb);
+  const rDb = createRoot(cDb);
+  const dbPlace = { id: 'd1', trip_id: 'trip-2027', name: 'Band-Test', city: 'Nara', date: '2027-03-08', start_time: '12:00', duration_min: 120, time_slot: null, end_date: null, sort_order: 0, booking_status: 'offen', priority: 'soll' };
+  let movedTo = null;
+  let resizedTo = null;
+  await act(async () => {
+    rDb.render(
+      React.createElement(DayBar, {
+        places: [dbPlace],
+        height: 14,
+        onMove: (id, minute) => {
+          movedTo = { id, minute };
+        },
+        onResize: (id, mins) => {
+          resizedTo = { id, mins };
+        },
+      }),
+    );
+  });
+  const fireAt = (el, type, x) => el.dispatchEvent(new dom.window.MouseEvent(type, { bubbles: true, clientX: x, clientY: 6 }));
+  // jeder Zeiger-Schritt für sich – React muss die neue Position vorher übernehmen
+  const dragSeq = async (el, from, to) => {
+    await act(async () => {
+      fireAt(el, 'pointerdown', from);
+    });
+    await act(async () => {
+      fireAt(el, 'pointermove', to); // 90 px bei 900 px Breite = 96 min → gerundet 90
+    });
+    await act(async () => {
+      fireAt(el, 'pointerup', to);
+    });
+  };
+  const block = cDb.querySelector('[role="slider"]');
+  if (block) await dragSeq(block, 100, 190);
+  const grip = cDb.querySelector('[role="separator"]');
+  if (grip) await dragSeq(grip, 260, 350);
+  const dragOk = movedTo?.id === 'd1' && movedTo?.minute === 810 && resizedTo?.mins === 210;
+  console.log((dragOk ? '✅' : '❌') + ` Zeitstrahl ziehen: Anfang ${String(Math.floor((movedTo?.minute ?? 0) / 60)).padStart(2, '0')}:${String((movedTo?.minute ?? 0) % 60).padStart(2, '0')} Uhr, Dauer ${resizedTo?.mins ?? '?'} min`);
+  if (!dragOk) failures.push('Zeitstrahl');
+  await act(async () => rDb.unmount());
+  cDb.remove();
+
+  // Karte: offene Kacheln ohne Key, Punkte bleiben sichtbar
+  const fs = require('fs');
+  const mapSrc = fs.readFileSync(__dirname + '/../src/components/MapView.tsx', 'utf8');
+  const tilesOk = /tile\.openstreetmap\.org/.test(mapSrc) && !/cartocdn|carto\.com|api key/i.test(mapSrc) && /CircleMarker/.test(mapSrc);
+  console.log((tilesOk ? '✅' : '❌') + ' Karte: OpenStreetMap-Kacheln ohne Key, Marker gezeichnet');
+  if (!tilesOk) failures.push('Kacheln');
+
   await act(async () => r2.unmount());
 
   // Status-Pill-Klick im Table: Inline-Select ändern
