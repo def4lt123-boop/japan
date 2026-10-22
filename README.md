@@ -100,7 +100,15 @@ supabase db push            # legt Tabellen + Sichten aus supabase/migrations/ a
 supabase db push --include-all  # nach einem Update: neue Spalten (z. B. ▶️ Unterwegs-Modus) fehlen sonst
 psql "DEINE_DB_URL" -f supabase/seed.sql   # optional die Beispieldaten
 ```
-Deshalb enthält `supabase/migrations/20261020000001_urlaubsplaner.sql` denselben Inhalt wie `schema.sql` – generiert von `npm run seed:sql`, du musst also nie zwei Dateien pflegen. Spätere Erweiterungen liegen als eigene, idempotente Migration daneben (z. B. `20261022000003_unterwegs_modus.sql` für ▶️ Unterwegs); `supabase/setup.sql` enthält alles zusammen und darf deshalb mehrfach ausgeführt werden. Fehlt eine Spalte noch, schreibt die App einfach ohne sie weiter und zeigt den Modus aus den Daten, die da sind.
+Deshalb enthält `supabase/migrations/20261020000001_urlaubsplaner.sql` denselben Inhalt wie `schema.sql` – generiert von `npm run seed:sql`, du musst also nie zwei Dateien pflegen. Spätere Erweiterungen liegen als eigene, idempotente Migration daneben (z. B. `20261022000003_unterwegs_modus.sql` für ▶️ Unterwegs). **Bei einer Datenbank, die schon läuft, immer die Migration einspielen** – `setup.sql` ist für das erste Setup und ergänzt keine Spalten an bestehende Tabellen (`create table if not exists` überspringt sie). Zum Nachprüfen, was fehlt:
+
+```sql
+select column_name from information_schema.columns
+where table_schema = 'public' and table_name = 'trips'
+  and column_name in ('started', 'started_at', 'planned_start', 'planned_end');
+```
+
+Vier Zeilen zurück = alles da. Nichts zurück = die Migration ausführen (oder die vier `alter table … add column if not exists` daraus einzeln – beide Male sicher mehrfach ausführbar). Fehlt eine Spalte noch, bricht kein Schreiben: die App lässt sie weg (hinweisend in der Konsole) und bleibt beim Planungsmodus – gestartet werden kann erst nach der Migration.
 Wer so arbeitet, braucht `setup.sql` nur einmal (oder ersetzt die Migration durch den Inhalt von `setup.sql`, falls die Beispieldaten mit rein sollen).
 
 ### C) Vollautomatisch bei jedem Push
