@@ -8,19 +8,22 @@ Ohne Datenbank-Zugangsdaten läuft die App im **Demo-Modus**: alle Daten liegen 
 
 ## Was die App kann
 
-Fünf Reiter, alles Wichtige vorn, der Rest hinter `⋯`:
+Sechs Reiter, alles Wichtige vorn, der Rest hinter `⋯`:
 
 | Reiter | Inhalt |
 | --- | --- |
-| 🗓️ **Tage** (Startseite der Reise) | **oben die Liste „Noch ohne Tag“**: jeder neue Punkt landet hier und bekommt Tag + Uhrzeit in zwei Dropdowns (der Tag mit der meisten Luft ist vorgeschlagen), ein Klick auf **✓ hinlegen** genügt – oder ⚡ verteilt alle auf einmal. Darunter ein Kartenstapel pro Reisetag: Datum, Stadt, Zahl und Programmstunden in der Zeile, **Zeitband 07–23 Uhr** mit dem belegten Tag: einen **Block ziehen** = neue Uhrzeit (15-Minuten-Schritte), am **rechten Rand ziehen** = Dauer, **Lücke anklicken** = oberster Punkt der Liste rutscht dorthin, ⇧+Pfeiltasten schieben eine Stunde. Im `⋯` des Tages 🗺️ Karte inline und 🧭 die Tagesroute bei Google Maps |
-| 🗂️ **Aktivitäten** | alles als Liste untereinander: oben, was noch **ohne Tag** ist, darunter die Tage. Tag, Uhrzeit, Dauer und **🏷️ Kategorie direkt in der Zeile** (ein Dropdown, kein Tippen), **Doppelplanung wird abgewiesen**, belegte Zeiten rutschen in die nächste Lücke, ⚡ verteilt automatisch |
+| ☀️ **Heute** | tagesaktuell: **was heute Morgen, mittags, nachmittags und abends dran ist**, abgehakt mit ✓, dazu die nächsten sechs Tage mit Stunden, Ort und anstehendem 🔀 Ortswechsel. Liegt der Reisezeitraum in der Zukunft, steht hier **▶️ Heute starten** – jeder Punkt, jede Nacht, jede Fahrt und jede Ausgabe rutscht auf den heutigen Tag, Reihenfolge und Abstände bleiben gleich |
+| 🗓️ **Tage** | **oben die Liste „Noch ohne Tag“**: jeder neue Punkt landet hier und bekommt Tag + Uhrzeit in zwei Dropdowns (der Tag mit der meisten Luft ist vorgeschlagen), ein Klick auf **✓ hinlegen** genügt – oder ⚡ verteilt alle auf einmal. Darunter ein Kartenstapel pro Reisetag: Datum, Stadt, Zahl und Programmstunden in der Zeile, **Zeitband 07–23 Uhr** mit dem belegten Tag: einen **Block ziehen** = neue Uhrzeit (15-Minuten-Schritte), am **rechten Rand ziehen** = Dauer, **Lücke anklicken** = oberster Punkt der Liste rutscht dorthin, ⇧+Pfeiltasten schieben eine Stunde. Im `⋯` des Tages: 🗺️ Karte inline, 🧭 Tagesroute bei Google Maps, **⚡ Tag sortieren** (der Reihe nach, ohne Überschneidung – feste Uhrzeiten bleiben Anker) und 🔀 **Ortswechsel an diesem Tag** · der heutige Tag ist mit einem Ring markiert |
+| 🗂️ **Aktivitäten** |  alles als Liste untereinander: oben, was noch **ohne Tag** ist, darunter die Tage. Tag, Uhrzeit, Dauer und **🏷️ Kategorie direkt in der Zeile** (ein Dropdown, kein Tippen), **Doppelplanung wird abgewiesen**, belegte Zeiten rutschen in die nächste Lücke, ⚡ verteilt automatisch |
 | 🗺️ **Karte** | Marker aus den Koordinaten (Farbe = Kategorie, hohle Kontur = noch ohne Tag), Route des Tages als Linie, 🏨 Unterkünfte · **Hintergrund: offene OpenStreetMap-Kacheln** – kein API-Key, keine Testphase, keine Rechnung, dunkel gefiltert oder hell umschaltbar · rechte Spalte dieselbe Ansicht bei Google Maps, Punkte ohne Koordinaten lassen sich einzeln oder auf einen Schlag nachziehen · **Filter nach Tag, Stadt und Kategorie**, im Popup des Punktes die Kategorie gleich umstellen |
 | 🧳 **Reise** | Unterkünfte · Fahrten · Kosten in einem Screen (Umschalter oben), darunter alle Downloads: CSV, JSON, KML |
 | 📊 **Übersicht** | grafische Reisekarte: Bett-Band über alle Tage, jeder Tag als Zeitbild, Ring „Planungsgrad“, Checklist „was noch fehlt“ und „was noch frei ist“ |
 
-Kategorien sind ein **Dropdown** mit 16 festen Begriffen (⛩️ Tempel & Schrein, 🍜 Essen & Cafés, 🏵️ Onsen & Bad, 🚆 Transport …) plus allem, was in der Reise schon drinsteht – nichts verschwindet. **🏷️ automatisch kategorisieren** (unten in der Karten-Legende und im `⋯`-Menü) gibt allen Punkten, die noch keinen passenden Begriff haben, eine Kategorie aus Name und Notiz; was schon sauber dasteht, wird nicht angefasst.
+Kategorien sind ein **Dropdown** mit 16 festen Begriffen plus allem, was in der Reise schon drinsteht – nichts verschwindet. **🏷️ automatisch kategorisieren** (unten in der Karten-Legende und im `⋯`-Menü) gibt allen Punkten, die noch keinen passenden Begriff haben, eine Kategorie aus Name und Notiz; was schon sauber dasteht, wird nicht angefasst.
 
 Jedes `⋯`-Menü sitzt am **Viewport** verankert – auf dem Handy als Blech von unten mit großen Feldern, auf dem Desktop als Panel, das nie über den Rand läuft und sich nach oben öffnet, wenn darunter zu wenig Platz ist (`npm run test:layout` prüft 60 Geräte-/Knopf-Kombinationen).
+
+Der **🔀 Ortswechsel** (Unterkünfte, Karte des Tages, ⋯-Menü) trägt einen Stadtwechsel in einem Schritt ein: der Dialog zeigt, in welcher Stadt du an dem Tag schläfst, und schreibt dann die Aktivitäten (nur diesen Tag oder alles Danach), die Unterkünfte (alter Check-out, neuer Check-in, Nächte) und – wenn gewünscht – die passende Fahrt ins Fahrten-Log. Erkannte Wechsel stehen chronologisch auf der Unterkünfte-Seite und auf ☀️ Heute.
 
 Immer nur zwei Knöpfe oben rechts: **＋ Anlegen** (Aktivität, Unterkunft, Fahrt, Ausgabe – mit kurzer Erklärung, was die Kachel tut) und
 **⋯** (Reise bearbeiten, Koordinaten nachziehen, als Tabelle öffnen, exportieren, drucken). Feinfilter, Tabellenansicht,

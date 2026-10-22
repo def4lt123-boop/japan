@@ -9,6 +9,7 @@ import { fmtDate, fmtDuration } from '../lib/format';
 import { fmtWindow, windowOf } from '../lib/dayplan';
 import { Card, LinkTag, Menu, Money, Pill, cx } from './ui';
 import { MapPreview } from './MapPreview';
+import { CategoryDot } from './CategoryDot';
 
 /** Kleiner Chip mit dem Buchungsstand – wird auch in den Panels der Reise-Seite genutzt. */
 export function StatusPill({ status }: { status: Place['booking_status'] }) {
@@ -61,9 +62,7 @@ export function PlaceCard({
       style={{ borderLeftColor: meta.color }}
     >
       <div className={cx('flex items-start gap-2.5', dense ? 'px-2.5 py-2' : 'px-3.5 py-3')}>
-        <span aria-hidden className={cx('shrink-0 select-none', dense ? 'text-base' : 'text-lg leading-6')} title={meta.label}>
-          {meta.icon}
-        </span>
+        <CategoryDot category={place.category} size={dense ? 19 : 23} className="mt-px" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <button

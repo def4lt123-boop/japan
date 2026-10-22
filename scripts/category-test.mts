@@ -12,6 +12,29 @@ const step = (name: string, ok: boolean, detail?: unknown) => {
 };
 
 // ── Katalog ─────────────────────────────────────────────────────────────────
+// ── Jedes Symbol und jede Farbe ist eindeutig und deutlich verschieden ────────
+const icons = CATEGORY_LABELS.map((label) => categoryMeta(label).icon);
+const colors = CATEGORY_LABELS.map((label) => categoryMeta(label).color);
+step('Jede Kategorie hat ihr eigenes Symbol', new Set(icons).size === icons.length, icons.filter((v, i) => icons.indexOf(v) !== i));
+step('Jede Kategorie hat ihre eigene Farbe', new Set(colors).size === colors.length, colors.filter((v, i) => colors.indexOf(v) !== i));
+const lab = (hex: string) => {
+  const v = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  const f = (x: number) => (x > 0.008856 ? 1.16 * x ** (1 / 3) - 0.16 : 7.787 * x + 16 / 116);
+  const x = f((0.4124 * v[0] + 0.3576 * v[1] + 0.1805 * v[2]) / 0.95047);
+  const y = f(0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]);
+  const z = f((0.0193 * v[0] + 0.1192 * v[1] + 0.9505 * v[2]) / 1.08883);
+  return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+};
+const dist = (a: string, b: string) => Math.hypot(...lab(a).map((x, i) => x - lab(b)[i]));
+let eng = { d: Infinity, pair: '' };
+for (let i = 0; i < colors.length; i++)
+  for (let j = i + 1; j < colors.length; j++) {
+    const d = dist(colors[i], colors[j]);
+    if (d < eng.d) eng = { d, pair: `${CATEGORY_LABELS[i]} ↔ ${CATEGORY_LABELS[j]}` };
+  }
+// ΔE in Lab: unter 25 sieht ein normaler Betrachter zwei Marker als dieselbe Farbe
+step(`Farben sind deutlich verschieden (ΔE ≥ 25) – engstes Paar ${Math.round(eng.d)}`, eng.d >= 25, eng.pair);
+
 // Invariante: jede Kategorie im Dropdown muss von ihrer eigenen Regel wiedererkannt werden,
 // sonst gilt sie fälschlich als „ohne Kategorie" und die Massen-Aktion räumt sie wieder um.
 const blind = CATEGORY_LABELS.filter((label) => needsCategory({ category: label }));

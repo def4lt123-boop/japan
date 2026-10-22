@@ -16,6 +16,7 @@ import { assign, collide, fmtWindow, minToTime, parseLen, plannedMinutes, sugges
 import { Button, Menu, Money, Select, cx } from './ui';
 import { DayBar } from './daybar';
 import { CategoryPicker } from './CategoryPicker';
+import { CategoryDot } from './CategoryDot';
 import { MapPreview } from './MapPreview';
 
 export function ActivityRow({
@@ -106,9 +107,7 @@ export function ActivityRow({
   return (
     <div className={cx('group rounded-lg border bg-white/[0.02] transition hover:border-white/20', place.date ? 'border-white/[0.07]' : 'border-dashed border-amber-400/25')}>
       <div className={cx('flex flex-wrap items-start gap-x-2 gap-y-1.5', dense ? 'px-2 py-1.5' : 'px-2.5 py-2')}>
-        <span aria-hidden className="mt-0.5 shrink-0 text-[15px]" title={meta.label}>
-          {meta.icon}
-        </span>
+        <CategoryDot category={place.category} size={dense ? 18 : 21} className="mt-0.5" />
 
         <div className="min-w-[190px] flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">

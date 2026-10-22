@@ -8,15 +8,20 @@ import { useStore } from '../../../lib/store';
 import { EditorProvider, useBatchGeocode, useEditor } from '../../../components/EditorProvider';
 import { Card, Menu, cx } from '../../../components/ui';
 import { daysBetween, fmtMoney, fmtRange, plural } from '../../../lib/format';
-import { costsOf } from '../../../lib/stats';
+import { costsOf, dayPlan } from '../../../lib/stats';
+import { startToday } from '../../../lib/today';
+import { sortDays } from '../../../lib/sortday';
+import { locusChanges } from '../../../lib/locus';
+import { today } from '../../../lib/format';
 import { needsCategory } from '../../../lib/categories';
 import { applyCategories } from '../../../lib/categorize';
 
 /**
- * Fünf Reiter, fünf Aufgaben. Alles Weitere lebt in den beiden Knöpfen rechts
+ * Sechs Reiter, sechs Aufgaben. Alles Weitere lebt in den beiden Knöpfen rechts
  * („Anlegen“ und „⋯“) bzw. auf der Reise-Seite.
  */
 const TABS = [
+  { href: '/heute', label: 'Heute', icon: '☀️' },
   { href: '/tage', label: 'Tage', icon: '🗓️' },
   { href: '/aktivitaeten', label: 'Aktivitäten', icon: '🗂️' },
   { href: '/karte', label: 'Karte', icon: '🗺️' },
@@ -78,6 +83,9 @@ function TripTopBar({ tripId }: { tripId: string }) {
   const missingCoords = bundle.places.filter((p) => p.lat === null || p.lng === null).length;
   const needsCat = bundle.places.filter((p) => needsCategory(p)).length;
   const openPool = bundle.places.filter((p) => !p.date).length;
+  const planDays = bundle.trip ? dayPlan(bundle) : [];
+  const sortierbar = planDays.filter((d) => d.places.length > 1).length;
+  const changeCount = locusChanges(bundle.places, bundle.hotels, planDays.map((d) => d.date), bundle.journeys).length;
   const days = trip?.start_date && trip?.end_date ? daysBetween(trip.start_date, trip.end_date) : 0;
 
   return (
@@ -125,6 +133,13 @@ function TripTopBar({ tripId }: { tripId: string }) {
           align="right"
           items={[
             { icon: '⚙', label: 'Reise bearbeiten', hint: 'Zeitraum, Budget, Personen, ¥-Kurs', run: () => open({ kind: 'trip', id: tripId }) },
+            ...(trip && !trip.archived && trip.start_date && trip.start_date !== today()
+              ? [{ icon: '▶️', label: 'Reise heute starten', hint: `${bundle.places.filter((p) => p.date).length} Punkte, ${bundle.hotels.length} Betten, ${bundle.journeys.filter((j) => j.date).length} Fahrten rutschen mit`, run: () => startToday(store, bundle) }]
+              : []),
+            ...(sortierbar
+              ? [{ icon: '⚡', label: 'Alle Tage sortieren', hint: 'der Reihe nach, ohne Überschneidungen', run: () => sortDays(store, planDays) }]
+              : []),
+            { icon: '🔀', label: 'Ortswechsel eintragen', hint: changeCount ? `${plural(changeCount, 'Wechsel', 'Wechsel')} erkannt` : 'Stadt und Bett an einem Tag tauschen', run: () => open({ kind: 'move' }) },
             ...(missingCoords
               ? [{ icon: '🌍', label: `${missingCoords} Kartenpunkte nachziehen`, hint: 'OpenStreetMap fragt die Koordinaten ab', run: () => void geocodeAll() }]
               : []),
@@ -140,3 +155,4 @@ function TripTopBar({ tripId }: { tripId: string }) {
     </section>
   );
 }
+

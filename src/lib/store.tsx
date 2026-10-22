@@ -32,7 +32,7 @@ function readLocal(): Snapshot | null {
   }
 }
 
-interface StoreValue extends Snapshot {
+export interface StoreValue extends Snapshot {
   ready: boolean;
   mode: 'supabase' | 'local';
   error: string | null;
