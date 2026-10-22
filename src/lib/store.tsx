@@ -42,6 +42,8 @@ interface StoreValue extends Snapshot {
   resetLocalData: () => Promise<void>;
   upsert: <K extends RowKey>(table: K, value: RowOf<K>) => Promise<void>;
   patch: <K extends RowKey>(table: K, id: string, patch: Partial<RowOf<K>>) => Promise<void>;
+  /** mehrere Zeilen auf einmal – ein Schreibvorgang, die Änderungen überschreiben sich nicht gegenseitig */
+  patchMany: <K extends RowKey>(table: K, changes: { id: string; patch: Partial<RowOf<K>> }[]) => Promise<void>;
   remove: (table: RowKey, id: string) => Promise<void>;
   bulkCreate: <K extends RowKey>(table: K, values: RowOf<K>[]) => Promise<void>;
   createTrip: (value: Partial<Trip>) => Promise<Trip>;
@@ -74,6 +76,8 @@ export function useTrip(tripId: string | undefined) {
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<Snapshot>(EMPTY);
+  // derselbe Stand, aber ohne Render-Zyklus lesbar – davon ausgehend rechnen die Mutatoren
+  const dataRef = useRef<Snapshot>(EMPTY);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -88,6 +92,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const persist = useCallback(
     (next: Snapshot) => {
+      dataRef.current = next;
       setData(next);
       if (!hasSupabase) {
         try {
@@ -121,11 +126,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             ...snapshot.journeys.map((j) => supaUpsert('journeys', j)),
             ...snapshot.expenses.map((e) => supaUpsert('expenses', e)),
           ]);
-          setData(snapshot);
+          persist(snapshot);
           say('Leere Datenbank erkannt – die Vorlage-Reisen wurden übernommen.');
           return;
         }
-        setData({
+        persist({
           trips: trips.map(normalizeTrip),
           places: places.map(normalizePlace),
           hotels: hotels.map(normalizeHotel),
@@ -134,20 +139,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         });
       } else {
         const stored = readLocal();
-        if (stored) setData(stored);
+        if (stored) persist(stored);
         else {
           const snapshot = seedSnapshot();
           window.localStorage.setItem(LS_KEY, JSON.stringify(snapshot));
-          setData(snapshot);
+          persist(snapshot);
         }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Fehler beim Laden');
-      setData(hasSupabase ? EMPTY : readLocal() ?? seedSnapshot());
+      persist(hasSupabase ? EMPTY : readLocal() ?? seedSnapshot());
     } finally {
       setReady(true);
     }
-  }, [say]);
+  }, [persist, say]);
 
   useEffect(() => {
     void refresh();
@@ -155,7 +160,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const upsert = useCallback(
     async <K extends RowKey>(table: K, value: RowOf<K>) => {
-      const next = { ...data } as Snapshot;
+      const next = { ...dataRef.current } as Snapshot;
       const list = [...(next[table] as RowOf<K>[])];
       const idx = list.findIndex((r) => r.id === value.id);
       if (idx >= 0) list[idx] = { ...list[idx], ...value };
@@ -168,12 +173,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         say(`Konnte nicht speichern: ${e instanceof Error ? e.message : 'Unbekannter Fehler'}`);
       }
     },
-    [data, persist, say],
+    [persist, say],
   );
 
   const patch = useCallback(
     async <K extends RowKey>(table: K, id: string, value: Partial<RowOf<K>>) => {
-      const next = { ...data } as Snapshot;
+      const next = { ...dataRef.current } as Snapshot;
       const list = [...(next[table] as RowOf<K>[])];
       const idx = list.findIndex((r) => r.id === id);
       if (idx < 0) return;
@@ -186,12 +191,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         say(`Konnte nicht speichern: ${e instanceof Error ? e.message : 'Unbekannter Fehler'}`);
       }
     },
-    [data, persist, say],
+    [persist, say],
   );
 
   const remove = useCallback(
     async (table: RowKey, id: string) => {
-      const next = { ...data } as Snapshot;
+      const next = { ...dataRef.current } as Snapshot;
       (next[table] as { id: string }[]) = (next[table] as { id: string }[]).filter((r) => r.id !== id);
       persist(next);
       try {
@@ -200,12 +205,34 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         say(`Konnte nicht löschen: ${e instanceof Error ? e.message : 'Unbekannter Fehler'}`);
       }
     },
-    [data, persist, say],
+    [persist, say],
+  );
+
+  const patchMany = useCallback(
+    async <K extends RowKey>(table: K, changes: { id: string; patch: Partial<RowOf<K>> }[]) => {
+      if (!changes.length) return;
+      const next = { ...dataRef.current } as Snapshot;
+      const list = [...((next[table] as unknown) as RowOf<K>[])];
+      for (const change of changes) {
+        const idx = list.findIndex((r) => r.id === change.id);
+        if (idx >= 0) list[idx] = { ...list[idx], ...change.patch };
+      }
+      (next[table] as unknown) = list;
+      persist(next);
+      if (hasSupabase) {
+        try {
+          for (const change of changes) await supaPatch(table as TableName, change.id, change.patch as Record<string, unknown>);
+        } catch (e) {
+          say(`Einträge aktualisiert, aber DB-Fehler: ${e instanceof Error ? e.message : 'unbekannt'}`);
+        }
+      }
+    },
+    [persist, say],
   );
 
   const bulkCreate = useCallback(
     async <K extends RowKey>(table: K, values: RowOf<K>[]) => {
-      const next = { ...data } as Snapshot;
+      const next = { ...dataRef.current } as Snapshot;
       (next[table] as RowOf<K>[]) = [...(next[table] as RowOf<K>[]), ...values];
       persist(next);
       try {
@@ -240,18 +267,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const deleteTrip = useCallback(
     async (id: string) => {
+      const cur = dataRef.current;
       const next: Snapshot = {
-        trips: data.trips.filter((t) => t.id !== id),
-        places: data.places.filter((p) => p.trip_id !== id),
-        hotels: data.hotels.filter((h) => h.trip_id !== id),
-        journeys: data.journeys.filter((j) => j.trip_id !== id),
-        expenses: data.expenses.filter((e) => e.trip_id !== id),
+        trips: cur.trips.filter((t) => t.id !== id),
+        places: cur.places.filter((p) => p.trip_id !== id),
+        hotels: cur.hotels.filter((h) => h.trip_id !== id),
+        journeys: cur.journeys.filter((j) => j.trip_id !== id),
+        expenses: cur.expenses.filter((e) => e.trip_id !== id),
       };
       persist(next);
       try {
         if (hasSupabase) {
           for (const table of ['places', 'hotels', 'journeys', 'expenses'] as const) {
-            const rows = data[table] as unknown as { trip_id: string; id: string }[];
+            const rows = next[table] as unknown as { trip_id: string; id: string }[];
             for (const row of rows.filter((r) => r.trip_id === id)) await supaDelete(table, row.id);
           }
           await supaDelete('trips', id);
@@ -266,6 +294,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const duplicateTrip = useCallback(
     async (sourceTripId: string, name: string, overrides?: Partial<Trip>) => {
+      const data = dataRef.current;
       const source = data.trips.find((t) => t.id === sourceTripId);
       if (!source) return null;
       const target: Trip = {
@@ -329,13 +358,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       resetLocalData,
       upsert,
       patch,
+      patchMany,
       remove,
       bulkCreate,
       createTrip,
       deleteTrip,
       duplicateTrip,
     }),
-    [data, ready, mode, error, note, say, refresh, resetLocalData, upsert, patch, remove, bulkCreate, createTrip, deleteTrip, duplicateTrip],
+    [data, ready, mode, error, note, say, refresh, resetLocalData, upsert, patch, patchMany, remove, bulkCreate, createTrip, deleteTrip, duplicateTrip],
   );
 
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;

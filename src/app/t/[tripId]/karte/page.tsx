@@ -7,7 +7,8 @@ import { useStore, useTrip } from '../../../../lib/store';
 import { useBatchGeocode, useEditor } from '../../../../components/EditorProvider';
 import { Button, Card, Empty, SectionTitle, Select, cx } from '../../../../components/ui';
 import { eachDate, fmtDate, plural } from '../../../../lib/format';
-import { categoryMeta, mapsUrl } from '../../../../lib/categories';
+import { CATEGORY_LABELS, categoryMeta, mapsUrl, needsCategory } from '../../../../lib/categories';
+import { applyCategories } from '../../../../lib/categorize';
 import { dayStops, hotelForDay, routeUrl } from '../../../../lib/maps';
 import { MapPreview, RoutePreview } from '../../../../components/MapPreview';
 import { geocode, queryFor } from '../../../../lib/geocode';
@@ -23,6 +24,7 @@ export default function MapPage() {
   const geocodeAll = useBatchGeocode(tripId);
   const [day, setDay] = useState('');
   const [city, setCity] = useState('');
+  const [cat, setCat] = useState('');
   const [showHotels, setShowHotels] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -35,8 +37,14 @@ export default function MapPage() {
   const cities = useMemo(() => Array.from(new Set(bundle.places.map((p) => p.city).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'de')), [bundle.places]);
 
   const visible = useMemo(
-    () => bundle.places.filter((p) => (!day || p.date === day) && (!city || p.city === city)),
-    [bundle.places, day, city],
+    () =>
+      bundle.places.filter(
+        (p) =>
+          (!day || p.date === day) &&
+          (!city || p.city === city) &&
+          (!cat || (cat === '—' ? needsCategory(p) : categoryMeta(p.category).label === cat)),
+      ),
+    [bundle.places, day, city, cat],
   );
   const routed = day ? visible : [];
   const stops = dayStops(visible);
@@ -44,7 +52,14 @@ export default function MapPage() {
   const hotel = hotelForDay(bundle.hotels, day || null, city || stops[0]?.city || null);
   const routeReady = stops.length > 1;
   const missing = visible.filter((p) => p.lat === null || p.lng === null);
+  const uncategorized = bundle.places.filter((p) => needsCategory(p));
   const onMap = visible.filter((p) => p.lat !== null && p.lng !== null);
+
+  /** Kategorien, die in dieser Reise wirklich vorkommen – mit Zähler fürs Dropdown */
+  const catCounts = CATEGORY_LABELS.map((label) => ({
+    label,
+    n: bundle.places.filter((p) => categoryMeta(p.category).label === label).length,
+  })).filter((x) => x.n > 0);
 
   const legend = useMemo(() => {
     const map = new Map<string, { color: string; icon: string; count: number }>();
@@ -78,6 +93,17 @@ export default function MapPage() {
               }}
             />
             <Select className="!w-auto" allowEmpty emptyLabel="Alle Städte" options={cities} value={city} onChange={(e) => setCity(e.target.value)} />
+            <Select
+              className="!w-auto"
+              allowEmpty
+              emptyLabel="Alle Kategorien"
+              options={[
+                ...catCounts.map((x) => ({ value: x.label, label: `${categoryMeta(x.label).icon}  ${x.label} (${x.n})` })),
+                ...(uncategorized.length ? [{ value: '—', label: `ohne klare Kategorie (${uncategorized.length})` }] : []),
+              ]}
+              value={cat}
+              onChange={(e) => setCat(e.target.value)}
+            />
             <Button size="sm" variant={showHotels ? 'primary' : 'ghost'} onClick={() => setShowHotels((v) => !v)}>
               🏨 Unterkünfte
             </Button>
@@ -117,6 +143,8 @@ export default function MapPage() {
             onSelect={setSelected}
             onEditPlace={(id) => open({ kind: 'place', id })}
             onEditHotel={(id) => open({ kind: 'hotel', id })}
+            onCategory={(id, category) => store.patch('places', id, { category })}
+            allCategories={bundle.places.map((x) => x.category)}
             dayLabel={day || null}
           />
         </Card>
@@ -158,6 +186,14 @@ export default function MapPage() {
               <h3 className="text-[13px] font-semibold text-white">Legende</h3>
               <span className="text-[11px] text-slate-500">{legend.length} Kategorien</span>
             </div>
+            {cat ? (
+              <p className="mb-2 -mt-1 text-[11px] text-slate-500">
+                gefiltert auf {categoryMeta(cat === '—' ? '' : cat).icon} {cat === '—' ? 'ohne klare Kategorie' : cat} ·{' '}
+                <button className="underline-offset-2 hover:text-white hover:underline" onClick={() => setCat('')}>
+                  alle zeigen
+                </button>
+              </p>
+            ) : null}
             <ul className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11.5px] text-slate-300">
               {legend.map(([label, v]) => (
                 <li key={label} className="flex items-center gap-1.5">
@@ -171,6 +207,19 @@ export default function MapPage() {
               ))}
               {!legend.length ? <li className="col-span-2 text-slate-500">Keine Marker im Filter.</li> : null}
             </ul>
+            {uncategorized.length ? (
+              <button
+                className="btn-quiet mt-2 w-full justify-center !text-[11.5px]"
+                onClick={() => {
+                  applyCategories(store, bundle.places);
+                }}
+                title="Weist allen Punkten, deren Kategorie noch kein Symbol hat, die passende zu – aus Name und Notiz"
+              >
+                🏷️ {uncategorized.length} {uncategorized.length === 1 ? 'Aktivität' : 'Aktivitäten'} automatisch kategorisieren
+              </button>
+            ) : (
+              <p className="mt-2 text-[11px] text-emerald-200/80">✓ Alle Aktivitäten haben eine Kategorie, die wir kennen.</p>
+            )}
           </Card>
 
           <Card className="max-h-[40vh] overflow-y-auto p-3">

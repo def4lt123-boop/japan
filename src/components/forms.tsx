@@ -5,9 +5,9 @@ import { Button, Card, Disclosure, Field, Modal, Select, TextArea, TextInput, cx
 import { BOOKING_STATUSES, EXPENSE_CATEGORIES, JOURNEY_MODES, PRIORITIES, TIME_SLOTS, type Expense, type Hotel, type Journey, type Place, type Trip } from '../lib/types';
 import { PRIORITY_META, STATUS_META, TICKET_META, TICKET_ORDER, mapsUrl } from '../lib/categories';
 import { eachDate, fmtDate, fmtDuration, num, parseDuration, uid } from '../lib/format';
+import { CategoryPicker } from './CategoryPicker';
 import { DateField, DateRangeField } from './dates';
 import type { TicketStatus } from '../lib/types';
-import { CATEGORY_SUGGESTIONS } from '../lib/categories';
 import { geocode, mapsUrlName, parseMapsUrl, queryFor, resolveMapsLink } from '../lib/geocode';
 import { MapPreview } from './MapPreview';
 import { useStore } from '../lib/store';
@@ -314,6 +314,8 @@ export function PlaceForm({
 
   const set = (patch: Partial<Place>) => setDraft((d) => ({ ...d, ...patch }));
   const store = useStore();
+  /** was in dieser Reise an Kategorien schon benutzt wird, bleibt wählbar */
+  const knownCategories = useMemo(() => store.places.filter((x) => x.trip_id === tripId).map((x) => x.category), [store.places, tripId]);
 
   /** Was dieser Eintrag am gewählten Tag blockiert – und was dann noch frei ist */
   const dayInfo = useMemo(() => {
@@ -387,13 +389,12 @@ export function PlaceForm({
             <Field label="Stadtteil / Viertel">
               <TextInput value={draft.district ?? ''} onChange={(e) => set({ district: e.target.value })} placeholder="Higashiyama" />
             </Field>
-            <Field label="Kategorie">
-              <TextInput list="cat-list" value={draft.category ?? ''} onChange={(e) => set({ category: e.target.value })} placeholder="Park, Tempel, Ramen …" />
-              <datalist id="cat-list">
-                {CATEGORY_SUGGESTIONS.map((c) => (
-                  <option key={c} value={c} />
-                ))}
-              </datalist>
+            <Field label="Kategorie" hint="bestimmt Symbol, Farbe auf der Karte und die Gruppen">
+              <CategoryPicker
+                value={draft.category}
+                used={knownCategories}
+                onChange={(v) => set({ category: v })}
+              />
             </Field>
           </div>
           <Field label="Notizen" hint="was du dir merken willst – Öffnungszeiten, Warteschlange, geschlossene Tage …">
