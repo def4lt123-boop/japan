@@ -63,7 +63,7 @@ export default function MapPage() {
       <SectionTitle
         title="Karte"
         icon="🗺️"
-        hint={`${plural(onMap.length, 'Marker', 'Marker')} · gestrichelte Linie = Route des gewählten Tages · hohle Marker = noch ohne Tag · Rechts: dasselbe bei Google Maps`}
+        hint={`${plural(onMap.length, 'Marker', 'Marker')} auf der Karte · gefüllt = mit Tag, hohl = noch ohne Tag · Linie = Route des gewählten Tages`}
         right={
           <>
             <Select
@@ -209,7 +209,12 @@ export default function MapPage() {
 
             {missing.length ? (
               <div className="mt-3 border-t border-white/10 pt-2">
-                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200/80">ohne Koordinaten ({missing.length})</p>
+                <p className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-amber-200/80">
+                  ohne Koordinaten ({missing.length})
+                  <button className="btn-quiet ml-auto !px-1.5 !py-0.5 !text-[10.5px] normal-case tracking-normal" onClick={() => void geocodeAll()} title="Für alle Punkte ohne Kartenpunkt die Koordinaten suchen lassen">
+                    🌍 alle nachziehen
+                  </button>
+                </p>
                 <ul className="space-y-1">
                   {missing.map((p) => (
                     <li key={p.id} className="flex items-center gap-1.5 text-[12px] text-slate-400">

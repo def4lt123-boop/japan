@@ -1,11 +1,12 @@
 'use client';
 
 import 'leaflet/dist/leaflet.css';
-import React, { useEffect, useMemo } from 'react';
-import { CircleMarker, MapContainer, Marker, Popup, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet';
+import React, { useEffect, useMemo, useState } from 'react';
+import { CircleMarker, MapContainer, Marker, Popup, Polyline, ScaleControl, TileLayer, Tooltip, ZoomControl, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import type { Hotel, Place } from '../lib/types';
 import { categoryMeta, mapsUrl, routeUrl } from '../lib/categories';
+import { cx } from './ui';
 import { fmtDate, fmtDuration, fmtMoney } from '../lib/format';
 
 interface Props {
@@ -60,13 +61,31 @@ export default function MapView({ places, hotels, showHotels, routePlaces, selec
     [routePlaces],
   );
   const focus = selectedId ? withCoords.find((p) => p.id === selectedId) : null;
+  /** Kachel-Look: dunkel passt zur App, hell ist die normale OSM-Karte */
+  const [dark, setDark] = useState(true);
 
   return (
-    <MapContainer center={[36.2, 138.25]} zoom={6} scrollWheelZoom className="h-[74vh] min-h-[420px] w-full rounded-xl border border-white/10" preferCanvas>
-      <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · &copy; <a href="https://carto.com/attributions">CARTO</a>'
-      />
+    <div className="relative">
+      <MapContainer
+        center={[36.2, 138.25]}
+        zoom={6}
+        scrollWheelZoom
+        zoomControl={false}
+        className="h-[74vh] min-h-[420px] w-full rounded-xl border border-white/10"
+        preferCanvas
+      >
+        {/*
+         * Offene OpenStreetMap-Kacheln – kein API-Key, keine Testphase, keine Rechnung.
+         * Für den dunklen Look werden nur die Kacheln invertiert (CSS-Filter), alles
+         * andere (Punkte, Route, Popups) bleibt von der App gezeichnet.
+         */}
+        <TileLayer
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende'
+          className={cx(dark && 'tiles-dark')}
+        />
+        <ScaleControl position="bottomleft" imperial={false} />
+        <ZoomControl position="bottomright" />
       <FitBounds points={bounds} fitKey={`${bounds.length}-${dayLabel ?? 'all'}`} />
       <FlyTo lat={focus?.lat ?? null} lng={focus?.lng ?? null} />
 
@@ -105,10 +124,11 @@ export default function MapView({ places, hotels, showHotels, routePlaces, selec
             center={[p.lat as number, p.lng as number]}
             radius={selected ? 11 : p.priority === 'muss' ? 9 : 7}
             pathOptions={{
-              color: selected ? '#ffffff' : meta.color,
-              weight: selected ? 3 : 1.5,
+              color: selected ? '#ffffff' : 'rgba(255,255,255,0.9)',
+              weight: selected ? 3 : 1.4,
               fillColor: meta.color,
-              fillOpacity: p.date ? 0.95 : 0.45,
+              fillOpacity: p.date ? 0.95 : 0.55,
+              dashArray: p.date ? undefined : '3 3',
             }}
             eventHandlers={{ click: () => onSelect(p.id) }}
           >
@@ -153,6 +173,19 @@ export default function MapView({ places, hotels, showHotels, routePlaces, selec
           </CircleMarker>
         );
       })}
-    </MapContainer>
+      </MapContainer>
+
+      <div className="absolute right-2 top-2 z-[1000] flex items-center gap-1 rounded-xl border border-white/10 bg-ink-900/85 p-1 backdrop-blur">
+        <button
+          type="button"
+          onClick={() => setDark((v) => !v)}
+          className="chip bg-white/[0.06] px-2 py-1 text-[11.5px] text-slate-200 ring-1 ring-inset ring-white/10 transition hover:bg-white/[0.12]"
+          title={dark ? 'Helle OpenStreetMap-Kacheln zeigen' : 'Dunkle Kacheln zeigen'}
+        >
+          {dark ? '☀️ hell' : '🌙 dunkel'}
+        </button>
+        <span className="px-1 text-[10.5px] text-slate-500">Kacheln: OpenStreetMap</span>
+      </div>
+    </div>
   );
 }

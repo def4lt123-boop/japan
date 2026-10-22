@@ -1,8 +1,12 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import clsx from 'clsx';
+
+/** useLayoutEffect nur im Browser – beim Server-Rendering würde React sonst warnen */
+const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 export function cx(...parts: (string | false | null | undefined)[]) {
   return clsx(parts);
@@ -74,7 +78,13 @@ export interface MenuItem {
   danger?: boolean;
 }
 
-/** Ein Knopf, der Aktionen erst zeigt, wenn man sie braucht */
+/**
+ * Ein Knopf, der Aktionen erst zeigt, wenn man sie braucht.
+ * Das Panel sitzt am Viewport verankert und nicht am Knopf festgeklebt: dadurch wird es
+ * auf dem Handy nicht abgeschnitten, klemmt nicht in Containern mit overflow und rutscht
+ * nach oben, wenn unter dem Knopf zu wenig Platz ist. Unter 640 px öffnet es als Blech
+ * von unten – mit großen Feldern für den Daumen.
+ */
 export function Menu({
   items,
   label,
@@ -91,30 +101,103 @@ export function Menu({
   align?: 'left' | 'right';
 }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [sheet, setSheet] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+
+  const place = React.useCallback(() => {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const btn = btnRef.current;
+    setSheet(vw < 640);
+    if (!btn || vw < 640) return;
+    const r = btn.getBoundingClientRect();
+    const pop = popRef.current;
+    const width = Math.min(pop?.offsetWidth || 268, vw - 16);
+    const height = pop?.offsetHeight || Math.min(44 + items.length * 44, vh * 0.72);
+    const raw = align === 'left' ? r.left : r.right - width;
+    const left = Math.max(8, Math.min(raw, vw - width - 8));
+    const below = r.bottom + 8;
+    const top = below + height > vh - 8 ? Math.max(8, r.top - height - 8) : below;
+    setPos({ top, left, width });
+  }, [align, items.length]);
+
+  useIsoLayoutEffect(() => {
+    if (open) place();
+  }, [open, place]);
+
   useEffect(() => {
     if (!open) return;
     const away = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+      if (!wrapRef.current?.contains(e.target as Node) && !popRef.current?.contains(e.target as Node)) setOpen(false);
     };
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    const move = () => place();
     window.addEventListener('mousedown', away);
     window.addEventListener('keydown', esc);
+    window.addEventListener('resize', move);
+    window.addEventListener('scroll', move, true);
     return () => {
       window.removeEventListener('mousedown', away);
       window.removeEventListener('keydown', esc);
+      window.removeEventListener('resize', move);
+      window.removeEventListener('scroll', move, true);
     };
-  }, [open]);
+  }, [open, place]);
 
-  const cls = variant === 'primary' ? 'btn-primary' : variant === 'quiet' ? 'btn-quiet' : 'btn-ghost';
+  const rows = (big: boolean) => (
+    <>
+      {items.map((item, i) =>
+        item.href ? (
+          <Link
+            key={i}
+            href={item.href}
+            onClick={() => setOpen(false)}
+            className={cx('flex items-start gap-2 rounded-lg px-2 text-[13px] text-slate-200 transition hover:bg-white/[0.07] hover:text-white', big ? 'py-2.5' : 'py-1.5')}
+          >
+            {item.icon ? <span aria-hidden className="mt-px">{item.icon}</span> : null}
+            <span className="min-w-0 flex-1">
+              <span className="block">{item.label}</span>
+              {item.hint ? <span className="block text-[11px] text-slate-500">{item.hint}</span> : null}
+            </span>
+          </Link>
+        ) : (
+          <button
+            key={i}
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              item.run?.();
+            }}
+            className={cx('flex w-full items-start gap-2 rounded-lg px-2 text-left text-[13px] transition hover:bg-white/[0.07]', big ? 'py-2.5' : 'py-1.5', item.danger ? 'text-red-200/90 hover:text-red-100' : 'text-slate-200 hover:text-white')}
+          >
+            {item.icon ? <span aria-hidden className="mt-px">{item.icon}</span> : null}
+            <span className="min-w-0 flex-1">
+              <span className="block">{item.label}</span>
+              {item.hint ? <span className="block text-[11px] text-slate-500">{item.hint}</span> : null}
+            </span>
+          </button>
+        ),
+      )}
+    </>
+  );
+
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative" ref={wrapRef}>
       <button
+        ref={btnRef}
         type="button"
-        className={cls}
+        className={clsBtn(variant)}
         title={title}
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        onClick={() => {
+          setPos(null);
+          setOpen((v) => !v);
+        }}
       >
         {icon ? <span aria-hidden>{icon}</span> : null}
         {label}
@@ -122,45 +205,43 @@ export function Menu({
           ▾
         </span>
       </button>
-      {open ? (
-        <div className={cx('menu-pop', align === 'left' && '!left-0 !right-auto')}>
-          {items.map((item, i) =>
-            item.href ? (
-              <Link
-                key={i}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className="flex items-start gap-2 rounded-lg px-2 py-1.5 text-[13px] text-slate-200 transition hover:bg-white/[0.07] hover:text-white"
-              >
-                {item.icon ? <span aria-hidden className="mt-px">{item.icon}</span> : null}
-                <span className="min-w-0 flex-1">
-                  <span className="block">{item.label}</span>
-                  {item.hint ? <span className="block text-[11px] text-slate-500">{item.hint}</span> : null}
-                </span>
-              </Link>
-            ) : (
-              <button
-                key={i}
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  item.run?.();
-                }}
-                className={cx('flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] transition hover:bg-white/[0.07]', item.danger ? 'text-red-200/90 hover:text-red-100' : 'text-slate-200 hover:text-white')}
-              >
-                {item.icon ? <span aria-hidden className="mt-px">{item.icon}</span> : null}
-                <span className="min-w-0 flex-1">
-                  <span className="block">{item.label}</span>
-                  {item.hint ? <span className="block text-[11px] text-slate-500">{item.hint}</span> : null}
-                </span>
-              </button>
-            ),
-          )}
-        </div>
-      ) : null}
+
+      {/* ins document.body gesetzt – sonst klemmt das Panel in Containern mit backdrop-blur/overflow */}
+      {open && sheet && typeof document !== 'undefined'
+        ? createPortal(
+            <>
+              <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]" onClick={() => setOpen(false)} aria-hidden />
+              <div ref={popRef} role="menu" className="menu-pop menu-sheet">
+                <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-white/20" aria-hidden />
+                {title ? <p className="px-2 pb-1.5 text-[11px] uppercase tracking-[0.12em] text-slate-500">{title}</p> : null}
+                {rows(true)}
+                <button type="button" className="btn-quiet mt-1.5 w-full justify-center" onClick={() => setOpen(false)}>
+                  schließen
+                </button>
+              </div>
+            </>,
+            document.body,
+          )
+        : null}
+
+      {open && !sheet && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              ref={popRef}
+              role="menu"
+              className="menu-pop"
+              style={{ position: 'fixed', right: 'auto', marginTop: 0, top: pos?.top ?? 0, left: pos?.left ?? 0, width: pos?.width, visibility: pos ? 'visible' : 'hidden' }}
+            >
+              {rows(false)}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
+
+const clsBtn = (variant: 'primary' | 'ghost' | 'quiet') => (variant === 'primary' ? 'btn-primary' : variant === 'quiet' ? 'btn-quiet' : 'btn-ghost');
 
 export function Card({ className, children, ...rest }: React.HTMLAttributes<HTMLDivElement>) {
   return (
