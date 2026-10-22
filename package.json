@@ -13,10 +13,11 @@
     "test:render": "node -r tsx/cjs scripts/render-test.cjs",
     "test:store": "tsx scripts/smoke.mts",
     "test:dayplan": "tsx scripts/dayplan-test.mts",
-    "test:all": "npm run typecheck && npm run test:dayplan && npm run test:store && npm run test:category && npm run test:today && npm run test:layout && npm run test:render",
+    "test:all": "npm run typecheck && npm run test:dayplan && npm run test:store && npm run test:category && npm run test:today && npm run test:mode && npm run test:layout && npm run test:render",
     "test:layout": "tsx scripts/layout-check.mts",
     "test:category": "tsx scripts/category-test.mts",
-    "test:today": "tsx scripts/today-test.mts"
+    "test:today": "tsx scripts/today-test.mts",
+    "test:mode": "tsx scripts/mode-test.mts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

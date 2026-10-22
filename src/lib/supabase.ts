@@ -35,6 +35,10 @@ export const COLUMNS: Record<TableName, string[]> = {
     'jpy_rate',
     'notes',
     'archived',
+    'started',
+    'started_at',
+    'planned_start',
+    'planned_end',
     'created_at',
   ],
   places: [
@@ -114,6 +118,39 @@ export function toRow<K extends TableName>(table: K, value: Record<string, unkno
   return row;
 }
 
+/**
+ * Spalten, die die Datenbank (noch) nicht kennt, werden gemerkt und beim nächsten
+ * Schreiben weggelassen – so läuft die App auch, bevor ein Update eingespielt wurde.
+ */
+const unbekannteSpalten = new Set<string>();
+const vergesseneSpalten = (meldung: string, table: TableName) =>
+  Array.from(meldung.matchAll(/'([a-z_]+)'/gi))
+    .map((m) => m[1])
+    .filter((name) => /^[a-z_]+$/.test(name) && name !== table && name !== 'public');
+
+function ohneUnbekanntes(table: TableName, row: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(row)) if (!unbekannteSpalten.has(`${table}.${key}`)) out[key] = value;
+  return out;
+}
+
+async function schreibe<T extends { error: { message: string } | null }>(
+  table: TableName,
+  row: Record<string, unknown>,
+  run: (payload: Record<string, unknown>) => PromiseLike<T>,
+): Promise<{ error: { message: string } | null }> {
+  const erster = await run(ohneUnbekanntes(table, row));
+  if (!erster.error) return erster;
+  if (!/column|schema cache/i.test(erster.error.message)) return erster;
+  const neue = vergesseneSpalten(erster.error.message, table)
+    .map((name) => `${table}.${name}`)
+    .filter((key) => !unbekannteSpalten.has(key) && Object.keys(row).includes(key.split('.')[1]));
+  if (!neue.length) return erster;
+  for (const key of neue) unbekannteSpalten.add(key);
+  console.warn(`${table}: ohne ${neue.map((k) => k.split('.')[1]).join(', ')} geschrieben – bitte die passende Migration einspielen (supabase/migrations/)`);
+  return run(ohneUnbekanntes(table, row));
+}
+
 export async function supaSelect<T>(table: TableName, tripId?: string): Promise<T[]> {
   const sb = getSupabase();
   if (!sb) return [];
@@ -127,7 +164,7 @@ export async function supaSelect<T>(table: TableName, tripId?: string): Promise<
 export async function supaUpsert<T extends { id: string }>(table: TableName, value: T): Promise<void> {
   const sb = getSupabase();
   if (!sb) return;
-  const { error } = await sb.from(table).upsert(toRow(table, value as unknown as Record<string, unknown>));
+  const { error } = await schreibe(table, toRow(table, value as unknown as Record<string, unknown>), (payload) => sb.from(table).upsert(payload));
   if (error) throw new Error(`${table}: ${error.message}`);
 }
 
@@ -137,7 +174,7 @@ export async function supaPatch(table: TableName, id: string, patch: Record<stri
   const row = toRow(table, { ...patch, id });
   delete row.created_at;
   delete row.id;
-  const { error } = await sb.from(table).update(row).eq('id', id);
+  const { error } = await schreibe(table, row, (payload) => sb.from(table).update(payload).eq('id', id));
   if (error) throw new Error(`${table}: ${error.message}`);
 }
 

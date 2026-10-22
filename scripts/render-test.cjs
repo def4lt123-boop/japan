@@ -431,7 +431,7 @@ async function render(name, Page, tripId) {
   if (!tableOk) failures.push('Tabelle Inline-Edits');
   await act(async () => r3.unmount());
 
-  // ☀️ Heute: „Reise heute starten" schiebt den ganzen Plan auf heute
+  // 🚶 zwei Modi: ▶️ Reise starten → Unterwegs-Seite, ✕ beenden → zurück zur Planung
   nav.setPath('/t/trip-2027/heute');
   const TodayPage = require('../src/app/t/[tripId]/heute/page.tsx').default;
   const cToday = document.createElement('div');
@@ -443,21 +443,58 @@ async function render(name, Page, tripId) {
   await act(async () => {
     await new Promise((r) => setTimeout(r, 60));
   });
-  const startBtn = [...cToday.querySelectorAll('button')].find((b) => /Heute starten/.test(b.textContent || ''));
-  if (startBtn) {
+  const click = async (el) => {
+    if (!el) return false;
     await act(async () => {
-      startBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+      el.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
     });
     await act(async () => {
       await new Promise((r) => setTimeout(r, 80));
     });
-  }
-  const todayText = cToday.textContent || '';
-  const started = Boolean(startBtn) && /Tag 1 von/.test(todayText) && /nächsten Tage/.test(todayText);
-  console.log((started ? '✅' : '❌') + ' ☀️ Heute: Reise gestartet → Tag 1 von 40 mit Blick nach vorn');
+    return true;
+  };
+  const menuItem = (re) => [...document.querySelectorAll('[role="menuitem"]')].find((b) => re.test(b.textContent || ''));
+
+  const startBtn = [...cToday.querySelectorAll('button')].find((b) => /Reise starten/.test(b.textContent || ''));
+  await click(startBtn);
+  const liveText = cToday.textContent || '';
+  const started = Boolean(startBtn) && /unterwegs/.test(liveText) && /Tag 1 von 40/.test(liveText);
+  console.log((started ? '✅' : '❌') + ' 🚶 Starten: Unterwegs-Seite mit Tag 1 von 40');
   if (!started) {
-    failures.push('Heute starten');
-    console.log('   text:', todayText.slice(0, 260));
+    failures.push('Unterwegs-Modus');
+    console.log('   text:', liveText.slice(0, 260));
+  }
+
+  // abhaken im Vorbeigehen: Zähler im Kopf steigt um eins
+  const doneBefore = Number((liveText.match(/(\d+)\/\d+ erledigt/) || [])[1] ?? -1);
+  const hak = [...cToday.querySelectorAll('button')].find((b) => /erledigt abhaken/.test(b.title || ''));
+  await click(hak);
+  const doneAfter = Number(((cToday.textContent || '').match(/(\d+)\/\d+ erledigt/) || [])[1] ?? -2);
+  const ticked = Boolean(hak) && doneAfter === doneBefore + 1;
+  console.log((ticked ? '✅' : '❌') + ` ✓ Abhaken: ${doneBefore} → ${doneAfter} erledigt`);
+  if (!ticked) failures.push('Abhaken unterwegs');
+
+  // ✕ beenden → wieder Planung (abgehakt bleibt)
+  await click([...cToday.querySelectorAll('button[aria-haspopup="menu"]')].find((b) => /⋯/.test(b.textContent || '')));
+  const endBtn = await click(menuItem(/Reise beenden/));
+  const planText = cToday.textContent || '';
+  const ended = endBtn && /Reise starten/.test(planText) && !/als nächstes/.test(planText);
+  console.log((ended ? '✅' : '❌') + ' ✕ Beenden: Planung ist zurück, Unterwegs-Ansicht weg');
+  if (!ended) {
+    failures.push('Reise beenden');
+    console.log('   text:', planText.slice(0, 260));
+  }
+
+  // ↩ Start zurücknehmen → der alte Planungszeitraum steht wieder
+  await click([...cToday.querySelectorAll('button')].find((b) => /Reise starten/.test(b.textContent || '')));
+  await click([...cToday.querySelectorAll('button[aria-haspopup="menu"]')].find((b) => /⋯/.test(b.textContent || '')));
+  const undoBtn = await click(menuItem(/Start zurücknehmen/));
+  const backText = cToday.textContent || '';
+  const restored = undoBtn && /März 2027/.test(backText) && /Reise starten/.test(backText);
+  console.log((restored ? '✅' : '❌') + ' ↩ Zurücknehmen: Zeitraum 06.03.2027 steht wieder, Modus ist Planung');
+  if (!restored) {
+    failures.push('Start zurücknehmen');
+    console.log('   text:', backText.slice(0, 300));
   }
 
   // 🔀 Ortswechsel: Dialog vom Unterkünfte-Block

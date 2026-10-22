@@ -6,10 +6,10 @@ import { useParams } from 'next/navigation';
 import { TabLink } from './tabs';
 import { useStore } from '../../../lib/store';
 import { EditorProvider, useBatchGeocode, useEditor } from '../../../components/EditorProvider';
-import { Card, Menu, cx } from '../../../components/ui';
+import { Button, Card, Menu, cx } from '../../../components/ui';
 import { daysBetween, fmtMoney, fmtRange, plural } from '../../../lib/format';
 import { costsOf, dayPlan } from '../../../lib/stats';
-import { startToday } from '../../../lib/today';
+import { endTrip, startHint, startTrip, tripMode } from '../../../lib/mode';
 import { sortDays } from '../../../lib/sortday';
 import { locusChanges } from '../../../lib/locus';
 import { today } from '../../../lib/format';
@@ -46,12 +46,15 @@ export default function TripLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
+  const live = tripMode(trip) === 'live';
+  const tabs = live ? TABS.map((t) => (t.href === '/heute' ? { ...t, label: 'Unterwegs', icon: '🚶' } : t)) : TABS;
+
   return (
     <EditorProvider tripId={tripId}>
       <div className="mb-4">
         <TripTopBar tripId={tripId} />
         <nav className="no-print mt-3 flex gap-1 overflow-x-auto rounded-2xl border border-white/[0.06] bg-white/[0.03] p-1">
-          {TABS.map((tab) => (
+          {tabs.map((tab) => (
             <TabLink key={tab.href} tab={tab} tripId={tripId} />
           ))}
         </nav>
@@ -70,7 +73,7 @@ function TripTopBar({ tripId }: { tripId: string }) {
 
   const bundle = useMemo(
     () => ({
-      trip: trip ?? { id: tripId, name: '', destination: '', start_date: null, end_date: null, travelers: 1, budget_eur: null, jpy_rate: null, notes: null, archived: archiv },
+      trip: trip ?? { id: tripId, name: '', destination: '', start_date: null, end_date: null, travelers: 1, budget_eur: null, jpy_rate: null, notes: null, archived: archiv, started: false, started_at: null, planned_start: null, planned_end: null },
       places: store.places.filter((p) => p.trip_id === tripId),
       hotels: store.hotels.filter((h) => h.trip_id === tripId),
       journeys: store.journeys.filter((j) => j.trip_id === tripId),
@@ -87,6 +90,8 @@ function TripTopBar({ tripId }: { tripId: string }) {
   const sortierbar = planDays.filter((d) => d.places.length > 1).length;
   const changeCount = locusChanges(bundle.places, bundle.hotels, planDays.map((d) => d.date), bundle.journeys).length;
   const days = trip?.start_date && trip?.end_date ? daysBetween(trip.start_date, trip.end_date) : 0;
+  const live = tripMode(bundle.trip) === 'live';
+  const offenHeute = bundle.places.filter((p) => p.date === today() && p.booking_status !== 'erledigt').length;
 
   return (
     <section className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
@@ -113,8 +118,31 @@ function TripTopBar({ tripId }: { tripId: string }) {
       </div>
 
       <div className="no-print flex flex-wrap items-center gap-1.5">
+        <span className={live ? 'chip bg-emerald-500/15 text-emerald-100' : 'chip text-slate-400'} title={live ? 'die Reise läuft – Tagesseite ist die Hauptseite' : 'nichts läuft – alles wird geplant'}>
+          {live ? `🚶 unterwegs${offenHeute ? ` · ${offenHeute} offen` : ''}` : '🗓️ Planung'}
+        </span>
+        {live ? (
+          <Menu
+            variant="primary"
+            icon="🚶"
+            title="Was braucht es unterwegs?"
+            align="right"
+            items={[
+              { icon: '☀️', label: 'Zum heutigen Tag', hint: 'Ort, Route, Hinweise, Abhaken', href: `/t/${tripId}/heute` },
+              { icon: '🗺️', label: 'Karte', hint: 'Punkte und Betten der Stadt', href: `/t/${tripId}/karte` },
+              ...(bundle.trip.planned_start
+                ? [{ icon: '↩', label: 'Start zurücknehmen', hint: `Zeitraum ${fmtRange(bundle.trip.planned_start, bundle.trip.planned_end)} wieder herstellen`, run: () => endTrip(store, bundle, true) }]
+                : []),
+              { icon: '✕', label: 'Reise beenden', hint: 'zurück in die Planung – Abgehaktes bleibt', run: () => endTrip(store, bundle, false) },
+            ]}
+          />
+        ) : trip?.archived ? null : (
+          <Button variant="primary" onClick={() => startTrip(store, bundle)} title={startHint({ ...bundle })}>
+            ▶️ Reise starten
+          </Button>
+        )}
         <Menu
-          variant="primary"
+          variant={live ? 'ghost' : 'primary'}
           label="Anlegen"
           icon="＋"
           title="Was brauchst du gerade?"
@@ -133,9 +161,10 @@ function TripTopBar({ tripId }: { tripId: string }) {
           align="right"
           items={[
             { icon: '⚙', label: 'Reise bearbeiten', hint: 'Zeitraum, Budget, Personen, ¥-Kurs', run: () => open({ kind: 'trip', id: tripId }) },
-            ...(trip && !trip.archived && trip.start_date && trip.start_date !== today()
-              ? [{ icon: '▶️', label: 'Reise heute starten', hint: `${bundle.places.filter((p) => p.date).length} Punkte, ${bundle.hotels.length} Betten, ${bundle.journeys.filter((j) => j.date).length} Fahrten rutschen mit`, run: () => startToday(store, bundle) }]
+            ...(trip && !trip.archived && !live
+              ? [{ icon: '▶️', label: 'Reise starten', hint: startHint({ ...bundle }) || 'die Unterwegs-Seite öffnet sich', run: () => startTrip(store, bundle) }]
               : []),
+            ...(live ? [{ icon: '☀️', label: 'Heutiger Tag', hint: offenHeute ? `${plural(offenHeute, 'Punkt', 'Punkte')} heute noch offen` : 'alles erledigt', href: `/t/${tripId}/heute` }] : []),
             ...(sortierbar
               ? [{ icon: '⚡', label: 'Alle Tage sortieren', hint: 'der Reihe nach, ohne Überschneidungen', run: () => sortDays(store, planDays) }]
               : []),

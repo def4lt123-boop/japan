@@ -928,6 +928,10 @@ export function TripForm({ value, onSubmit, onCancel, onDelete }: { value?: Part
     jpy_rate: 175,
     notes: null,
     archived: false,
+    started: false,
+    started_at: null,
+    planned_start: null,
+    planned_end: null,
     ...value,
   }));
   const set = (patch: Partial<Trip>) => setDraft((d) => ({ ...d, ...patch }));

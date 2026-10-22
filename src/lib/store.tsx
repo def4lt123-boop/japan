@@ -257,6 +257,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         jpy_rate: value.jpy_rate ?? null,
         notes: value.notes ?? null,
         archived: false,
+        started: false,
+        started_at: null,
+        planned_start: null,
+        planned_end: null,
       };
       await upsert('trips', trip);
       say(`Reise „${trip.name}“ angelegt.`);
@@ -303,6 +307,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         id: uid('trip'),
         name: (name.trim() || `${source.name.replace(/\d{4}/, '')} (Kopie)`).trim(),
         archived: false,
+        started: false,
+        started_at: null,
+        planned_start: null,
+        planned_end: null,
         notes: overrides?.notes ?? `Kopie von „${source.name}“ – Inhalte verschoben, Buchungen zurückgesetzt.`,
       };
       const withTrip: Snapshot = { ...data, trips: [...data.trips, target] };

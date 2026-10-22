@@ -30,6 +30,10 @@ create table if not exists public.trips (
   jpy_rate     numeric(10, 2),          -- 1 EUR = x JPY
   notes        text,
   archived     boolean not null default false,
+  started      boolean not null default false,  -- ▶️ Unterwegs-Modus: Tagesseite statt Planung
+  started_at   date,                            -- seit wann
+  planned_start date,                           -- Zeitraum vor dem Start (für „Start zurücknehmen")
+  planned_end   date,
   created_at   timestamptz not null default now(),
   constraint trips_date_order check (end_date is null or start_date is null or end_date >= start_date)
 );
