@@ -271,17 +271,16 @@ async function render(name, Page, tripId) {
   console.log((clicked && hasDate ? '✅' : '❌') + ' Klick „Aktivität an diesem Tag anlegen“ öffnet Formular mit vorbelegtem Datum');
   if (!(clicked && hasDate)) { failures.push('Klick Test'); console.log('   clicked=' + clicked + ' hasDate=' + hasDate); clickErr.filter(e=>/Error|not a function|Cannot read/.test(e)).slice(0,3).forEach(e=>console.log('   '+e.slice(0,240))); }
   console.error = oe2;
-  // Die Tages-Aktionen stecken jetzt im ⋯-Menü: erst öffnen, dann suchen
-  const openMenu = async () => {
-    for (const t of [...c2.querySelectorAll('button')].filter((b) => (b.textContent || '').trim().startsWith('⋯')).slice(0, 8)) {
-      await act(async () => { t.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
-      await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
-      if ([...c2.querySelectorAll('button')].some((b) => (b.textContent || '').includes('Karte zu diesem Tag'))) return true;
-    }
-    return false;
-  };
-  await openMenu();
-  const mapBtn = [...c2.querySelectorAll('button')].find((b) => (b.textContent || '').includes('Karte zu diesem Tag') || (b.title || '').includes('Karte zu diesem Tag'));
+  // Die Tages-Aktionen stecken im ⋯-Menü, und das Menü lebt im document.body (Portal)
+  const body = dom.window.document.body;
+  const allButtons = () => [...body.querySelectorAll('button')];
+  const menuTriggers = allButtons().filter((b) => (b.textContent || '').trim().startsWith('⋯'));
+  for (const t of menuTriggers.slice(0, 8)) {
+    await act(async () => { t.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+    if (allButtons().some((b) => (b.textContent || '').includes('Karte zu diesem Tag'))) break;
+  }
+  const mapBtn = allButtons().find((b) => (b.textContent || '').includes('Karte zu diesem Tag') || (b.title || '').includes('Karte zu diesem Tag'));
   let routeFrame = false;
   if (mapBtn) {
     await act(async () => { mapBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
@@ -290,6 +289,40 @@ async function render(name, Page, tripId) {
   }
   console.log((mapBtn && routeFrame ? '✅' : (mapBtn ? '⚠️' : '❌')) + ` Tageskarte aufklappen${routeFrame ? ' – Route eingebettet' : mapBtn ? ' – iframe konnte nicht geladen werden (jsdom lädt nicht)' : ''}`);
   if (!mapBtn) failures.push('Tageskarte');
+  // „Noch ohne Tag“ sitzt oben auf dem Tagesplan: ✓ legt den Punkt auf den gewählten Tag
+  const poolCard = c2.querySelector('#pool');
+  const openCount = () => {
+    const el = c2.querySelector('#pool h3 .tabular-nums');
+    return el ? parseInt(el.textContent || '-1', 10) : -1;
+  };
+  const firstRow = poolCard ? [...poolCard.querySelectorAll('li')][0] : null;
+  const rowName = firstRow ? (firstRow.querySelector('.font-medium') || {}).textContent || '' : '';
+  const daySel = firstRow ? [...firstRow.querySelectorAll('select')][0] : null;
+  const dayValue = daySel ? daySel.value : '';
+  const layBtn = firstRow ? [...firstRow.querySelectorAll('button')].find((b) => (b.textContent || '').includes('hinlegen')) : null;
+  const beforeCount = openCount();
+  if (layBtn) {
+    await act(async () => { layBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 40)); });
+  }
+  const dayCardHtml = dayValue ? ((c2.querySelector(`[id="${dayValue}"]`) || {}).innerHTML || '') : '';
+  const poolOk = Boolean(layBtn && dayValue && rowName && beforeCount > 0 && openCount() === beforeCount - 1 && dayCardHtml.includes(rowName) && dayCardHtml.includes('Uhr'));
+  console.log((poolOk ? '✅' : '❌') + ` „Noch ohne Tag“-Liste oben: ${rowName ? '„' + rowName + '“' : '–'} → ${dayValue || 'kein Tag'} (${beforeCount} → ${openCount()} offen)`);
+  if (!poolOk) failures.push('Offen-Liste');
+
+  // ⋯-Menü sitzt am Viewport fest (nicht abgeschnitten) und lebt im <body>
+  const trig = [...dom.window.document.body.querySelectorAll('button')].filter((b) => (b.textContent || '').trim().startsWith('⋯'))[0];
+  let popFixed = false;
+  if (trig) {
+    await act(async () => { trig.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+    const pop = dom.window.document.querySelector('.menu-pop');
+    popFixed = Boolean(pop && dom.window.document.body.contains(pop) && /fixed/.test(pop.getAttribute('style') || ''));
+    await act(async () => { trig.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
+  }
+  console.log((popFixed ? '✅' : '❌') + ' ⋯-Menü: im body verankert, am Viewport positioniert');
+  if (!popFixed) failures.push('Menü-Position');
+
   await act(async () => r2.unmount());
 
   // Status-Pill-Klick im Table: Inline-Select ändern

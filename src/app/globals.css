@@ -81,6 +81,16 @@ body {
   .menu-pop {
     @apply pop-in absolute right-0 z-50 mt-1 w-60 rounded-xl border border-white/10 bg-ink-800/95 p-1 text-left shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] backdrop-blur;
   }
+  .menu-sheet {
+    @apply fixed inset-x-2 bottom-2 z-50 mx-auto max-h-[72vh] w-auto max-w-lg overflow-y-auto rounded-2xl p-2;
+    animation: sheet-up 0.18s ease-out;
+  }
+  @keyframes sheet-up {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+  }
   .cell {
     @apply px-2 py-1 align-top text-[13px] leading-snug;
   }
