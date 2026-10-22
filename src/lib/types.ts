@@ -21,6 +21,13 @@ export interface Trip {
   jpy_rate: number | null; // 1 EUR = x JPY
   notes: string | null;
   archived: boolean;
+  /** ▶️ Unterwegs-Modus: an = die Reise läuft gerade, die ☀️-Seite wird zur Tages-App */
+  started: boolean;
+  /** seit wann sie läuft (Datum) */
+  started_at: string | null;
+  /** der Planungszeitraum vor dem Start – „Start zurücknehmen" stellt ihn wieder her */
+  planned_start: string | null;
+  planned_end: string | null;
 }
 
 export interface Place {

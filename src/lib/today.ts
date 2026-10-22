@@ -4,6 +4,10 @@
  * Alles hier rechnet mit echten Kalenderdaten: Der heutige Tag ist der Tag, den
  * die Uhr anzeigt. Liegt der außerhalb des Reisezeitraums, sagt der Status bescheid
  * und bietet an, die Reise auf heute zu schieben (`startToday`).
+ *
+ * Die zwei Zustände einer Reise (🗓️ Planung ↔ 🚶 unterwegs, ▶️ starten / ✕ beenden)
+ * sitzen in src/lib/mode.ts – von hier nutzt es `shiftTrip` fürs Verrutschen und
+ * `dayBuckets`/`slotOf` für die Reihenfolge des Tages.
  */
 import type { Expense, Hotel, Journey, Place, Trip } from './types';
 import type { StoreValue } from './store';

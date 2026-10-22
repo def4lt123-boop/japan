@@ -23,7 +23,7 @@ export function seedSnapshot(): Snapshot {
   const raw = (seedJson as { default?: unknown })?.default ?? seedJson;
   const base = raw as unknown as Snapshot;
   const snapshot: Snapshot = {
-    trips: base.trips.map((t) => ({ ...t })),
+    trips: base.trips.map((t) => ({ ...t, started: Boolean(t.started), started_at: t.started_at ?? null, planned_start: t.planned_start ?? null, planned_end: t.planned_end ?? null })),
     places: base.places.map((p) => {
       const ticketpflicht = TICKET_PFLICHT.some((k) => p.name.includes(k));
       return {

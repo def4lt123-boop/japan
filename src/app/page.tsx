@@ -6,7 +6,8 @@ import { useStore } from '../lib/store';
 import { TripForm } from '../components/forms';
 import { Button, Card, Field, Menu, Modal, Money, SectionTitle, Stat, TextInput, cx } from '../components/ui';
 import { costsOf, dayPlan, nightCoverage, tripLengthLabel } from '../lib/stats';
-import { dayContext, startToday } from '../lib/today';
+import { dayContext } from '../lib/today';
+import { endTrip, startHint, startTrip, tripMode } from '../lib/mode';
 import { addDays, fmtDate, fmtMoney, fmtRange, plural } from '../lib/format';
 import type { Trip, TripBundle } from '../lib/types';
 
@@ -109,7 +110,10 @@ export default function HomePage() {
               <TripCard
                 key={bundle.trip.id}
                 bundle={bundle}
-                onStart={() => startToday(store, bundle)}
+                onStart={() => {
+                  if (startTrip(store, bundle)) window.location.href = `/t/${bundle.trip.id}/heute`;
+                }}
+                onEnd={() => endTrip(store, bundle, false)}
                 onEdit={() => setEditingTrip(bundle.trip)}
                 onDuplicate={() => openDuplicate(bundle.trip)}
                 onDelete={async () => {
@@ -205,9 +209,10 @@ export default function HomePage() {
   );
 }
 
-function TripCard({ bundle, onEdit, onDuplicate, onDelete, onStart }: { bundle: TripBundle; onEdit: () => void; onDuplicate: () => void; onDelete: () => void; onStart: () => void }) {
+function TripCard({ bundle, onEdit, onDuplicate, onDelete, onStart, onEnd }: { bundle: TripBundle; onEdit: () => void; onDuplicate: () => void; onDelete: () => void; onStart: () => void; onEnd: () => void }) {
   const ctx = dayContext(bundle.trip);
-  const liveDay = ctx?.state === 'live' ? dayPlan(bundle).find((d) => d.date === ctx.iso) : null;
+  const live = tripMode(bundle.trip) === 'live';
+  const liveDay = dayPlan(bundle).find((d) => d.date === (live ? bundle.trip.started_at ?? ctx?.iso ?? '' : ctx?.state === 'live' ? ctx.iso : '')) ?? null;
   const costs = costsOf(bundle);
   const gaps = nightCoverage(bundle).filter((n) => !n.covered);
   const planned = bundle.places.filter((p) => p.date).length;
@@ -230,9 +235,12 @@ function TripCard({ bundle, onEdit, onDuplicate, onDelete, onStart }: { bundle: 
             {bundle.trip.destination || '—'} · {fmtRange(bundle.trip.start_date, bundle.trip.end_date)} · {tripLengthLabel(bundle.trip)} · {plural(bundle.trip.travelers, 'Person', 'Personen')}
           </p>
         </div>
-        <Link href={`/t/${bundle.trip.id}/tage`} className="btn-primary shrink-0">
-          Planen →
-        </Link>
+        <span className="flex shrink-0 items-center gap-1.5">
+          {live ? <span className="chip bg-emerald-500/15 text-emerald-100 ring-emerald-400/30" title="seit 🗓️">🚶 unterwegs</span> : null}
+          <Link href={`/t/${bundle.trip.id}/${live ? 'heute' : 'tage'}`} className="btn-primary">
+            {live ? '🚶 Heute' : 'Planen →'}
+          </Link>
+        </span>
       </div>
 
       {ctx && !bundle.trip.archived && ctx.state !== 'nachher' ? (
@@ -243,15 +251,15 @@ function TripCard({ bundle, onEdit, onDuplicate, onDelete, onStart }: { bundle: 
             ctx.state === 'live' ? 'bg-emerald-400/[0.09] text-emerald-100 ring-1 ring-inset ring-emerald-400/25 hover:bg-emerald-400/[0.16]' : 'bg-white/[0.03] text-slate-300 ring-1 ring-inset ring-white/[0.07] hover:bg-white/[0.07]',
           )}
         >
-          {ctx.state === 'live' ? (
+          {live || ctx.state === 'live' ? (
             <>
-              <span aria-hidden>☀️</span>
-              <span className="font-medium">Heute · Tag {ctx.dayIndex} von {ctx.totalDays}</span>
+              <span aria-hidden>{live ? '🚶' : '☀️'}</span>
+              <span className="font-medium">{live ? `Läuft · Tag ${bundle.trip.started_at && bundle.trip.start_date ? ctx.dayIndex : 1} von ${ctx.totalDays || '?'}` : `Heute · Tag ${ctx.dayIndex} von ${ctx.totalDays}`}</span>
               <span className="text-emerald-200/70">
-                {liveDay?.places.length ? `${liveDay.places.length} ${liveDay.places.length === 1 ? 'Punkt' : 'Punkte'} · ${liveDay.hours.toFixed(1)} h` : 'nichts geplant'}
+                {liveDay?.places.length ? `${liveDay.places.filter((x) => x.booking_status !== 'erledigt').length} von ${liveDay.places.length} offen · ${liveDay.hours.toFixed(1)} h` : 'nichts geplant'}
                 {liveDay?.cities.length ? ` · ${liveDay.cities.join(' / ')}` : ''}
               </span>
-              <span className="ml-auto text-[11px] text-emerald-200/60 underline-offset-2 group-hover:underline">Tagesplan →</span>
+              <span className="ml-auto text-[11px] text-emerald-200/60 underline-offset-2 group-hover:underline">{live ? 'Zum Tag →' : 'Tagesplan →'}</span>
             </>
           ) : (
             <>
@@ -261,7 +269,7 @@ function TripCard({ bundle, onEdit, onDuplicate, onDelete, onStart }: { bundle: 
                   ? `startet ${ctx.daysToStart ? `in ${plural(ctx.daysToStart, 'Tag', 'Tagen')}` : 'bald'} · ${fmtDate(bundle.trip.start_date, { day: '2-digit', month: '2-digit', year: 'numeric' })}`
                   : 'noch ohne Reisezeitraum'}
               </span>
-              <span className="ml-auto text-[11px] text-slate-500">Heute-Ansicht →</span>
+              <span className="ml-auto text-[11px] text-slate-500">Tag ansehen →</span>
             </>
           )}
         </Link>
@@ -298,9 +306,10 @@ function TripCard({ bundle, onEdit, onDuplicate, onDelete, onStart }: { bundle: 
             items={[
               { icon: '✎', label: 'Reise bearbeiten', hint: 'Zeitraum, Budget, Personen, ¥-Kurs', run: onEdit },
               { icon: '☀️', label: 'Heute & nächste Tage', href: `/t/${bundle.trip.id}/heute` },
-              ...(bundle.trip.start_date && !bundle.trip.archived && ctx?.state === 'vorher'
-                ? [{ icon: '▶️', label: 'Reise heute starten', hint: 'alle Tage rutschen auf heute', run: onStart }]
+              ...(!bundle.trip.archived && !live
+                ? [{ icon: '▶️', label: 'Reise starten', hint: startHint({ ...bundle }) || 'die Unterwegs-Seite öffnet sich', run: onStart }]
                 : []),
+              ...(live ? [{ icon: '✕', label: 'Reise beenden', hint: 'zurück in die Planung – Abgehaktes bleibt', run: onEnd }] : []),
               { icon: '🗓️', label: 'Tage ansehen', href: `/t/${bundle.trip.id}/tage` },
               { icon: '🌐', label: 'Übersicht ansehen', href: `/t/${bundle.trip.id}/uebersicht` },
               { icon: '⧉', label: 'Duplizieren', hint: 'Vorlage für eine nächste Reise', run: onDuplicate },

@@ -12,7 +12,7 @@ Sechs Reiter, alles Wichtige vorn, der Rest hinter `⋯`:
 
 | Reiter | Inhalt |
 | --- | --- |
-| ☀️ **Heute** | tagesaktuell: **was heute Morgen, mittags, nachmittags und abends dran ist**, abgehakt mit ✓, dazu die nächsten sechs Tage mit Stunden, Ort und anstehendem 🔀 Ortswechsel. Liegt der Reisezeitraum in der Zukunft, steht hier **▶️ Heute starten** – jeder Punkt, jede Nacht, jede Fahrt und jede Ausgabe rutscht auf den heutigen Tag, Reihenfolge und Abstände bleiben gleich |
+| ☀️ **Heute** / 🚶 **Unterwegs** | dieselbe Seite in zwei Zuständen. **🗓️ Planung** (nicht gestartet): was heute Morgen, mittags, nachmittags und abends dran ist, dazu die nächsten sechs Tage mit Stunden, Ort und anstehendem 🔀 Ortswechsel – und der Knopf **▶️ Reise starten**. **🚶 Unterwegs** (gestartet): der Tag als App – großer Tageskopf mit *Tag 3 von 40*, Stadt und Bett, **als nächstes** mit Uhrzeit und Fahrzeit, 🗺️ Route, ✓ abhaken, Hinweise aufgeklappt, dazu **Morgen** und der **Reiseplan** der drei nächsten Tage. Editieren ist nur noch das kleine ✎ daneben |
 | 🗓️ **Tage** | **oben die Liste „Noch ohne Tag“**: jeder neue Punkt landet hier und bekommt Tag + Uhrzeit in zwei Dropdowns (der Tag mit der meisten Luft ist vorgeschlagen), ein Klick auf **✓ hinlegen** genügt – oder ⚡ verteilt alle auf einmal. Darunter ein Kartenstapel pro Reisetag: Datum, Stadt, Zahl und Programmstunden in der Zeile, **Zeitband 07–23 Uhr** mit dem belegten Tag: einen **Block ziehen** = neue Uhrzeit (15-Minuten-Schritte), am **rechten Rand ziehen** = Dauer, **Lücke anklicken** = oberster Punkt der Liste rutscht dorthin, ⇧+Pfeiltasten schieben eine Stunde. Im `⋯` des Tages: 🗺️ Karte inline, 🧭 Tagesroute bei Google Maps, **⚡ Tag sortieren** (der Reihe nach, ohne Überschneidung – feste Uhrzeiten bleiben Anker) und 🔀 **Ortswechsel an diesem Tag** · der heutige Tag ist mit einem Ring markiert |
 | 🗂️ **Aktivitäten** |  alles als Liste untereinander: oben, was noch **ohne Tag** ist, darunter die Tage. Tag, Uhrzeit, Dauer und **🏷️ Kategorie direkt in der Zeile** (ein Dropdown, kein Tippen), **Doppelplanung wird abgewiesen**, belegte Zeiten rutschen in die nächste Lücke, ⚡ verteilt automatisch |
 | 🗺️ **Karte** | Marker aus den Koordinaten (Farbe = Kategorie, hohle Kontur = noch ohne Tag), Route des Tages als Linie, 🏨 Unterkünfte · **Hintergrund: offene OpenStreetMap-Kacheln** – kein API-Key, keine Testphase, keine Rechnung, dunkel gefiltert oder hell umschaltbar · rechte Spalte dieselbe Ansicht bei Google Maps, Punkte ohne Koordinaten lassen sich einzeln oder auf einen Schlag nachziehen · **Filter nach Tag, Stadt und Kategorie**, im Popup des Punktes die Kategorie gleich umstellen |
@@ -21,7 +21,9 @@ Sechs Reiter, alles Wichtige vorn, der Rest hinter `⋯`:
 
 Kategorien sind ein **Dropdown** mit 16 festen Begriffen plus allem, was in der Reise schon drinsteht – nichts verschwindet. **🏷️ automatisch kategorisieren** (unten in der Karten-Legende und im `⋯`-Menü) gibt allen Punkten, die noch keinen passenden Begriff haben, eine Kategorie aus Name und Notiz; was schon sauber dasteht, wird nicht angefasst.
 
-Jedes `⋯`-Menü sitzt am **Viewport** verankert – auf dem Handy als Blech von unten mit großen Feldern, auf dem Desktop als Panel, das nie über den Rand läuft und sich nach oben öffnet, wenn darunter zu wenig Platz ist (`npm run test:layout` prüft 60 Geräte-/Knopf-Kombinationen).
+Jedes `⋯`-Menü sitzt am **Viewport** verankert – auf dem Handy als Blech von unten mit großen Feldern, auf dem Desktop als Panel, das nie über den Rand läuft und sich nach oben öffnet, wenn darunter zu wenig Platz ist (`npm run test:layout` prüft 60 Geräte-/Knopf-Kombinationen, `npm run test:mode` das Starten und Zurücknehmen des Unterwegs-Modus).
+
+Zwei Zustände, ein Reiseplan: **🗓️ planen** und **🚶 unterwegs**. **▶️ Reise starten** (oben rechts, auf der Reisekarte oder im `⋯`-Menü) setzt Tag 1 auf heute – liegt der geplante Zeitraum in der Zukunft oder schon vorbei, rutschen Punkte, Nächte, Fahrten und Ausgaben komplett mit, Reihenfolge und Abstände bleiben gleich; der alte Zeitraum wird gemerkt. Die ☀️-Seite wird damit zur Tages-App für die Hosentasche: Standort, Fahrzeit vom Hotel, Hinweise, Ticket-Status, 🗺️ Route, ✓ – und darunter Morgen plus Reiseplan. **✕ Reise beenden** dreht das um: alles bleibt, was abgehakt ist, die Daten bleiben stehen. **↩ Start zurücknehmen** (nur im `⋯`, wenn ein alter Zeitraum gemerkt ist) schiebt den Plan zusätzlich auf die ursprünglichen Daten zurück, als wäre nie gestartet worden. Archivierte Reisen lassen sich nicht starten.
 
 Der **🔀 Ortswechsel** (Unterkünfte, Karte des Tages, ⋯-Menü) trägt einen Stadtwechsel in einem Schritt ein: der Dialog zeigt, in welcher Stadt du an dem Tag schläfst, und schreibt dann die Aktivitäten (nur diesen Tag oder alles Danach), die Unterkünfte (alter Check-out, neuer Check-in, Nächte) und – wenn gewünscht – die passende Fahrt ins Fahrten-Log. Erkannte Wechsel stehen chronologisch auf der Unterkünfte-Seite und auf ☀️ Heute.
 
@@ -95,9 +97,10 @@ npm i -g supabase
 supabase login
 supabase link --project-ref DEIN_REF
 supabase db push            # legt Tabellen + Sichten aus supabase/migrations/ an
+supabase db push --include-all  # nach einem Update: neue Spalten (z. B. ▶️ Unterwegs-Modus) fehlen sonst
 psql "DEINE_DB_URL" -f supabase/seed.sql   # optional die Beispieldaten
 ```
-Deshalb enthält `supabase/migrations/20261020000001_urlaubsplaner.sql` denselben Inhalt wie `schema.sql` – generiert von `npm run seed:sql`, du musst also nie zwei Dateien pflegen.
+Deshalb enthält `supabase/migrations/20261020000001_urlaubsplaner.sql` denselben Inhalt wie `schema.sql` – generiert von `npm run seed:sql`, du musst also nie zwei Dateien pflegen. Spätere Erweiterungen liegen als eigene, idempotente Migration daneben (z. B. `20261022000003_unterwegs_modus.sql` für ▶️ Unterwegs); `supabase/setup.sql` enthält alles zusammen und darf deshalb mehrfach ausgeführt werden. Fehlt eine Spalte noch, schreibt die App einfach ohne sie weiter und zeigt den Modus aus den Daten, die da sind.
 Wer so arbeitet, braucht `setup.sql` nur einmal (oder ersetzt die Migration durch den Inhalt von `setup.sql`, falls die Beispieldaten mit rein sollen).
 
 ### C) Vollautomatisch bei jedem Push

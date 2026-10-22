@@ -35,7 +35,17 @@ export function normalizeRow<T extends Record<string, any>>(table: keyof typeof 
   return out as T;
 }
 
-export const normalizeTrip = (r: Trip) => normalizeRow<Trip>('trips', r);
+/** Unterwegs-Modus – alte Datensätze und die Vorlage kennen die Felder noch nicht */
+export function normalizeTrip(r: Trip): Trip {
+  const row = normalizeRow<Trip>('trips', r);
+  return {
+    ...row,
+    started: row.started === true,
+    started_at: row.started_at ?? null,
+    planned_start: row.planned_start ?? null,
+    planned_end: row.planned_end ?? null,
+  };
+}
 export const normalizePlace = (r: Place) => normalizeRow<Place>('places', r);
 export const normalizeHotel = (r: Hotel) => normalizeRow<Hotel>('hotels', r);
 export const normalizeJourney = (r: Journey) => normalizeRow<Journey>('journeys', r);
