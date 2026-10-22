@@ -7,6 +7,7 @@ import L from 'leaflet';
 import type { Hotel, Place } from '../lib/types';
 import { categoryMeta, mapsUrl, routeUrl } from '../lib/categories';
 import { cx } from './ui';
+import { CategoryPicker } from './CategoryPicker';
 import { fmtDate, fmtDuration, fmtMoney } from '../lib/format';
 
 interface Props {
@@ -18,6 +19,9 @@ interface Props {
   onSelect: (id: string | null) => void;
   onEditPlace: (id: string) => void;
   onEditHotel: (id: string) => void;
+  /** Kategorie hier umstellen – das Dropdown im Popup */
+  onCategory?: (id: string, category: string | null) => void;
+  allCategories?: (string | null)[];
   dayLabel: string | null;
 }
 
@@ -49,7 +53,7 @@ function FitBounds({ points, fitKey }: { points: [number, number][]; fitKey: str
   return null;
 }
 
-export default function MapView({ places, hotels, showHotels, routePlaces, selectedId, onSelect, onEditPlace, onEditHotel, dayLabel }: Props) {
+export default function MapView({ places, hotels, showHotels, routePlaces, selectedId, onSelect, onEditPlace, onEditHotel, onCategory, allCategories = [], dayLabel }: Props) {
   const withCoords = useMemo(() => places.filter((p) => p.lat !== null && p.lng !== null), [places]);
   const bounds = useMemo<[number, number][]>(() => withCoords.map((p) => [p.lat as number, p.lng as number]), [withCoords]);
   const route = useMemo<[number, number][]>(
@@ -154,6 +158,16 @@ export default function MapView({ places, hotels, showHotels, routePlaces, selec
                     .join(' · ') || '—'}
                 </div>
                 {p.notes ? <p style={{ marginTop: 5, fontSize: 12 }}>{p.notes}</p> : null}
+                {onCategory ? (
+                  <div style={{ marginTop: 7, display: 'flex', gap: 6, alignItems: 'center', maxWidth: 250 }} onPointerDown={(e) => e.stopPropagation()}>
+                    <span style={{ fontSize: 11, color: '#94a3b8' }}>🏷️</span>
+                    <CategoryPicker
+                      value={p.category}
+                      used={allCategories.length ? allCategories : places.map((x) => x.category)}
+                      onChange={(v) => onCategory(p.id, v)}
+                    />
+                  </div>
+                ) : null}
                 <div style={{ marginTop: 7, display: 'flex', flexWrap: 'wrap', gap: 9, alignItems: 'center' }}>
                   <a href={mapsUrl(p)} target="_blank" rel="noreferrer">
                     📍 Maps

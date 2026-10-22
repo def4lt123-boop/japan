@@ -9,6 +9,8 @@ import { EditorProvider, useBatchGeocode, useEditor } from '../../../components/
 import { Card, Menu, cx } from '../../../components/ui';
 import { daysBetween, fmtMoney, fmtRange, plural } from '../../../lib/format';
 import { costsOf } from '../../../lib/stats';
+import { needsCategory } from '../../../lib/categories';
+import { applyCategories } from '../../../lib/categorize';
 
 /**
  * Fünf Reiter, fünf Aufgaben. Alles Weitere lebt in den beiden Knöpfen rechts
@@ -74,6 +76,7 @@ function TripTopBar({ tripId }: { tripId: string }) {
 
   const costs = costsOf(bundle);
   const missingCoords = bundle.places.filter((p) => p.lat === null || p.lng === null).length;
+  const needsCat = bundle.places.filter((p) => needsCategory(p)).length;
   const openPool = bundle.places.filter((p) => !p.date).length;
   const days = trip?.start_date && trip?.end_date ? daysBetween(trip.start_date, trip.end_date) : 0;
 
@@ -124,6 +127,9 @@ function TripTopBar({ tripId }: { tripId: string }) {
             { icon: '⚙', label: 'Reise bearbeiten', hint: 'Zeitraum, Budget, Personen, ¥-Kurs', run: () => open({ kind: 'trip', id: tripId }) },
             ...(missingCoords
               ? [{ icon: '🌍', label: `${missingCoords} Kartenpunkte nachziehen`, hint: 'OpenStreetMap fragt die Koordinaten ab', run: () => void geocodeAll() }]
+              : []),
+            ...(needsCat
+              ? [{ icon: '🏷️', label: `${needsCat} eine Kategorie geben`, hint: 'aus Name und Notiz abgeleitet', run: () => applyCategories(store, bundle.places) }]
               : []),
             { icon: '🗂️', label: 'Alles als Tabelle', hint: 'jedes Feld in einer Zeile', href: `/t/${tripId}/tabelle` },
             { icon: '⇩', label: 'Dateien & Export', hint: 'CSV, Google-Maps-KML, JSON', href: `/t/${tripId}/reise#export` },

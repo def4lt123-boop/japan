@@ -67,7 +67,7 @@ const PAGES = [
   { name: 'Tage', path: '/t/trip-2027/tage', file: '../src/app/t/[tripId]/tage/page.tsx', expect: [/Tagesplan/, /Sa06\.03\./, /noch frei|Aktivitäten/] },
   { name: 'Aktivitäten', path: '/t/trip-2027/aktivitaeten', file: '../src/app/t/[tripId]/aktivitaeten/page.tsx', expect: [/Noch ohne Tag/, /Aktivität/] },
   { name: 'Tabelle', path: '/t/trip-2027/tabelle', file: '../src/app/t/[tripId]/tabelle/page.tsx', expect: [/Fahrzeit ab Hotel/, /Standort/] },
-  { name: 'Karte', path: '/t/trip-2027/karte', file: '../src/app/t/[tripId]/karte/page.tsx', expect: [/Karte/, /Legende/] },
+  { name: 'Karte', path: '/t/trip-2027/karte', file: '../src/app/t/[tripId]/karte/page.tsx', expect: [/Karte/, /Legende/, /Alle Kategorien/, /Kategorie/] },
   { name: 'Unterkünfte', path: '/t/trip-2027/unterkuenfte', file: '../src/app/t/[tripId]/unterkuenfte/page.tsx', expect: [/Nächte-Check/, /Hotel Tokio/] },
   { name: 'Kosten', path: '/t/trip-2027/kosten', file: '../src/app/t/[tripId]/kosten/page.tsx', expect: [/Budgetauslastung/, /Alle Posten/] },
   { name: 'Reiseverlauf', path: '/t/trip-2027/verlauf', file: '../src/app/t/[tripId]/verlauf/page.tsx', expect: [/Reiseverlauf/, /Ankunft/] },
@@ -166,7 +166,9 @@ async function render(name, Page, tripId) {
     await new Promise((r) => setTimeout(r, 30));
   });
   const formText = container.textContent || '';
-  const formOk = /Was ist es\?/.test(formText) && /Google Maps/.test(formText) && /Tageszeit/.test(formText);
+  const catSelect = [...container.querySelectorAll('select')].find((el) => /Tempel & Schrein/.test(el.textContent || ''));
+  const formOk =
+    /Was ist es\?/.test(formText) && /Google Maps/.test(formText) && /Tageszeit/.test(formText) && Boolean(catSelect) && !container.querySelector('#cat-list');
   console.log((formOk ? '✅' : '❌') + ' Eintrags-Formular rendert (Felder + Geo-Block)');
   if (!formOk) {
     failures.push('PlaceForm');
@@ -375,6 +377,40 @@ async function render(name, Page, tripId) {
   console.log((tilesOk ? '✅' : '❌') + ' Karte: OpenStreetMap-Kacheln ohne Key, Marker gezeichnet');
   if (!tilesOk) failures.push('Kacheln');
 
+  // Klick in der Legende: „automatisch kategorisieren" setzt die fehlenden Kategorien und verschwindet
+  nav.setPath('/t/trip-2027/karte');
+  const MapPage = require('../src/app/t/[tripId]/karte/page.tsx').default;
+  const cMap = document.createElement('div');
+  document.body.appendChild(cMap);
+  const rMap = createRoot(cMap);
+  await act(async () => {
+    rMap.render(
+      React.createElement(
+        StoreProvider,
+        null,
+        React.createElement(require('../src/components/EditorProvider.tsx').EditorProvider, { tripId: 'trip-2027' }, React.createElement(MapPage)),
+      ),
+    );
+  });
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 60));
+  });
+  const catBtn = [...cMap.querySelectorAll('button')].find((b) => /automatisch kategorisieren/.test(b.textContent || ''));
+  if (catBtn) {
+    await act(async () => {
+      catBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 60));
+    });
+  }
+  const stillThere = [...cMap.querySelectorAll('button')].some((b) => /automatisch kategorisieren/.test(b.textContent || ''));
+  const catOk = Boolean(catBtn) && !stillThere && /Alle Aktivitäten haben eine Kategorie/.test(cMap.textContent || '');
+  console.log((catOk ? '✅' : '❌') + ' Karte: Kategorien per Klick gesetzt' + (catBtn ? ` (${(catBtn.textContent || '').trim().slice(0, 28)}…)` : ' – Knopf nicht gefunden'));
+  if (!catOk) failures.push('Kategorien-Klick');
+  await act(async () => rMap.unmount());
+  cMap.remove();
+
   await act(async () => r2.unmount());
 
   // Status-Pill-Klick im Table: Inline-Select ändern
@@ -389,9 +425,9 @@ async function render(name, Page, tripId) {
   const inputs = c3.querySelectorAll('tbody input[type=date]').length;
   const selects = c3.querySelectorAll('tbody select').length;
   const tickets = c3.querySelectorAll('tbody select').length;
-  const tableOk = rows > 60 && inputs === rows && selects === rows * 3;
+  const tableOk = rows > 60 && inputs === rows && selects === rows * 4;
   console.log((tableOk ? '✅' : '❌') + ` Tabelle: ${rows} Zeilen, ${inputs} Datums-Edits, ${selects} Status/Ticket/Prio-Selects`);
-  if (!tableOk) console.log('   erwartet: rows*3 Selects, gefunden ' + tickets);
+  if (!tableOk) console.log('   erwartet: rows*4 Selects, gefunden ' + tickets);
   if (!tableOk) failures.push('Tabelle Inline-Edits');
   await act(async () => r3.unmount());
   if (warnings.length) {

@@ -7,6 +7,7 @@ import { useEditor } from '../../../../components/EditorProvider';
 import { FilterBar, EMPTY_FILTER, applyFilter, type PlaceFilter } from '../../../../components/filters';
 import { Button, Card, Empty, Pill, Select, SectionTitle, TextInput, cx } from '../../../../components/ui';
 import { STATUS_META, TICKET_META, TICKET_ORDER, categoryMeta, mapsUrl } from '../../../../lib/categories';
+import { CategoryPicker } from '../../../../components/CategoryPicker';
 import { BOOKING_STATUSES, PRIORITIES, TICKET_STATUSES, type Place } from '../../../../lib/types';
 import { fmtDate, fmtMoney } from '../../../../lib/format';
 import { download, placeCsv } from '../../../../lib/export';
@@ -35,6 +36,7 @@ export default function TablePage() {
   const tripId = String(params?.tripId ?? '');
   const store = useStore();
   const bundle = useTrip(tripId);
+  const usedCategories = bundle.places.map((x) => x.category);
   const { open } = useEditor();
   const [filter, setFilter] = useState<PlaceFilter>(EMPTY_FILTER);
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'date', dir: 1 });
@@ -167,9 +169,16 @@ export default function TablePage() {
                       </button>
                     </td>
                     <td className="cell whitespace-nowrap">
-                      <Pill className="ring-white/10" style={{ background: `${meta.color}22`, color: '#e2e8f0' }} title={meta.label}>
-                        <span aria-hidden>{meta.icon}</span> {p.category ?? '—'}
-                      </Pill>
+                      <div className="flex items-center gap-1" style={{ color: meta.color }}>
+                        <span aria-hidden title={meta.label}>{meta.icon}</span>
+                        <CategoryPicker
+                          size="sm"
+                          className="!border-transparent !bg-transparent !px-1 !py-0.5"
+                          value={p.category}
+                          used={usedCategories}
+                          onChange={(v) => store.patch('places', p.id, { category: v })}
+                        />
+                      </div>
                     </td>
                     <td className="cell whitespace-nowrap text-slate-300">{p.travel_time ?? '—'}</td>
                     <td className="cell whitespace-nowrap tabular-nums text-slate-300">{p.duration_min ? `${Math.floor(p.duration_min / 60)}h${p.duration_min % 60 ? ` ${p.duration_min % 60}m` : ''}` : '—'}</td>

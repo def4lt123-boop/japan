@@ -15,6 +15,7 @@ import { PRIORITY_META, TICKET_META, categoryMeta, mapsUrl, nextTicket } from '.
 import { assign, collide, fmtWindow, minToTime, parseLen, plannedMinutes, suggestStart, timeToMin, windowOf } from '../lib/dayplan';
 import { Button, Menu, Money, Select, cx } from './ui';
 import { DayBar } from './daybar';
+import { CategoryPicker } from './CategoryPicker';
 import { MapPreview } from './MapPreview';
 
 export function ActivityRow({
@@ -193,6 +194,15 @@ export function ActivityRow({
               options={dayOptions}
               value={place.date ?? ''}
               onChange={(e) => placeOn(e.target.value || null)}
+            />
+          </label>
+          <label className="flex items-center gap-1 text-[11px] text-slate-500">
+            <span aria-hidden title="Kategorie">🏷</span>
+            <CategoryPicker
+              size="sm"
+              value={place.category}
+              used={all.map((x) => x.category)}
+              onChange={(v) => store.patch('places', place.id, { category: v })}
             />
           </label>
           <label className="flex items-center gap-1 text-[11px] text-slate-500" title="Ab wann – nur mit Tag darunter sinnvoll">
