@@ -2,24 +2,24 @@ import type { BookingStatus, Place, Priority, TicketStatus } from './types';
 
 /** Kategorie-Bezeichnungen → Icon + Farbe für Liste, Karte und Übersicht */
 const RULES: { test: RegExp; label: string; icon: string; color: string }[] = [
-  { test: /freizeitpark|park.*disney|disney|universal|nintendo|nijigen|theme/i, label: 'Freizeitpark', icon: '🎢', color: '#f04e23' },
-  { test: /tempel|schrein|shrine|jinja|torii| buddhist|kannon|dojo/i, label: 'Tempel & Schrein', icon: '⛩️', color: '#e0483d' },
-  { test: /burg|castle|schloss|residenz/i, label: 'Burg & Schloss', icon: '🏯', color: '#b3742e' },
-  { test: /bad|onsen|hot spring|ryokan|sentō|sento/i, label: 'Onsen & Bad', icon: '♨️', color: '#0ea5a4' },
-  { test: /strand|beach|meer|sea|ocean|schnorchel|tauchen|dive|insel|island/i, label: 'Meer & Insel', icon: '🏝️', color: '#0ea3d9' },
-  { test: /park|garten|garden|gyoen|korakuen|shibakoen|bambus|bamboo|see|lake/i, label: 'Parks & Gärten', icon: '🌳', color: '#4f9d5b' },
-  { test: /museum|galerie|manga|anime|aquarium|kaiyukan|aussicht|view|tower|hochhaus|skytree|sky tree/i, label: 'Museum & Aussicht', icon: '🏛️', color: '#7c5cd6' },
-  { test: /ramen|sushi|restaurant|cafe|café|essen|food|pancake|\beis|\bice|markt|market|kaiseki|izakaya|coffee/i, label: 'Essen & Cafés', icon: '🍜', color: '#e8912f' },
-  { test: /shop|store|einkauf|kaufhaus|shopping|markt|don quijote|daiso|loft|hands|sekando|street.*gassen/i, label: 'Shoppen', icon: '🛍️', color: '#d64f9e' },
-  { test: /nacht|club|bar|kabuki|izakaya|viertel|stadtteil|neighbourhood|neighborhood|crossing|kreuzung|strasse|straße/i, label: 'Stadtteile & Nachtleben', icon: '🏮', color: '#c2417f' },
-  { test: /tattoo/i, label: 'Tattoo & Studio', icon: '💉', color: '#5c6ac4' },
-  { test: /ausflug|ausflüg|tagausflug|trip|blick|fuji|berg|mountain|rokkō|rokko|\bnatur\b/i, label: 'Ausflüge & Natur', icon: '⛰️', color: '#2f8f6b' },
-  { test: /hotel|übernachtung|unterkunft/i, label: 'Unterkunft', icon: '🏨', color: '#3f5f96' },
-  { test: /transport|transfer|flug|airport|haneda|narita|shinkansen|zug|bahn|bahnhof|fähre|ferry|fahrplan/i, label: 'Transport', icon: '🚄', color: '#6b7280' },
-  { test: /organisation|orga\b|suica|ic-karte|karte|ticket|sim|esim|pass|versicherung|apotheke|bank|automat|gepäck|locker|wlan|wifi/i, label: 'Organisation', icon: '🎫', color: '#8a8f98' },
+  { test: /freizeitpark|park.*disney|disney|universal|nintendo|nijigen|theme/i, label: 'Freizeitpark', icon: '🎢', color: '#ff7a18' },
+  { test: /tempel|schrein|shrine|jinja|torii| buddhist|kannon|dojo/i, label: 'Tempel & Schrein', icon: '⛩️', color: '#e01e2b' },
+  { test: /burg|castle|schloss|residenz/i, label: 'Burg & Schloss', icon: '🏯', color: '#8d6a46' },
+  { test: /bad|onsen|hot spring|ryokan|sentō|sento/i, label: 'Onsen & Bad', icon: '♨️', color: '#1fc8c8' },
+  { test: /strand|beach|meer|sea|ocean|schnorchel|tauchen|dive|insel|island/i, label: 'Meer & Insel', icon: '🏝️', color: '#1989f9' },
+  { test: /park|garten|garden|gyoen|korakuen|shibakoen|bambus|bamboo|see|lake/i, label: 'Parks & Gärten', icon: '🌳', color: '#3fbb3a' },
+  { test: /museum|galerie|manga|anime|aquarium|kaiyukan|aussicht|view|tower|hochhaus|skytree|sky tree/i, label: 'Museum & Aussicht', icon: '🏛️', color: '#c45cf4' },
+  { test: /ramen|sushi|restaurant|cafe|café|essen|food|pancake|\beis|\bice|markt|market|kaiseki|izakaya|coffee/i, label: 'Essen & Cafés', icon: '🍜', color: '#ffd21f' },
+  { test: /shop|store|einkauf|kaufhaus|shopping|markt|don quijote|daiso|loft|hands|sekando|street.*gassen/i, label: 'Shoppen', icon: '🛍️', color: '#d6336c' },
+  { test: /nacht|club|bar|kabuki|izakaya|viertel|stadtteil|neighbourhood|neighborhood|crossing|kreuzung|strasse|straße/i, label: 'Stadtteile & Nachtleben', icon: '🏮', color: '#f90695' },
+  { test: /tattoo/i, label: 'Tattoo & Studio', icon: '✒️', color: '#7a1f3d' },
+  { test: /ausflug|ausflüg|tagausflug|trip|blick|fuji|berg|mountain|rokkō|rokko|\bnatur\b/i, label: 'Ausflüge & Natur', icon: '⛰️', color: '#12875b' },
+  { test: /hotel|übernachtung|unterkunft/i, label: 'Unterkunft', icon: '🏨', color: '#6c4df0' },
+  { test: /transport|transfer|flug|airport|haneda|narita|shinkansen|zug|bahn|bahnhof|fähre|ferry|fahrplan/i, label: 'Transport', icon: '🚄', color: '#1b5689' },
+  { test: /organisation|orga\b|suica|ic-karte|karte|ticket|sim|esim|pass|versicherung|apotheke|bank|automat|gepäck|locker|wlan|wifi/i, label: 'Organisation', icon: '🗂️', color: '#dcd3b4' },
 ];
 
-export const FALLBACK = { label: 'Sonstiges', icon: '📍', color: '#94a3b8' };
+export const FALLBACK = { label: 'Sonstiges', icon: '📍', color: '#8b93a1' };
 
 export function categoryMeta(category?: string | null): { label: string; icon: string; color: string } {
   if (!category) return FALLBACK;

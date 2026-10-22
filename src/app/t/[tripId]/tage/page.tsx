@@ -13,6 +13,10 @@ import { assign, minToTime, setSlot } from '../../../../lib/dayplan';
 import { DayBar } from '../../../../components/daybar';
 import { Button, Card, Empty, Menu, SectionTitle, cx } from '../../../../components/ui';
 import { dayPlan, nightCoverage } from '../../../../lib/stats';
+import { locusChanges } from '../../../../lib/locus';
+import { sortDays } from '../../../../lib/sortday';
+import { ChangeStrip } from '../../../../components/Ortswechsel';
+import { today } from '../../../../lib/format';
 import { fmtDate, fmtDuration, plural } from '../../../../lib/format';
 
 const MODE_ICON: Record<string, string> = {
@@ -39,6 +43,8 @@ export default function DaysPage() {
   const pool = bundle.places.filter((p) => !p.date);
   const coverage = new Map(bundle.trip ? nightCoverage(bundle).map((n) => [n.date, n]) : []);
   const dateIndex = new Map(days.map((d, i) => [d.date, i]));
+  const changeByDate = new Map(locusChanges(bundle.places, bundle.hotels, days.map((d) => d.date), bundle.journeys).map((c) => [c.date, c]));
+  const now = today();
 
   const moveDay = (placeId: string, from: string | null, dir: -1 | 1) => {
     if (!from) return;
@@ -94,11 +100,12 @@ export default function DaysPage() {
               )}
               title={`${plural(d.places.length, 'Aktivität', 'Aktivitäten')} · ${d.hours.toFixed(1)} h`}
             >
-              <span className="font-semibold">{fmtDate(d.date, { weekday: 'short' })}</span>
+              <span className={cx('font-semibold', d.date === now && 'text-amber-200')}>{fmtDate(d.date, { weekday: 'short' })}</span>
               <span className="tabular-nums">{fmtDate(d.date, { day: '2-digit', month: '2-digit' })}</span>
               <span className={cx('rounded px-1 tabular-nums', d.hours > 8 ? 'bg-shu-500/25 text-shu-100' : d.places.length ? 'bg-white/[0.07] text-slate-300' : 'text-slate-600')}>{d.places.length}</span>
             </a>
           ))}
+          <a href={`/t/${tripId}/heute`} title="was heute und an den nächsten Tagen dran ist" className="flex shrink-0 items-center gap-1.5 rounded-lg bg-white/[0.05] px-2 py-1 text-[12px] text-slate-200 hover:bg-white/10">☀️ Heute</a>
           {pool.length ? (
             <a href="#pool" className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[12px] text-amber-100 ring-1 ring-inset ring-amber-400/25 hover:bg-amber-500/20">
               ✨ ohne Tag <span className="tabular-nums">{pool.length}</span>
@@ -138,7 +145,7 @@ export default function DaysPage() {
               }}
               onDragLeave={() => setDropTarget((cur) => (cur === d.date ? null : cur))}
               onDrop={drop(d.date)}
-              className={cx('print-block scroll-mt-16 p-0 transition', dropTarget === d.date && 'drop-live', over && 'border-shu-400/30')}
+              className={cx('print-block scroll-mt-16 p-0 transition', dropTarget === d.date && 'drop-live', over && 'border-shu-400/30', d.date === now && 'ring-1 ring-white/20')}
             >
               <header className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-white/[0.06] px-3 py-2">
                 <span className="text-[13.5px] font-semibold text-white">{fmtDate(d.date, { weekday: 'short', day: 'numeric', month: 'long' })}</span>
@@ -175,11 +182,27 @@ export default function DaysPage() {
                             },
                           ]
                         : []),
+                      ...(d.places.length > 1
+                        ? [{ icon: '⚡', label: 'Tag sortieren', hint: 'der Reihe nach, ohne Überschneidungen', run: () => sortDays(store, [d]) }]
+                        : []),
+                      { icon: '🔀', label: 'Ortswechsel an diesem Tag', hint: 'Stadt, Bett und Fahrt umtragen', run: () => open({ kind: 'move', date: d.date }) },
                       { icon: '🗓️', label: 'Alle Aktivitäten der Reise', href: `/t/${tripId}/aktivitaeten` },
                     ]}
                   />
                 </span>
               </header>
+
+              {changeByDate.get(d.date) ? (
+                <ChangeStrip
+                  date={d.date}
+                  from={changeByDate.get(d.date)!.from ?? '—'}
+                  to={changeByDate.get(d.date)!.to}
+                  fromHotel={changeByDate.get(d.date)!.fromHotel}
+                  toHotel={changeByDate.get(d.date)!.toHotel}
+                  daysInOld={changeByDate.get(d.date)!.daysInOld}
+                  onOpen={() => open({ kind: 'move', date: d.date })}
+                />
+              ) : null}
 
               {(d.journeys.length || night) && (
                 <div className="space-y-1 border-b border-white/[0.07] bg-black/20 px-3 py-2">

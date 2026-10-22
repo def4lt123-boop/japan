@@ -6,6 +6,7 @@ import type { Place } from '../lib/types';
 import { useStore } from '../lib/store';
 import { DEFAULT_DURATION, fmtWindow, minToTime, suggestStart, timeToMin } from '../lib/dayplan';
 import { categoryMeta } from '../lib/categories';
+import { CategoryDot } from './CategoryDot';
 import { fmtDate } from '../lib/format';
 import { Card, Select, TextInput, cx } from './ui';
 
@@ -164,9 +165,7 @@ export function PendingList({
                   className="flex min-w-0 flex-1 cursor-grab items-center gap-2 active:cursor-grabbing"
                   title="Oder direkt auf einen Tag ziehen"
                 >
-                  <span aria-hidden className="shrink-0 text-[15px]">
-                    {meta.icon}
-                  </span>
+                  <CategoryDot category={p.category} size={19} />
                   <span className="min-w-0">
                     <span className="block truncate text-[13px] font-medium text-slate-100">{p.name}</span>
                     <span className="block truncate text-[11px] text-slate-500">

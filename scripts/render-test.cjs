@@ -426,10 +426,73 @@ async function render(name, Page, tripId) {
   const selects = c3.querySelectorAll('tbody select').length;
   const tickets = c3.querySelectorAll('tbody select').length;
   const tableOk = rows > 60 && inputs === rows && selects === rows * 4;
-  console.log((tableOk ? '✅' : '❌') + ` Tabelle: ${rows} Zeilen, ${inputs} Datums-Edits, ${selects} Status/Ticket/Prio-Selects`);
+  console.log((tableOk ? '✅' : '❌') + ` Tabelle: ${rows} Zeilen, ${inputs} Datums-Edits, ${selects} Status/Ticket/Prio/Kategorie-Selects`);
   if (!tableOk) console.log('   erwartet: rows*4 Selects, gefunden ' + tickets);
   if (!tableOk) failures.push('Tabelle Inline-Edits');
   await act(async () => r3.unmount());
+
+  // ☀️ Heute: „Reise heute starten" schiebt den ganzen Plan auf heute
+  nav.setPath('/t/trip-2027/heute');
+  const TodayPage = require('../src/app/t/[tripId]/heute/page.tsx').default;
+  const cToday = document.createElement('div');
+  document.body.appendChild(cToday);
+  const rToday = createRoot(cToday);
+  await act(async () => {
+    rToday.render(React.createElement(StoreProvider, null, React.createElement(EditorProvider, { tripId: 'trip-2027' }, React.createElement(TodayPage))));
+  });
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 60));
+  });
+  const startBtn = [...cToday.querySelectorAll('button')].find((b) => /Heute starten/.test(b.textContent || ''));
+  if (startBtn) {
+    await act(async () => {
+      startBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 80));
+    });
+  }
+  const todayText = cToday.textContent || '';
+  const started = Boolean(startBtn) && /Tag 1 von/.test(todayText) && /nächsten Tage/.test(todayText);
+  console.log((started ? '✅' : '❌') + ' ☀️ Heute: Reise gestartet → Tag 1 von 40 mit Blick nach vorn');
+  if (!started) {
+    failures.push('Heute starten');
+    console.log('   text:', todayText.slice(0, 260));
+  }
+
+  // 🔀 Ortswechsel: Dialog vom Unterkünfte-Block
+  nav.setPath('/t/trip-2027/unterkuenfte');
+  const HotelsPage = require('../src/app/t/[tripId]/unterkuenfte/page.tsx').default;
+  const cHot = document.createElement('div');
+  document.body.appendChild(cHot);
+  const rHot = createRoot(cHot);
+  await act(async () => {
+    rHot.render(React.createElement(StoreProvider, null, React.createElement(EditorProvider, { tripId: 'trip-2027' }, React.createElement(HotelsPage))));
+  });
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 60));
+  });
+  const openMove = [...cHot.querySelectorAll('button')].find((b) => /eintragen ändern|🔀 Ortswechsel/.test(b.textContent || ''));
+  if (openMove) {
+    await act(async () => {
+      openMove.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 80));
+    });
+  }
+  const bodyText = document.body.textContent || '';
+  const dialogOk = Boolean(openMove) && /Neue Stadt/.test(bodyText) && /Wechsel eintragen/.test(bodyText) && /Was soll mitwandern/.test(bodyText);
+  console.log((dialogOk ? '✅' : '❌') + ' 🔀 Ortswechsel-Dialog: Stadt, Betten und Fahrt in einem Schritt');
+  if (!dialogOk) {
+    failures.push('Ortswechsel-Dialog');
+    console.log('   text:', bodyText.slice(-400));
+  }
+  await act(async () => rHot.unmount());
+  cHot.remove();
+  await act(async () => rToday.unmount());
+  cToday.remove();
+
   if (warnings.length) {
     console.log('\n⚠️  Hinweise:');
     [...new Set(warnings)].slice(0, 8).forEach((w) => console.log('   ' + w));

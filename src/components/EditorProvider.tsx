@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 import type { Expense, Hotel, Journey, Place, Trip } from '../lib/types';
 import { useStore } from '../lib/store';
 import { ExpenseForm, HotelForm, JourneyForm, PlaceForm, TripForm } from './forms';
+import { OrtswechselDialog } from './Ortswechsel';
 import { geocode, queryFor, sleep } from '../lib/geocode';
 import { fmtDate } from '../lib/format';
 
@@ -12,6 +13,8 @@ type Request =
   | { kind: 'hotel'; id?: string; defaults?: Partial<Hotel> }
   | { kind: 'journey'; id?: string; defaults?: Partial<Journey> }
   | { kind: 'expense'; id?: string; defaults?: Partial<Expense> }
+  /** Ortswechsel: Stadt, Betten und Fahrt an einem Tag umtragen */
+  | { kind: 'move'; date?: string | null }
   | { kind: 'trip'; id?: string };
 
 interface EditorApi {
@@ -181,6 +184,17 @@ export function EditorProvider({ tripId, children }: { tripId: string; children:
           }
         />
       ) : null}
+      {request?.kind === 'move' ? (
+        <OrtswechselDialog
+          trip={trip}
+          places={store.places.filter((p) => p.trip_id === tripId)}
+          hotels={store.hotels.filter((h) => h.trip_id === tripId)}
+          journeys={store.journeys.filter((j) => j.trip_id === tripId)}
+          initialDate={request.date ?? trip?.start_date ?? null}
+          onClose={close}
+        />
+      ) : null}
+
     </Ctx.Provider>
   );
 }
