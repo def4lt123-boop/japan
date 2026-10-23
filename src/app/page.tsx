@@ -16,7 +16,7 @@ export default function HomePage() {
   const [creating, setCreating] = useState(false);
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
   const [duplicateSource, setDuplicateSource] = useState<string | null>(null);
-  const [dupForm, setDupForm] = useState({ name: '', start_date: '', end_date: '', travelers: 2, moveDates: true });
+  const [dupForm, setDupForm] = useState({ name: '', start_date: '', end_date: '', travelers: 2 });
   const [busy, setBusy] = useState(false);
 
   const bundles = useMemo(() => {
@@ -55,7 +55,6 @@ export default function HomePage() {
       start_date: nextStart ? addDays(nextStart, 371) : '',
       end_date: nextEnd ? addDays(nextEnd, 371) : '',
       travelers: source.travelers,
-      moveDates: true,
     });
     setDuplicateSource(source.id);
   };
@@ -125,9 +124,6 @@ export default function HomePage() {
         )}
       </section>
 
-      <TipsCard />
-
-
       {creating ? (
         <TripForm
           onCancel={() => setCreating(false)}
@@ -189,8 +185,7 @@ export default function HomePage() {
             </div>
           </div>
           <p className="mt-2 text-[12px] leading-relaxed text-slate-400">
-            Die Quelle ist „{store.trips.find((t) => t.id === duplicateSource)?.name}“. Neu angelegte Aktivitäten starten in der <b>Liste</b> (ohne Tag), damit du selbst planen kannst – oder du lässt sie
-            automatisch auf die Stadttage verteilen.
+            Die Quelle ist „{store.trips.find((t) => t.id === duplicateSource)?.name}“. Jeder Punkt behält seinen Tag – was in der Quelle ohne Tag liegt, startet in der <b>Liste</b> und wartet dort auf dich.
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {store.trips.map((t) => (
@@ -299,11 +294,13 @@ function TripCard({ bundle, onEdit, onDuplicate, onDelete, onStart, onEnd }: { b
             title="Mit dieser Reise"
             items={[
               { icon: '✎', label: 'Reise bearbeiten', hint: 'Zeitraum, Budget, Personen, ¥-Kurs', run: onEdit },
-              { icon: '☀️', label: 'Heute & nächste Tage', href: `/t/${bundle.trip.id}/heute` },
-              ...(!bundle.trip.archived && !live
-                ? [{ icon: '▶️', label: 'Reise starten', hint: startHint({ ...bundle }) || 'die Unterwegs-Seite öffnet sich', run: onStart }]
+              ...(live
+                ? [
+                    { icon: '🚶', label: 'Unterwegs ansehen', hint: 'der Tag als Liste mit ✓ abhaken', href: `/t/${bundle.trip.id}/heute` },
+                    { icon: '✕', label: 'Reise beenden', hint: 'zurück in die Planung – Abgehaktes bleibt', run: onEnd },
+                  ]
                 : []),
-              ...(live ? [{ icon: '✕', label: 'Reise beenden', hint: 'zurück in die Planung – Abgehaktes bleibt', run: onEnd }] : []),
+              ...(!bundle.trip.archived && !live ? [{ icon: '▶️', label: 'Reise starten', hint: startHint({ ...bundle }) || 'der Tag liegt bereit', run: onStart }] : []),
               { icon: '🗓️', label: 'Tage ansehen', href: `/t/${bundle.trip.id}/tage` },
               { icon: '🌐', label: 'Übersicht ansehen', href: `/t/${bundle.trip.id}/uebersicht` },
               { icon: '⧉', label: 'Duplizieren', hint: 'Vorlage für eine nächste Reise', run: onDuplicate },
@@ -313,49 +310,5 @@ function TripCard({ bundle, onEdit, onDuplicate, onDelete, onStart, onEnd }: { b
         </span>
       </div>
     </Card>
-  );
-}
-
-function TipsCard() {
-  const store = useStore();
-  return (
-    <section className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
-      <Card className="p-4">
-        <SectionTitle title="So arbeitest du" icon="💡" hint="Plane pro Tag, sieh was fehlt, und behalte Betten und Kosten im Blick." />
-        <ul className="grid gap-1.5 text-[13px] leading-relaxed text-slate-300 sm:grid-cols-2">
-          <li>
-            <b>Tage</b>: Aktivität aus der Leiste links auf einen Tag ziehen – oder eine Lücke im Zeitband anklicken.
-          </li>
-          <li>
-            <b>Aktivitäten</b>: was noch keinen Tag hat, steht oben; ⚡ verteilt sie auf freie Zeit.
-          </li>
-          <li>
-            <b>Karte</b>: alles, was einen Punkt hat – und eine Suche für die, die noch keinen haben.
-          </li>
-          <li>
-            <b>Reise</b>: Unterkünfte, Fahrten, Kosten und alle Downloads an einem Ort.
-          </li>
-          <li className="sm:col-span-2 text-[12.5px] text-slate-400">
-            In jedem Screen steckt oben rechts ein <b>⋯</b> – dort liegen Bearbeiten, Nachziehen, Export und Drucken.
-          </li>
-        </ul>
-      </Card>
-      <Card className="p-4">
-        <SectionTitle title="Diese Reise-Liste" icon="🧭" hint={store.mode === 'supabase' ? 'Datenbank verbunden – Änderungen gelten auf allen Geräten.' : 'Änderungen bleiben in diesem Browser.'} />
-        <div className="flex flex-wrap gap-1.5">
-          <Button size="sm" variant="ghost" onClick={() => window.print()}>
-            🖨 Drucken / PDF
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => void store.refresh()}>
-            ↻ Neu laden
-          </Button>
-          {store.mode !== 'supabase' ? (
-            <Button size="sm" variant="ghost" onClick={() => void store.resetLocalData()} title="Alle Reisen und Einträge durch die mitgelieferte Vorlage ersetzen">
-              ⟲ Vorlage wiederherstellen
-            </Button>
-          ) : null}
-        </div>
-      </Card>
-    </section>
   );
 }

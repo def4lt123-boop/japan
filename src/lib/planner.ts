@@ -2,8 +2,8 @@ import type { Hotel, Journey, Place } from './types';
 import { uid } from './format';
 
 /**
- * Planungs-Helfer: eine Reise (oder deren Pool) in eine neue Reise übernehmen
- * und die Orte automatisch auf die passenden Tage verteilen.
+ * Planungs-Helfer: eine Reise in eine neue übernehmen.
+ * Tage wandern mit, Status wird zurückgesetzt – verteilt wird hier nichts.
  */
 
 export function dayDiff(from?: string | null, to?: string | null): number {
@@ -22,92 +22,20 @@ export function shiftDate(iso: string | null | undefined, days: number): string 
   return d.toISOString().slice(0, 10);
 }
 
-/** Städte, die in der Reisekette nicht als eigener Halt auftauchen → Gaststadt */
-const CITY_ALIASES: Record<string, string> = {
-  kamakura: 'tokio',
-  nara: 'osaka',
-  wakayama: 'osaka',
-  tottori: 'kobe',
-  awaji: 'kobe',
-  miyajima: 'hiroshima',
-  otsu: 'shiga',
-  hikone: 'shiga',
-  uji: 'kyoto',
-  ohara: 'kyoto',
-};
-
-const norm = (s: string | null | undefined) => (s ?? '').trim().toLowerCase();
-
-/** Welche Daten gehören zu welcher Stadt? Abgleitet aus dem Reiseverlauf. */
-export function cityDates(journeys: Journey[]): Map<string, string[]> {
-  const map = new Map<string, string[]>();
-  for (const j of journeys) {
-    if (!j.date) continue;
-    for (const city of [j.to_city, j.from_city]) {
-      if (!city) continue;
-      const key = norm(city);
-      const arr = map.get(key) ?? [];
-      if (!arr.includes(j.date)) arr.push(j.date);
-      map.set(key, arr.sort());
-    }
-  }
-  for (const [key, arr] of map) map.set(key, Array.from(new Set(arr)).sort());
-  return map;
-}
-
 export interface CloneOptions {
   targetTripId: string;
   shiftDays: number;
-  /** Orte ohne Datum aus dem Pool auf die Stadttage verteilen */
-  distributePool?: boolean;
   /** Buchungsstatus/Preise für eine neue Reise zurücksetzen */
   resetForNewTrip?: boolean;
-  /** Stadt → Reisetage (schon auf die neue Reise verschoben), aus dem Reiseverlauf */
-  cityDates?: Map<string, string[]>;
 }
 
 export function clonePlaces(places: Place[], opts: CloneOptions): Place[] {
-  const { targetTripId, shiftDays, distributePool = true, resetForNewTrip = false, cityDates } = opts;
-  const datesByCity = new Map<string, string[]>();
-  const addCityDate = (city: string, date: string) => {
-    const key = norm(CITY_ALIASES[norm(city)] ?? norm(city));
-    const arr = datesByCity.get(key) ?? [];
-    if (!arr.includes(date)) arr.push(date);
-    datesByCity.set(key, arr.sort());
-  };
-  if (distributePool && cityDates) {
-    for (const [city, arr] of cityDates) for (const d of arr) addCityDate(city, d);
-  }
-
-  // Last pro Tag, damit die Tage ähnlich voll werden
-  const load = new Map<string, number>();
+  const { targetTripId, shiftDays, resetForNewTrip = false } = opts;
   const bySort = [...places].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-
-  for (const p of bySort) {
-    if (!p.date) continue;
-    const shifted = shiftDate(p.date, shiftDays)!;
-    load.set(shifted, (load.get(shifted) ?? 0) + 1);
-    if (distributePool && p.city) addCityDate(p.city, shifted);
-  }
-  const empty = !Array.from(datesByCity.values()).some((v) => v.length);
-  const activeMap = distributePool && !empty ? datesByCity : null;
-
-  const cityKey = (city: string | null | undefined) => norm(CITY_ALIASES[norm(city)] ?? norm(city));
-  const candidatesFor = (city: string | null | undefined): string[] =>
-    activeMap?.get(cityKey(city)) ?? (activeMap ? (Array.from(activeMap.values()).flat().sort() as string[]) : []);
 
   return bySort.map((p) => {
     let date: string | null = p.date ? shiftDate(p.date, shiftDays) : null;
-    if (!date && activeMap) {
-      const candidates = candidatesFor(p.city).filter(Boolean);
-      if (candidates.length) {
-        // freier Tag mit der geringsten Auslastung
-        date = candidates.reduce((best, d) => ((load.get(d) ?? 0) < (load.get(best) ?? 0) ? d : best), candidates[0]);
-        load.set(date, (load.get(date) ?? 0) + 1);
-      }
-    }
-    // „Kann“-Punkte bleiben in der neuen Reise bewusst ohne Tag –
-    // so sieht man sofort, was noch Platz hat.
+    // „Kann“-Punkte kommen ohne Tag in die neue Reise – so sieht man sofort, was noch Platz hat.
     if (resetForNewTrip && p.priority === 'kann') date = null;
     const clone: Place = {
       ...p,
@@ -173,9 +101,13 @@ export function cloneJourneys(journeys: Journey[], opts: CloneOptions): Journey[
     .sort((a, b) => (a.date! < b.date! ? -1 : 1));
 }
 
+/** nur für die Vorlage: Stadt-Tage erkennen, damit die Beispielreise nicht leer aussieht */
+const norm = (v: string | null | undefined) => (v ?? '').trim().toLowerCase();
+
 /**
- * Restliche Pool-Einträge (date = null) auf die Reisetage verteilen –
- * gleichmäßig, mit Blick auf die schon vorhandene Auslastung.
+ * Punkte ohne Tag auf die Reisetage setzen – gleichmäßig, mit Blick auf die
+ * Auslaufung und gleiche Stadt zuerst. Läuft einmal beim Anlegen der Beispiel-Reise,
+ * nie beim Duplizieren und nie in der Oberfläche: geplant wird hier nichts.
  */
 export function distributePool(places: Place[], startDate: string | null, endDate: string | null): Place[] {
   if (!startDate || !endDate) return places;
@@ -187,22 +119,22 @@ export function distributePool(places: Place[], startDate: string | null, endDat
   }
   if (!dates.length) return places;
   const load = new Map<string, number>();
-  for (const p of places) if (p.date) load.set(p.date, (load.get(p.date) ?? 0) + 1);
+  for (const q of places) if (q.date) load.set(q.date, (load.get(q.date) ?? 0) + 1);
 
   const byCity = new Map<string, string[]>();
-  for (const p of places) {
-    if (!p.date || !p.city) continue;
-    const arr = byCity.get(norm(p.city)) ?? [];
-    if (!arr.includes(p.date)) arr.push(p.date);
-    byCity.set(norm(p.city), arr);
+  for (const q of places) {
+    if (!q.date || !q.city) continue;
+    const arr = byCity.get(norm(q.city)) ?? [];
+    if (!arr.includes(q.date)) arr.push(q.date);
+    byCity.set(norm(q.city), arr);
   }
 
-  return places.map((p) => {
-    if (p.date) return p;
-    const cityDatesArr = (byCity.get(norm(p.city)) ?? []).filter((d) => dates.includes(d));
-    const candidates = cityDatesArr.length ? cityDatesArr : dates;
+  return places.map((q) => {
+    if (q.date) return q;
+    const cityDays = (byCity.get(norm(q.city)) ?? []).filter((d) => dates.includes(d));
+    const candidates = cityDays.length ? cityDays : dates;
     const date = candidates.reduce((best, d) => ((load.get(d) ?? 0) < (load.get(best) ?? 0) ? d : best), candidates[0]);
     load.set(date, (load.get(date) ?? 0) + 1);
-    return { ...p, date };
+    return { ...q, date };
   });
 }

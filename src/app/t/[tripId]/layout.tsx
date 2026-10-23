@@ -16,8 +16,8 @@ import { needsCategory } from '../../../lib/categories';
 import { applyCategories } from '../../../lib/categorize';
 
 /**
- * Sechs Reiter, sechs Aufgaben. Alles Weitere lebt in den beiden Knöpfen rechts
- * („Anlegen“ und „⋯“) bzw. auf der Reise-Seite.
+ * Fünf Reiter, fünf Aufgaben – im Unterwegs-Modus kommt 🚶 dazu. Alles Weitere lebt in
+ * den beiden Knöpfen rechts („Anlegen“ und „⋯“) bzw. auf der Reise-Seite.
  */
 const TABS = [
   { href: '/tage', label: 'Tage', icon: '🗓️' },
@@ -125,7 +125,7 @@ function TripTopBar({ tripId }: { tripId: string }) {
             title="Was braucht es unterwegs?"
             align="right"
             items={[
-              { icon: '☀️', label: 'Zum heutigen Tag', hint: 'Ort, Route, Hinweise, Abhaken', href: `/t/${tripId}/heute` },
+              { icon: '🚶', label: 'Zum Tag', hint: 'Ort, Route, Hinweise, Abhaken', href: `/t/${tripId}/heute` },
               { icon: '🗺️', label: 'Karte', hint: 'Punkte und Betten der Stadt', href: `/t/${tripId}/karte` },
               ...(bundle.trip.planned_start
                 ? [{ icon: '↩', label: 'Start zurücknehmen', hint: `Zeitraum ${fmtRange(bundle.trip.planned_start, bundle.trip.planned_end)} wieder herstellen`, run: () => endTrip(store, bundle, true) }]
@@ -158,10 +158,14 @@ function TripTopBar({ tripId }: { tripId: string }) {
           align="right"
           items={[
             { icon: '⚙', label: 'Reise bearbeiten', hint: 'Zeitraum, Budget, Personen, ¥-Kurs', run: () => open({ kind: 'trip', id: tripId }) },
+            { icon: '↻', label: 'Daten neu laden', hint: 'den Stand aller Geräte hierher holen', run: () => void store.refresh() },
+            ...(store.mode !== 'supabase'
+              ? [{ icon: '⟲', label: 'Vorlage wiederherstellen', hint: 'diesen Browser auf die Beispiel-Reise zurücksetzen', run: () => void store.resetLocalData() }]
+              : []),
             ...(trip && !trip.archived && !live
               ? [{ icon: '▶️', label: 'Reise starten', hint: startHint({ ...bundle }) || 'die Unterwegs-Seite öffnet sich', run: () => startTrip(store, bundle) }]
               : []),
-            ...(live ? [{ icon: '☀️', label: 'Heutiger Tag', hint: offenHeute ? `${plural(offenHeute, 'Punkt', 'Punkte')} heute noch offen` : 'alles erledigt', href: `/t/${tripId}/heute` }] : []),
+            ...(live ? [{ icon: '🚶', label: 'Heutiger Tag', hint: offenHeute ? `${plural(offenHeute, 'Punkt', 'Punkte')} heute noch offen` : 'alles erledigt', href: `/t/${tripId}/heute` }] : []),
             { icon: '🔀', label: 'Ortswechsel eintragen', hint: changeCount ? `${plural(changeCount, 'Wechsel', 'Wechsel')} erkannt` : 'Stadt und Bett an einem Tag tauschen', run: () => open({ kind: 'move' }) },
             ...(missingCoords
               ? [{ icon: '🌍', label: `${missingCoords} Punkte ohne Ort`, hint: 'die Kartensuche setzt den Punkt', run: () => void geocodeAll() }]

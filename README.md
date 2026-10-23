@@ -10,13 +10,13 @@ Ohne Datenbank-Zugangsdaten läuft die App im **Demo-Modus**: alle Daten liegen 
 
 Fünf Reiter, alles Wichtige vorn, der Rest hinter `⋯`. Wer die Reise startet, bekommt den sechsten dazu (**🚶 Unterwegs**).
 
-**Das Modell:** ein Tag ist eine Liste. Punkte werden angehängt, gezogen oder mit ▲▼ verschoben – die Nummer ist die Reihenfolge. Mehr als vier Punkte an einem Tag gelten als voll.
+**Das Modell:** ein Tag ist eine Liste. Punkte werden angehängt, gezogen oder mit ▲▼ verschoben – die Nummer ist die Reihenfolge. Mehr als vier Punkte an einem Tag gelten als voll. **Verteilt wird nichts automatisch** – jeder Punkt landet dort, wo du ihn ablegst.
 
 | Reiter | Inhalt |
 | --- | --- |
 | 🚶 **Unterwegs** | (nur im gestarteten Modus) der Tag als App für die Hosentasche: Tageskopf mit *Tag 3 von 40*, Stadt, Bett und *2/5 erledigt*, darunter **als nächstes** = der erste noch offene Punkt der Liste mit 🗺️ Route und ✓ abhaken, danach die nummerierte Liste des Tages zum Umhängen, dann der **Reiseplan** der drei nächsten Tage und der 🔀 Ortswechsel. Editieren ist nur das kleine ✎ daneben |
-| 🗓️ **Tage** | **oben die Liste „Noch ohne Tag“**: jeder neue Punkt landet hier, ein Dropdown (der Tag mit der meisten Luft ist vorgeschlagen) und **✓ hinlegen** genügen – ⚡ verteilt alle auf einmal. Darunter ein Kartenstapel pro Reisetag: **die Punkte des Tages als nummerierte Liste**. Auf den Tag ziehen = ans Ende, auf eine Zeile ziehen = dort einfügen, ▲▼ = eine Stelle rauf oder runter. Im `⋯` des Tages: 🗺️ Karte inline, 🧭 Tagesroute bei Google Maps, ✨ obersten Wunsch hierher legen und 🔀 **Ortswechsel an diesem Tag** · oben eine schmale Navigation mit dem Zähler je Tag |
-| 🗂️ **Aktivitäten** | alles als Liste untereinander: oben, was noch **ohne Tag** ist, darunter die Tage mit ihrer Nummer. Tag, **🏷️ Kategorie**, Ticket und Status direkt in der Zeile (ein Dropdown, kein Tippen) – **derselbe Punkt zweimal am selben Tag wird abgewiesen**, ✨ Wunsch hierher legt ihn an den gewählten Tag |
+| 🗓️ **Tage** | **oben die Liste „Noch ohne Tag“**: jeder neue Punkt landet hier, Tag im Dropdown wählen und **✓ hinlegen** – der Punkt rutscht ans Ende dieses Tages. Darunter ein Kartenstapel pro Reisetag: **die Punkte des Tages als nummerierte Liste**. Auf den Tag ziehen = ans Ende, auf eine Zeile ziehen = dort einfügen, ▲▼ = eine Stelle rauf oder runter. Im `⋯` des Tages: 🗺️ Karte inline, 🧭 Tagesroute bei Google Maps, ✨ obersten Wunsch hierher legen und 🔀 **Ortswechsel an diesem Tag** · oben eine schmale Navigation mit dem Zähler je Tag |
+| 🗂️ **Aktivitäten** | alles als Liste untereinander: oben, was noch **ohne Tag** ist, darunter die Tage mit ihrer Nummer. Tag, **🏷️ Kategorie**, Ticket und Status direkt in der Zeile (ein Dropdown, kein Tippen) – **derselbe Punkt zweimal am selben Tag wird abgewiesen** |
 | 🗺️ **Karte** | Marker (Farbe = Kategorie, hohle Kontur = noch ohne Tag), Route des Tages als Linie, 🏨 Unterkünfte · **Hintergrund: offene OpenStreetMap-Kacheln** – kein API-Key, keine Testphase, keine Rechnung, dunkel gefiltert oder hell umschaltbar · rechte Spalte dieselbe Ansicht bei Google Maps, Punkte ohne Ort lassen sich einzeln oder auf einen Schlag suchen · **Filter nach Tag, Stadt und Kategorie**, im Popup des Punktes die Kategorie gleich umstellen |
 | 🧳 **Reise** | Unterkünfte · Fahrten · Kosten in einem Screen (Umschalter oben), darunter alle Downloads: CSV, JSON, KML |
 | 📊 **Übersicht** | grafische Reisekarte: Bett-Band über alle Tage, jeder Tag als Feld mit Zähler und Säulenhöhe, Ring „Planungsgrad“, Checklist „was noch fehlt“ und „was noch frei ist“ |
@@ -124,7 +124,7 @@ data/seed.json            Vorlage-Reisen (Reisen, Aktivitäten, Unterkünfte, Fa
 src/lib/types.ts          Feldnamen = Datenbankspalten (snake_case) → kein Mapping nötig
 src/lib/supabase.ts       Client, Spaltenlisten, select/upsert/patch/delete
 src/lib/seed.ts           Seed + „Reise duplizieren“ (Tage verschieben, Status zurücksetzen)
-src/lib/planner.ts        Automatisch verteilen, Stadt→Tage-Ableitung inkl. Alias-Regeln (Nara → Osaka, Kamakura → Tokio …)
+src/lib/planner.ts        eine Reise in eine neue übernehmen (Tage mitnehmen, Status zurücksetzen) – es wird nichts verteilt
 src/lib/store.tsx         React-Context: lädt Supabase ODER localStorage, alle CRUD-Aufrufe
 src/lib/geocode.ts        Nominatim-Suche + Google-Maps-URL-Parser
 src/lib/stats.ts          Kosten, Nächte-Check, Tagesplanung, leere Tage

@@ -391,18 +391,6 @@ export function capacity(cells: DayCell[]): Capacity {
   };
 }
 
-/** Vorschlag: welcher Tag passt zu einem Pool-Eintrag? (gleiche Stadt, meiste freie Zeit) */
-export function bestDaysFor(pool: Place, cells: DayCell[], limit = 3): { date: string; free: number; city: string | null }[] {
-  const key = (s: string | null | undefined) => (s ?? '').trim().toLowerCase();
-  const cityKey = key(pool.city);
-  const sameCity = cells.filter((c) => c.city && key(c.city) === cityKey);
-  const base = (sameCity.length ? sameCity : cells).filter((c) => !c.checkIn && !c.checkOut);
-  return base
-    .map((c) => ({ date: c.date, free: c.free + (c.empty ? 1 : 0), city: c.city }))
-    .sort((a, b) => b.free - a.free || a.date.localeCompare(b.date))
-    .slice(0, limit);
-}
-
 /** pro Stadt: Tage & Nächte vs. geplante Punkte → wo ist noch Luft */
 export interface CityLoad {
   city: string;

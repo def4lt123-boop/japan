@@ -135,14 +135,6 @@ export interface TripBundle {
 export const BOOKING_STATUSES: BookingStatus[] = ['offen', 'reserviert', 'gebucht', 'erledigt'];
 export const PRIORITIES: Priority[] = ['muss', 'soll', 'kann'];
 export const TICKET_STATUSES: TicketStatus[] = ['unklar', 'noetig', 'gekauft', 'keins'];
-export const TIME_SLOTS: TimeSlot[] = [
-  'Vormittag',
-  'Mittag',
-  'Nachmittag',
-  'Abend',
-  'Nachts',
-  'Ganzer Tag',
-];
 export const JOURNEY_MODES = [
   'Flug',
   'Shinkansen',

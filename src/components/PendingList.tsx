@@ -10,14 +10,12 @@ import { CategoryDot } from './CategoryDot';
 import { fmtDate, plural } from '../lib/format';
 import { Card, Select, TextInput, cx } from './ui';
 
-type DayLite = { date: string; cities: string[]; places: Place[] };
-
-const key = (v: string | null | undefined) => (v ?? '').trim().toLowerCase();
+type DayLite = { date: string; places: Place[] };
 
 /**
  * Die Liste oben auf dem Tagesplan: was noch an keinem Tag liegt.
- * Ein Dropdown (der Tag) und ein Klick (✓ hinlegen) – der Punkt landet am Ende
- * der Liste des Tages, den die meisten Plätze frei hat.
+ * Du wählst den Tag selbst – ein Dropdown, ✓ hinlegen, oder nach unten ziehen.
+ * Der Punkt kommt ans Ende der Liste dieses Tages.
  */
 export function PendingList({
   tripId,
@@ -35,13 +33,6 @@ export function PendingList({
   const [showAll, setShowAll] = useState(false);
   const [draft, setDraft] = useState<Record<string, string | null>>({});
 
-  /** Tag mit der meisten Luft – gleiche Stadt zuerst */
-  const suggestDay = (p: Place): string | null => {
-    const same = days.filter((d) => d.cities.some((c) => key(c) === key(p.city)));
-    const list = (same.length ? same : days).slice().sort((a, b) => a.places.length - b.places.length || a.date.localeCompare(b.date));
-    return list[0]?.date ?? null;
-  };
-
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const list = needle ? pool.filter((p) => `${p.name} ${p.city ?? ''} ${p.category ?? ''} ${p.notes ?? ''}`.toLowerCase().includes(needle)) : pool.slice();
@@ -49,9 +40,9 @@ export function PendingList({
   }, [pool, q]);
 
   const place = (p: Place) => {
-    const date = draft[p.id] ?? suggestDay(p);
+    const date = draft[p.id];
     if (!date) {
-      store.say('Diese Reise hat noch keine Tage – oben rechts unter ⋯ „Reise bearbeiten“ den Zeitraum eintragen.');
+      store.say('Erst den Tag wählen, dann ✓ hinlegen – oder den Punkt direkt auf einen Tag ziehen.');
       return;
     }
     if (!assign(store, all, p, { date })) return;
@@ -62,29 +53,6 @@ export function PendingList({
     });
   };
 
-  /** ⚡ – verteilt alles ohne Tag gleichmäßig, volle Tage zuletzt */
-  const spread = () => {
-    if (!days.length) {
-      store.say('Erst der Reise einen Zeitraum geben, dann lässt sich verteilen.');
-      return;
-    }
-    const last = new Map(days.map((d) => [d.date, d.places.length]));
-    let done = 0;
-    for (const p of shown.filter((x) => !x.date)) {
-      const same = days.filter((d) => d.cities.some((c) => key(c) === key(p.city)));
-      const order = (same.length ? same : days)
-        .slice()
-        .sort((a, b) => (last.get(a.date) ?? 0) - (last.get(b.date) ?? 0) || a.date.localeCompare(b.date));
-      const target = order.find((d) => (last.get(d.date) ?? 0) < 4) ?? order[0];
-      if (!target) break;
-      if (!assign(store, all, p, { date: target.date })) continue;
-      last.set(target.date, (last.get(target.date) ?? 0) + 1);
-      done += 1;
-    }
-    setDraft({});
-    store.say(done ? `${plural(done, 'Punkt', 'Punkte')} auf die Tage mit dem meisten Platz gelegt.` : 'Nichts zu verteilen.');
-  };
-
   if (!pool.length) return null;
 
   return (
@@ -93,25 +61,20 @@ export function PendingList({
         <h3 className="text-[13px] font-semibold text-amber-50">
           Noch ohne Tag <span className="tabular-nums text-amber-100/70">{pool.length}</span>
         </h3>
-        <p className="text-[11.5px] text-amber-100/70">Tag wählen, ✓ hinlegen – oder nach unten auf einen Tag ziehen</p>
-        <div className="ml-auto flex flex-wrap items-center gap-1.5">
-          {days.length > 1 ? (
-            <button type="button" className="chip bg-amber-400/15 text-amber-50 ring-1 ring-inset ring-amber-300/25 transition hover:bg-amber-400/25" onClick={spread} title="Alle auf die Tage mit dem meisten Platz legen">
-              ⚡ {pool.length} verteilen
-            </button>
-          ) : null}
-          <Link href={`/t/${tripId}/aktivitaeten`} className="text-[11.5px] text-amber-100/80 underline-offset-2 hover:text-white hover:underline">
-            alle Aktivitäten →
-          </Link>
-        </div>
+        <p className="text-[11.5px] text-amber-100/70">Tag wählen und ✓ hinlegen – oder nach unten auf einen Tag ziehen</p>
+        <Link href={`/t/${tripId}/aktivitaeten`} className="ml-auto text-[11.5px] text-amber-100/80 underline-offset-2 hover:text-white hover:underline">
+          alle Aktivitäten →
+        </Link>
       </div>
 
       <div className="p-2.5">
-        {pool.length > 5 ? <TextInput className="mb-2 !py-1 !text-[12.5px]" value={q} onChange={(e) => setQ(e.target.value)} placeholder="in der Liste suchen …" /> : null}
+        {pool.length > 5 ? (
+          <TextInput className="mb-2 !py-1 !text-[12.5px]" value={q} onChange={(e) => setQ(e.target.value)} placeholder="in der Liste suchen …" />
+        ) : null}
         <ul className="space-y-1.5">
           {(showAll ? shown : shown.slice(0, 6)).map((p) => {
             const meta = categoryMeta(p.category);
-            const date = draft[p.id] ?? suggestDay(p);
+            const date = draft[p.id] ?? null;
             const ansEnde = date ? dayPlaces(all, date).length + 1 : 0;
             return (
               <li
@@ -150,8 +113,7 @@ export function PendingList({
                     value={date ?? ''}
                     onChange={(e) => setDraft((d) => ({ ...d, [p.id]: e.target.value || null }))}
                   />
-                  {!draft[p.id] && date ? <span className="text-[10.5px] text-slate-500" title="Vorgeschlagen: der Tag mit der meisten Luft">Vorschlag</span> : null}
-                  {date && ansEnde ? <span className="text-[11px] text-slate-500">→ Stelle {ansEnde}</span> : null}
+                  {ansEnde ? <span className="text-[11px] text-slate-500">→ Stelle {ansEnde}</span> : null}
                   <button
                     type="button"
                     className={cx('btn !py-1 !text-[12px]', date ? 'bg-matcha-500/25 text-white ring-1 ring-inset ring-shu-400/40 hover:bg-shu-500/35' : 'bg-white/[0.04] text-slate-600 ring-white/10')}

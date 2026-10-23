@@ -11,7 +11,7 @@ import React, { useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { useEditor } from './EditorProvider';
 import { Button, Card, Empty, LinkTag, Money, ProgressBar, SectionTitle, cx } from './ui';
-import { DAY_CAPACITY, type CityLoad, type DayCell, type GapItem, type Sample, type Stay, bestDaysFor, cityLoad, loadLabel, loadTone } from '../lib/overview';
+import { DAY_CAPACITY, type CityLoad, type DayCell, type GapItem, type Sample, type Stay, cityLoad, loadLabel, loadTone } from '../lib/overview';
 import { STATUS_META, TICKET_META, categoryMeta } from '../lib/categories';
 import { assign } from '../lib/dayplan';
 import { fmtDate, fmtDuration, fmtMoney, plural } from '../lib/format';
@@ -232,7 +232,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
       {pool.length && !noDates ? (
         <div className="no-print mb-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.05] p-2">
           <p className="mb-1.5 px-1 text-[11.5px] text-amber-100/90">
-            <b>Ziehen &amp; fallen lassen:</b> {plural(pool.length, 'Punkt', 'Punkte')} noch ohne Tag – auf eine Tageskarte ablegen. Ein Klick legt ihn auf den Tag mit der meisten Luft – die komplette Liste ist unter „Aktivitäten“.
+            <b>Ziehen &amp; fallen lassen:</b> {plural(pool.length, 'Punkt', 'Punkte')} noch ohne Tag – auf eine Tageskarte ablegen. Die komplette Liste ist unter „Aktivitäten“.
           </p>
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             {pool.map((item) => {
@@ -245,12 +245,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
                     e.dataTransfer.setData('text/plain', item.id);
                     e.dataTransfer.effectAllowed = 'move';
                   }}
-                  onClick={() => {
-                    const best = bestDaysFor(item, cells)[0];
-                    if (!best) return;
-                    assign(store, store.places, item, { date: best.date });
-                  }}
-                  title={`${meta.label}${item.city ? ` · ${item.city}` : ''} – hierher ziehen oder klicken`}
+                  title={`${meta.label}${item.city ? ` · ${item.city}` : ''} – auf einen Tag ziehen`}
                   className="flex shrink-0 cursor-grab items-center gap-1.5 rounded-lg border border-white/10 bg-ink-800/80 px-2 py-1 text-[12px] text-slate-200 transition hover:border-amber-400/40 hover:bg-ink-700 active:cursor-grabbing"
                 >
                   <span aria-hidden>{meta.icon}</span>
@@ -522,19 +517,6 @@ export function CapacityPanel({
   const lightDays = cells.filter((c) => c.count > 0 && c.count * 2 < DAY_CAPACITY).length;
   const maxPlaces = Math.max(1, ...cities.map((c) => c.places));
 
-  const spread = () => {
-    if (!freeDays.length) return;
-    const targets = freeDays.slice(0, pool.length);
-    let i = 0;
-    for (const p of pool) {
-      const day = targets[i % targets.length];
-      if (!day) break;
-      store.patch('places', p.id, { date: day.date });
-      i += 1;
-    }
-    store.say(`${plural(i, 'Wunsch', 'Wünsche')} auf die freien Tage verteilt.`);
-  };
-
   return (
     <div className="space-y-4">
       <Card className="p-4">
@@ -542,13 +524,6 @@ export function CapacityPanel({
           title="Was noch verfügbar ist"
           icon="🈳"
           hint={pool.length ? `${plural(pool.length, 'Punkt', 'Punkte')} warten auf einen Tag · ${plural(freeDays.length, 'Tag', 'Tage')} noch ganz frei` : 'Jeder Wunsch hat einen Tag – es bleiben trotzdem Plätze frei.'}
-          right={
-            freeDays.length && pool.length ? (
-              <Button size="sm" variant="primary" onClick={spread} title={`${plural(pool.length, 'Wunsch', 'Wünsche')} gleichmäßig auf die leeren Tage verteilen`}>
-                ⚡ auf freie Tage legen
-              </Button>
-            ) : null
-          }
         />
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
