@@ -66,7 +66,7 @@ const PAGES = [
   { name: 'Übersicht', path: '/t/trip-2027/uebersicht', file: '../src/app/t/[tripId]/uebersicht/page.tsx', expect: [/Reisedauer/, /Reise auf einem Blick/, /Jeder Tag im Bild/, /Was noch fehlen würde/, /Was noch verfügbar ist/, /Bett pro Nacht/] },
   { name: 'Tage', path: '/t/trip-2027/tage', file: '../src/app/t/[tripId]/tage/page.tsx', expect: [/Tagesplan/, /Sa06\.03\./, /noch frei|Aktivitäten/] },
   { name: 'Aktivitäten', path: '/t/trip-2027/aktivitaeten', file: '../src/app/t/[tripId]/aktivitaeten/page.tsx', expect: [/Noch ohne Tag/, /Aktivität/] },
-  { name: 'Tabelle', path: '/t/trip-2027/tabelle', file: '../src/app/t/[tripId]/tabelle/page.tsx', expect: [/Fahrzeit ab Hotel/, /Standort/] },
+  { name: 'Tabelle', path: '/t/trip-2027/tabelle', file: '../src/app/t/[tripId]/tabelle/page.tsx', expect: [/Reihe/, /Aktivität/] },
   { name: 'Karte', path: '/t/trip-2027/karte', file: '../src/app/t/[tripId]/karte/page.tsx', expect: [/Karte/, /Legende/, /Alle Kategorien/, /Kategorie/] },
   { name: 'Unterkünfte', path: '/t/trip-2027/unterkuenfte', file: '../src/app/t/[tripId]/unterkuenfte/page.tsx', expect: [/Nächte-Check/, /Hotel Tokio/] },
   { name: 'Kosten', path: '/t/trip-2027/kosten', file: '../src/app/t/[tripId]/kosten/page.tsx', expect: [/Budgetauslastung/, /Alle Posten/] },
@@ -168,8 +168,8 @@ async function render(name, Page, tripId) {
   const formText = container.textContent || '';
   const catSelect = [...container.querySelectorAll('select')].find((el) => /Tempel & Schrein/.test(el.textContent || ''));
   const formOk =
-    /Was ist es\?/.test(formText) && /Google Maps/.test(formText) && /Tageszeit/.test(formText) && Boolean(catSelect) && !container.querySelector('#cat-list');
-  console.log((formOk ? '✅' : '❌') + ' Eintrags-Formular rendert (Felder + Geo-Block)');
+    /Was ist es\?/.test(formText) && /Google Maps/.test(formText) && /An welchem Tag/.test(formText) && Boolean(catSelect) && !container.querySelector('#cat-list');
+  console.log((formOk ? '✅' : '❌') + ' Eintrags-Formular rendert (Name, Tag, Kategorie, Punkt)');
   if (!formOk) {
     failures.push('PlaceForm');
     console.log('   text:', formText.slice(0, 300));
@@ -207,7 +207,7 @@ async function render(name, Page, tripId) {
   const formCases = [
     ['PlaceForm', React.createElement(forms.PlaceForm, { tripId: 'trip-2027', cities: ['Tokio'], value: null, onSubmit() {}, onCancel() {} }), /Was ist es\?/],
     ['PlaceForm Ticket-Frage', React.createElement(forms.PlaceForm, { tripId: 'trip-2027', cities: ['Tokio'], value: null, tripStart: '2027-03-06', tripEnd: '2027-04-14', onSubmit() {}, onCancel() {} }), /Ticket\?/],
-    ['PlaceForm Mehrtage-Feld', React.createElement(forms.PlaceForm, { tripId: 'trip-2027', cities: ['Tokio'], value: null, tripStart: '2027-03-06', tripEnd: '2027-04-14', onSubmit() {}, onCancel() {} }), /Mehrtages-Ausflug/],
+    ['PlaceForm Tag-Frage', React.createElement(forms.PlaceForm, { tripId: 'trip-2027', cities: ['Tokio'], value: null, tripStart: '2027-03-06', tripEnd: '2027-04-14', onSubmit() {}, onCancel() {} }), /An welchem Tag\?/],
     ['HotelForm', React.createElement(forms.HotelForm, { tripId: 'trip-2027', cities: ['Tokio'], value: null, onSubmit() {}, onCancel() {} }), /Preis gesamt/],
     ['JourneyForm', React.createElement(forms.JourneyForm, { tripId: 'trip-2027', value: null, onSubmit() {}, onCancel() {} }), /Verkehrsmittel/],
     ['JourneyForm Zeitraum', React.createElement(forms.JourneyForm, { tripId: 'trip-2027', value: null, onSubmit() {}, onCancel() {} }), /zweiter Klick = Ankunft/],
@@ -308,7 +308,7 @@ async function render(name, Page, tripId) {
     await act(async () => { await new Promise((r) => setTimeout(r, 40)); });
   }
   const dayCardHtml = dayValue ? ((c2.querySelector(`[id="${dayValue}"]`) || {}).innerHTML || '') : '';
-  const poolOk = Boolean(layBtn && dayValue && rowName && beforeCount > 0 && openCount() === beforeCount - 1 && dayCardHtml.includes(rowName) && dayCardHtml.includes('Uhr'));
+  const poolOk = Boolean(layBtn && dayValue && rowName && beforeCount > 0 && openCount() === beforeCount - 1 && dayCardHtml.includes(rowName) && dayCardHtml.includes('Stelle'));
   console.log((poolOk ? '✅' : '❌') + ` „Noch ohne Tag“-Liste oben: ${rowName ? '„' + rowName + '“' : '–'} → ${dayValue || 'kein Tag'} (${beforeCount} → ${openCount()} offen)`);
   if (!poolOk) failures.push('Offen-Liste');
 
@@ -325,50 +325,23 @@ async function render(name, Page, tripId) {
   console.log((popFixed ? '✅' : '❌') + ' ⋯-Menü: im body verankert, am Viewport positioniert');
   if (!popFixed) failures.push('Menü-Position');
 
-  // Tagesband: Block ziehen = neue Uhrzeit, Rand ziehen = neue Dauer
-  const { DayBar } = require('../src/components/daybar.tsx');
-  const cDb = document.createElement('div');
-  document.body.appendChild(cDb);
-  const rDb = createRoot(cDb);
-  const dbPlace = { id: 'd1', trip_id: 'trip-2027', name: 'Band-Test', city: 'Nara', date: '2027-03-08', start_time: '12:00', duration_min: 120, time_slot: null, end_date: null, sort_order: 0, booking_status: 'offen', priority: 'soll' };
-  let movedTo = null;
-  let resizedTo = null;
-  await act(async () => {
-    rDb.render(
-      React.createElement(DayBar, {
-        places: [dbPlace],
-        height: 14,
-        onMove: (id, minute) => {
-          movedTo = { id, minute };
-        },
-        onResize: (id, mins) => {
-          resizedTo = { id, mins };
-        },
-      }),
-    );
-  });
-  const fireAt = (el, type, x) => el.dispatchEvent(new dom.window.MouseEvent(type, { bubbles: true, clientX: x, clientY: 6 }));
-  // jeder Zeiger-Schritt für sich – React muss die neue Position vorher übernehmen
-  const dragSeq = async (el, from, to) => {
-    await act(async () => {
-      fireAt(el, 'pointerdown', from);
-    });
-    await act(async () => {
-      fireAt(el, 'pointermove', to); // 90 px bei 900 px Breite = 96 min → gerundet 90
-    });
-    await act(async () => {
-      fireAt(el, 'pointerup', to);
-    });
-  };
-  const block = cDb.querySelector('[role="slider"]');
-  if (block) await dragSeq(block, 100, 190);
-  const grip = cDb.querySelector('[role="separator"]');
-  if (grip) await dragSeq(grip, 260, 350);
-  const dragOk = movedTo?.id === 'd1' && movedTo?.minute === 810 && resizedTo?.mins === 210;
-  console.log((dragOk ? '✅' : '❌') + ` Zeitstrahl ziehen: Anfang ${String(Math.floor((movedTo?.minute ?? 0) / 60)).padStart(2, '0')}:${String((movedTo?.minute ?? 0) % 60).padStart(2, '0')} Uhr, Dauer ${resizedTo?.mins ?? '?'} min`);
-  if (!dragOk) failures.push('Zeitstrahl');
-  await act(async () => rDb.unmount());
-  cDb.remove();
+  // Nummerierte Liste: ▼ am Tag tauscht zwei Punkte
+  const dayCards = [...c2.querySelectorAll('[id]')].filter((el) => /^\d{4}-\d{2}-\d{2}$/.test(el.id));
+  const namesOf = (el) => [...el.querySelectorAll('button[title="Bearbeiten"]')].map((b) => (b.textContent || '').trim());
+  const swapCard = dayCards.find((el) => el.querySelectorAll('button[title="Bearbeiten"]').length >= 2 && Boolean(el.querySelector('button[title="eine Stelle tiefer"]:not([disabled])')));
+  let swapOk = false;
+  let swapLog = 'kein Tag mit zwei Punkten';
+  if (swapCard) {
+    const vorher = namesOf(swapCard);
+    const runter = swapCard.querySelector('button[title="eine Stelle tiefer"]:not([disabled])');
+    await act(async () => { runter.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 60)); });
+    const nachher = namesOf(swapCard);
+    swapOk = nachher[0] === vorher[1] && nachher[1] === vorher[0];
+    swapLog = `${vorher[0]} / ${vorher[1]} → ${nachher[0]} / ${nachher[1]} (${swapCard.id})`;
+  }
+  console.log((swapOk ? '✅' : '❌') + ' Nummerierte Liste: ▼ räumt um – ' + swapLog);
+  if (!swapOk) failures.push('Reihenfolge');
 
   // Karte: offene Kacheln ohne Key, Punkte bleiben sichtbar
   const fs = require('fs');

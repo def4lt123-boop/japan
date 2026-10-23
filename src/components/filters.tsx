@@ -32,7 +32,7 @@ export function applyFilter(places: Place[], f: PlaceFilter): Place[] {
     if (f.missing === 'ohne-termin' && p.date) return false;
     if (f.missing === 'ohne-koordinaten' && p.lat !== null && p.lng !== null) return false;
     if (!q) return true;
-    const hay = [p.name, p.city, p.district, p.category, p.notes, p.price_note, p.time_slot, p.travel_time, p.maps_query].filter(Boolean).join(' ').toLowerCase();
+    const hay = [p.name, p.city, p.category, p.notes, p.price_note].filter(Boolean).join(' ').toLowerCase();
     return hay.includes(q);
   });
 }
@@ -60,7 +60,7 @@ export function FilterBar({
     { key: 'tag', label: 'ohne Tag', n: count((p) => !p.date), on: value.missing === 'ohne-termin', only: { missing: 'ohne-termin' } },
     { key: 'ticket', label: 'Ticket offen', n: count((p) => !p.ticket_status || p.ticket_status === 'unklar' || p.ticket_status === 'noetig'), on: value.missing === 'ohne-ticket', only: { missing: 'ohne-ticket' } },
     { key: 'muss', label: '★ Muss', n: count((p) => p.priority === 'muss'), on: value.prio === 'muss', only: { prio: 'muss' } },
-    { key: 'geo', label: 'ohne Kartenpunkt', n: count((p) => p.lat === null || p.lng === null), on: value.missing === 'ohne-koordinaten', only: { missing: 'ohne-koordinaten' } },
+    { key: 'geo', label: 'ohne Punkt auf der Karte', n: count((p) => p.lat === null || p.lng === null), on: value.missing === 'ohne-koordinaten', only: { missing: 'ohne-koordinaten' } },
   ];
 
   return (

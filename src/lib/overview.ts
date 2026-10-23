@@ -1,68 +1,29 @@
 /**
  * Rechengrundlage für die grafische Reise-Übersicht:
- * Tagesraster mit Zeitblöcken, Hotel-Bänder, offene Baustellen und freie Kapazität.
+ * Tagesraster mit Punkten, Hotel-Bänder, offene Baustellen und freie Plätze.
  * Bewusst rein funktional – die Komponenten rendern nur.
+ *
+ * Gezählt wird, nicht gestoppt: ein Tag hat so und so viele Punkte, keine Uhrzeiten.
  */
-import { categoryMeta } from './categories';
 import { addDays, eachDate, weekdayShort } from './format';
-import { SLOT_START } from './dayplan';
+import { byOrder } from './dayplan';
 import { type BundleLike, emptyDays, nightCoverage } from './stats';
 import type { Hotel, Journey, Place } from './types';
 
-/** Achse der Tagesleiste: 07:00 – 23:00 */
-export const AXIS_START = 7 * 60;
-export const AXIS_END = 23 * 60;
-export const AXIS_SPAN = AXIS_END - AXIS_START;
-/** ab so vielen Programm-Minuten gilt ein Tag als voll */
-export const FULL_DAY_MIN = 8 * 60;
-
-const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-
-export function timeToMin(t?: string | null): number | null {
-  if (!t) return null;
-  const m = /^(\d{1,2}):(\d{2})/.exec(String(t).trim());
-  if (!m) return null;
-  const h = Number(m[1]);
-  const min = Number(m[2]);
-  if (h > 23 || min > 59) return null;
-  return h * 60 + min;
-}
-
-export const minToTime = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(Math.round(min % 60)).padStart(2, '0')}`;
-
-export interface Block {
-  id: string;
-  name: string;
-  icon: string;
-  color: string;
-  /** Minuten seit Mitternacht */
-  start: number;
-  end: number;
-  /** false = ohne Uhrzeit eingeplant, Position nur geschätzt */
-  timed: boolean;
-  fullDay: boolean;
-  /** >1 = Eintrag über mehrere Tage */
-  span: number;
-  duration: number;
-  price_eur: number | null;
-  booking_status: string;
-  priority: string;
-  city: string | null;
-  date: string;
-  travel_time: string | null;
-  place: Place;
-}
+/** so viele Punkte passen locker an einen Tag */
+export const DAY_CAPACITY = 4;
 
 export interface DayCell {
   date: string;
   index: number;
   weekday: string;
   weekend: boolean;
-  blocks: Block[];
-  /** geplant ohne Uhrzeit → taucht nur als Punkt auf, nicht als Balken */
-  plannedMin: number;
-  freeMin: number;
-  /** 0..1+, >1 = überfüllt */
+  /** die Punkte des Tages, in der geplanten Reihenfolge */
+  places: Place[];
+  count: number;
+  /** wie viele Punkte noch locker dazupassen */
+  free: number;
+  /** 0..1+, >1 = voller als ein lockerer Tag */
   load: number;
   city: string | null;
   cities: string[];
@@ -82,7 +43,7 @@ const TRAVEL_RE = /flug|ankunft|abreise|rückflug|heimflug|transfer|fahrt|→|sh
 
 const isTravel = (j: Journey) => TRAVEL_RE.test(`${j.title ?? ''} ${j.mode ?? ''}`);
 
-/** Alle Tage der Reise als Raster inklusive Zeitblöcken */
+/** Alle Tage der Reise als Raster – pro Tag die Punkte der Reihenfolge nach */
 export function dayCells(bundle: BundleLike): DayCell[] {
   const dates = eachDate(bundle.trip?.start_date, bundle.trip?.end_date);
   const plannedDates = Array.from(new Set(bundle.places.map((p) => p.date).filter((d): d is string => Boolean(d))));
@@ -100,8 +61,7 @@ export function dayCells(bundle: BundleLike): DayCell[] {
     const nights = nightCoverage(bundle);
     const night = nights.find((n) => n.date === date);
 
-    const blocks = layoutDay(places, date);
-    const plannedMin = blocks.reduce((a, b) => a + (b.fullDay ? 0 : b.duration), 0);
+    const geordnet = places.slice().sort(byOrder);
     const cities = Array.from(new Set(places.map((p) => p.city).filter(Boolean) as string[]));
     const cityFromJourney = journeys.map((j) => j.to_city).filter(Boolean)[0] ?? null;
 
@@ -109,8 +69,6 @@ export function dayCells(bundle: BundleLike): DayCell[] {
     if (!places.length && !journeys.length) issues.push('kein Programm');
     if (quiet.has(date)) issues.push('freier Tag');
     if (!night?.covered && index < all.length - 1) issues.push('Nacht ohne Hotel');
-    const noTime = places.filter((p) => !p.start_time && !p.time_slot).length;
-    if (noTime) issues.push(`${noTime}× ohne Uhrzeit`);
     const noPrice = places.filter((p) => p.priority !== 'kann' && p.price_eur === null && !p.price_note).length;
     if (noPrice) issues.push(`${noPrice}× ohne Preis`);
     const open = places.filter((p) => p.booking_status === 'offen' && p.priority === 'muss').length;
@@ -125,10 +83,10 @@ export function dayCells(bundle: BundleLike): DayCell[] {
       index,
       weekday: weekdayShort(date),
       weekend: [0, 6].includes(new Date(`${date}T00:00:00`).getDay()),
-      blocks,
-      plannedMin,
-      freeMin: Math.max(0, FULL_DAY_MIN - plannedMin),
-      load: plannedMin / FULL_DAY_MIN,
+      places: geordnet,
+      count: geordnet.length,
+      free: Math.max(0, DAY_CAPACITY - geordnet.length),
+      load: geordnet.length / DAY_CAPACITY,
       city: cities[0] ?? (hotel?.city ?? cityFromJourney),
       cities: Array.from(new Set([...cities, ...(hotel?.city ? [hotel.city] : []), ...(cityFromJourney ? [cityFromJourney] : [])])),
       hotel,
@@ -141,59 +99,6 @@ export function dayCells(bundle: BundleLike): DayCell[] {
       issues,
     };
   });
-}
-
-/**
- * Setzt die Orte eines Tages auf die 07–23-Achse: feste Uhrzeiten zuerst,
- * der Rest wird danach hintereinander gepackt (20 Min Wegezeit dazwischen).
- */
-const daySpan = (from?: string | null, to?: string | null) =>
-  from && to ? Math.max(1, Math.round((new Date(`${to}T00:00:00`).getTime() - new Date(`${from}T00:00:00`).getTime()) / 86400000) + 1) : 1;
-
-export function layoutDay(places: Place[], date: string): Block[] {
-  const withMin = places.map((p) => ({ p, at: timeToMin(p.start_time), slot: p.time_slot ? SLOT_START[p.time_slot] ?? null : null }));
-  withMin.sort((a, b) => {
-    const ka = a.at ?? a.slot ?? 9 * 60 + a.p.sort_order;
-    const kb = b.at ?? b.slot ?? 9 * 60 + b.p.sort_order;
-    return ka - kb || a.p.sort_order - b.p.sort_order;
-  });
-
-  let cursor = AXIS_START;
-  const blocks: Block[] = [];
-  for (const { p, at, slot } of withMin) {
-    const spansDays = Boolean(p.end_date && p.date && p.end_date > p.date);
-    const fullDay = p.time_slot === 'Ganzer Tag' || spansDays;
-    const duration = fullDay ? AXIS_SPAN : p.duration_min ?? 60;
-    let start: number;
-    if (at !== null) start = at;
-    else if (slot !== null) start = Math.max(slot, cursor);
-    else start = Math.max(cursor, 9 * 60);
-    start = clamp(start, AXIS_START, AXIS_END - 15);
-    const end = fullDay ? AXIS_END : clamp(start + duration, start + 15, AXIS_END);
-    const span = daySpan(p.date, p.end_date);
-    const meta = categoryMeta(p.category);
-    blocks.push({
-      id: p.id,
-      name: p.name,
-      icon: meta.icon,
-      color: meta.color,
-      start,
-      end,
-      timed: at !== null,
-      fullDay,
-      span,
-      duration: fullDay ? end - start : duration,
-      price_eur: p.price_eur,
-      booking_status: p.booking_status,
-      priority: p.priority,
-      city: p.city,
-      date,
-      travel_time: p.travel_time,
-      place: p,
-    });
-    cursor = end + 20;
-  }
-  return blocks;
 }
 
 /* ------------------------------------------------------------------ Unterkünfte */
@@ -461,11 +366,11 @@ const rank = (s: Severity) => (s === 'bad' ? 0 : s === 'warn' ? 1 : 2);
 /* ------------------------------------------------------------------ Kapazität */
 
 export interface Capacity {
-  /** Tage, an denen noch ein halber Tag frei wäre */
-  openDays: { date: string; freeMin: number; city: string | null }[];
-  totalFreeMin: number;
-  /** Ø Programmzeit pro Tag */
-  avgDayMin: number;
+  /** Tage, an denen noch etwas dazupasst */
+  openDays: { date: string; free: number; city: string | null }[];
+  totalFree: number;
+  /** Ø Punkte pro Tag mit Programm */
+  avgPerDay: number;
   fullestDay: DayCell | null;
   emptiestDay: DayCell | null;
 }
@@ -473,31 +378,29 @@ export interface Capacity {
 export function capacity(cells: DayCell[]): Capacity {
   const usable = cells.filter((c) => !c.checkIn && !c.travelOnly);
   const openDays = usable
-    .filter((c) => c.load < 0.75)
-    .map((c) => ({ date: c.date, freeMin: c.freeMin, city: c.city }))
-    .sort((a, b) => b.freeMin - a.freeMin);
-  const totalFreeMin = usable.reduce((a, c) => a + c.freeMin, 0);
-  const withPlan = usable.filter((c) => c.plannedMin > 0);
+    .filter((c) => c.free > 0)
+    .map((c) => ({ date: c.date, free: c.free, city: c.city }))
+    .sort((a, b) => b.free - a.free);
+  const withPlan = usable.filter((c) => c.count > 0);
   return {
     openDays,
-    totalFreeMin,
-    avgDayMin: withPlan.length ? Math.round(withPlan.reduce((a, c) => a + c.plannedMin, 0) / withPlan.length) : 0,
-    fullestDay: usable.slice().sort((a, b) => b.plannedMin - a.plannedMin)[0] ?? null,
-    emptiestDay: usable.slice().sort((a, b) => a.plannedMin - b.plannedMin)[0] ?? null,
+    totalFree: usable.reduce((a, c) => a + c.free, 0),
+    avgPerDay: withPlan.length ? Math.round((withPlan.reduce((a, c) => a + c.count, 0) / withPlan.length) * 10) / 10 : 0,
+    fullestDay: usable.slice().sort((a, b) => b.count - a.count)[0] ?? null,
+    emptiestDay: usable.slice().sort((a, b) => a.count - b.count)[0] ?? null,
   };
 }
 
 /** Vorschlag: welcher Tag passt zu einem Pool-Eintrag? (gleiche Stadt, meiste freie Zeit) */
-export function bestDaysFor(pool: Place, cells: DayCell[], limit = 3): { date: string; freeMin: number; city: string | null }[] {
+export function bestDaysFor(pool: Place, cells: DayCell[], limit = 3): { date: string; free: number; city: string | null }[] {
   const key = (s: string | null | undefined) => (s ?? '').trim().toLowerCase();
   const cityKey = key(pool.city);
   const sameCity = cells.filter((c) => c.city && key(c.city) === cityKey);
   const base = (sameCity.length ? sameCity : cells).filter((c) => !c.checkIn && !c.checkOut);
-  const scored = base.map((c) => ({ date: c.date, freeMin: c.freeMin, city: c.city, bonus: c.empty ? 20 : 0, load: c.load }));
-  return scored
-    .sort((a, b) => b.freeMin + b.bonus - (a.freeMin + a.bonus))
-    .slice(0, limit)
-    .map(({ date, freeMin, city }) => ({ date, freeMin, city }));
+  return base
+    .map((c) => ({ date: c.date, free: c.free + (c.empty ? 1 : 0), city: c.city }))
+    .sort((a, b) => b.free - a.free || a.date.localeCompare(b.date))
+    .slice(0, limit);
 }
 
 /** pro Stadt: Tage & Nächte vs. geplante Punkte → wo ist noch Luft */
@@ -570,4 +473,10 @@ export function loadTone(load: number): string {
   if (load > 0.35) return 'bg-matcha-500/80';
   if (load > 0) return 'bg-sky-400/70';
   return 'bg-white/10';
+}
+
+/** „3 Punkte · einer passt noch" */
+export function loadLabel(c: DayCell): string {
+  if (!c.count) return c.journeys.length ? 'Reisetag' : 'frei';
+  return c.free > 0 ? `${c.count} Punkte · ${c.free} passen noch` : `${c.count} Punkte · voll`;
 }

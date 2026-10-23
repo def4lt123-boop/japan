@@ -2,9 +2,9 @@
 
 /**
  * Alle Aktivitäten als Liste untereinander: oben, was noch an keinem Tag sitzt,
- * darunter die Tage mit dem, was schon platziert ist. Ein Punkt kann genau an
- * einem Tag stehen – ein zweiter Eintrag mit demselben Namen an demselben Tag
- * wird abgewiesen. Uhrzeit + Dauer zeigen sofort, welcher Abschnitt blockiert ist.
+ * darunter die Tage mit dem, was schon platziert ist – der Reihe nach, ohne
+ * Uhrzeiten. Ein Punkt kann genau an einem Tag stehen; derselbe Name zweimal am
+ * selben Tag ist ein Duplikat und wird abgewiesen.
  */
 import React, { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -15,7 +15,7 @@ import { FilterBar, EMPTY_FILTER, applyFilter, type PlaceFilter } from '../../..
 import { Button, Card, Empty, SectionTitle, cx } from '../../../../components/ui';
 import { distributePool } from '../../../../lib/planner';
 import { eachDate, fmtDate, plural } from '../../../../lib/format';
-import { assign, minToTime, plannedMinutes, setSlot } from '../../../../lib/dayplan';
+import { assign, byOrder, dayPlaces, shiftWithin } from '../../../../lib/dayplan';
 
 type View = 'alle' | 'offen' | 'platziert';
 
@@ -45,7 +45,6 @@ export default function ActivitiesPage() {
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [placed]);
 
-  const openMinutes = open_.reduce((sum, p) => sum + (p.duration_min ?? 90), 0);
 
   const runAutoPlan = () => {
     if (!bundle.trip) return;
@@ -73,7 +72,7 @@ export default function ActivitiesPage() {
       <SectionTitle
         title="Aktivitäten"
         icon="🗂️"
-        hint="Was noch keinen Tag hat, steht oben – ziehen, ⚡ verteilen oder in der Zeile auf einen Tag legen"
+        hint="Was noch keinen Tag hat, steht oben – ziehen, ⚡ verteilen oder in der Zeile auf einen Tag legen. Punkte am Tag sind die Reihenfolge."
         right={
           <>
             {tabs.map((t) => (
@@ -97,7 +96,7 @@ export default function ActivitiesPage() {
       <FilterBar value={filter} onChange={setFilter} places={bundle.places} />
 
       <p className="-mt-1 text-[11.5px] text-slate-500">
-        {open_.length ? <>{open_.length} ohne Tag · {Math.round(openMinutes / 60)} h zu verteilen · </> : 'jeder Punkt hat einen Tag · '}
+        {open_.length ? <>{open_.length} ohne Tag · warten oben auf ihren Platz · </> : 'jeder Punkt hat einen Tag · '}
         {placed.length} platziert auf {byDay.length} {plural(byDay.length, 'Tag', 'Tagen')}
       </p>
 
@@ -117,7 +116,7 @@ export default function ActivitiesPage() {
             <Card className="p-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-t-lg border-b border-white/[0.07] bg-amber-500/[0.07] px-2.5 py-1.5">
                 <h3 className="text-[12.5px] font-semibold text-amber-100">✨ Noch ohne Tag</h3>
-                <span className="text-[11.5px] text-amber-100/70">{plural(open_.length, 'Punkt', 'Punkte')} · {Math.round(openMinutes / 60)} h warten</span>
+                <span className="text-[11.5px] text-amber-100/70">{plural(open_.length, 'Punkt', 'Punkte')} · ziehen oder oben rechts verteilen</span>
                 {open_.length ? (
                   <button className="ml-auto text-[11.5px] text-amber-200/90 underline-offset-2 hover:text-white hover:underline" onClick={() => setFolded((f) => ({ ...f, offen: !f.offen }))}>
                     {folded.offen ? 'alle zeigen' : 'einklappen'}
@@ -146,31 +145,25 @@ export default function ActivitiesPage() {
                   <DayRowHeader
                     date={date}
                     places={list}
-                    onPickSlot={(m) => {
-                      const candidate = open_[0];
-                      if (candidate) assign(store, bundle.places, candidate, { date, start_time: minToTime(m) });
-                    }}
-                    onMove={(id, minute) => {
-                      const moving = bundle.places.find((x) => x.id === id);
-                      if (moving) setSlot(store, bundle.places, moving, { start: minute });
-                    }}
-                    onResize={(id, minutes) => {
-                      const moving = bundle.places.find((x) => x.id === id);
-                      if (moving) setSlot(store, bundle.places, moving, { duration: minutes });
-                    }}
-                    note={
-                      <span className="text-slate-400">
-                        {plural(list.length, 'Aktivität', 'Aktivitäten')} · {Math.round(plannedMinutes(list) / 60)} h verplant
-                      </span>
+                    right={
+                      open_.length ? (
+                        <button
+                          className="btn-quiet !px-1.5 !py-0.5 !text-[11px]"
+                          title="Obersten Punkt aus der Liste ans Ende dieses Tages legen"
+                          onClick={() => {
+                            const candidate = open_.find((c) => c.city === list[0]?.city) ?? open_[0];
+                            if (candidate) assign(store, bundle.places, candidate, { date });
+                          }}
+                        >
+                          ✨ Wunsch hierher
+                        </button>
+                      ) : null
                     }
                   />
                   <div className="space-y-1.5 p-2">
-                    {list
-                      .slice()
-                      .sort((a, b) => (a.start_time ?? '99').localeCompare(b.start_time ?? '99'))
-                      .map((p) => (
-                        <ActivityRow key={p.id} place={p} all={bundle.places} dayOptions={dayOptions} dense tripStart={bundle.trip?.start_date} tripEnd={bundle.trip?.end_date} />
-                      ))}
+                    {dayPlaces(bundle.places, date).map((p, i, arr) => (
+                      <ActivityRow key={p.id} place={p} all={bundle.places} dayOptions={dayOptions} dense tripStart={bundle.trip?.start_date} tripEnd={bundle.trip?.end_date} nr={i + 1} total={arr.length} />
+                    ))}
                   </div>
                 </Card>
               ))

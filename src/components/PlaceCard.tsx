@@ -5,8 +5,7 @@ import type { Place } from '../lib/types';
 import { useStore } from '../lib/store';
 import { useEditor } from './EditorProvider';
 import { PRIORITY_META, STATUS_META, TICKET_META, categoryMeta, mapsUrl, nextTicket, routeUrl } from '../lib/categories';
-import { fmtDate, fmtDuration } from '../lib/format';
-import { fmtWindow, windowOf } from '../lib/dayplan';
+import { fmtDate } from '../lib/format';
 import { Card, LinkTag, Menu, Money, Pill, cx } from './ui';
 import { MapPreview } from './MapPreview';
 import { CategoryDot } from './CategoryDot';
@@ -23,29 +22,37 @@ export function StatusPill({ status }: { status: Place['booking_status'] }) {
 }
 
 /**
- * Eine Aktivität als Karte: Name, Zeitfenster, Preis, Ticket – und rechts
- * genau zwei Knöpfe (abhaken, mehr). Alles Weitere steckt im Menü.
+ * Eine Aktivität als Karte: Nummer in der Tagesliste, Name, Preis, Ticket – und
+ * rechts die drei Griffe (abhaken, Karte, mehr). Uhrzeiten gibt es nicht mehr,
+ * die Reihenfolge macht den Tag.
  */
 export function PlaceCard({
   place,
   showDate,
   draggable = true,
   dense = false,
+  nr,
   onMove,
+  onUp,
+  onDown,
 }: {
   place: Place;
   showDate?: boolean;
   draggable?: boolean;
   dense?: boolean;
+  /** Stelle am Tag, 1 = erster Punkt */
+  nr?: number;
   /** ◀ ▶: Eintrag einen Tag zurück/weiter schieben */
   onMove?: (dir: -1 | 1) => void;
+  /** ▲▼: innerhalb des Tages rücken */
+  onUp?: () => void;
+  onDown?: () => void;
 }) {
   const store = useStore();
   const { open } = useEditor();
   const meta = categoryMeta(place.category);
   const prio = PRIORITY_META[place.priority] ?? PRIORITY_META.soll;
   const ticket = TICKET_META[place.ticket_status ?? 'unklar'] ?? TICKET_META.unklar;
-  const win = place.date ? windowOf(place) : null;
   const [showMap, setShowMap] = useState(false);
   const done = place.booking_status === 'erledigt';
 
@@ -62,6 +69,7 @@ export function PlaceCard({
       style={{ borderLeftColor: meta.color }}
     >
       <div className={cx('flex items-start gap-2.5', dense ? 'px-2.5 py-2' : 'px-3.5 py-3')}>
+        {nr ? <span className="mt-0.5 w-4 shrink-0 text-right text-[11.5px] tabular-nums text-slate-500" title={`Stelle ${nr}`}>{nr}</span> : null}
         <CategoryDot category={place.category} size={dense ? 19 : 23} className="mt-px" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
@@ -82,23 +90,12 @@ export function PlaceCard({
                 {fmtDate(place.date, { weekday: 'short', day: '2-digit', month: '2-digit' })}
               </span>
             ) : null}
-            {place.date && place.end_date && place.end_date !== place.date ? (
-              <span className="text-[11px] text-slate-400" title="Mehrtages-Ausflug">
-                → {fmtDate(place.end_date, { day: '2-digit', month: '2-digit' })}
-              </span>
-            ) : null}
+
           </div>
 
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-slate-400">
             {place.city ? <span className="text-slate-300">{place.city}</span> : null}
-            {place.district ? <span className="text-slate-500">· {place.district}</span> : null}
-            {win ? (
-              <span className="tabular-nums text-slate-200">· {fmtWindow(win.start, win.end)}{place.start_time ? '' : ' (geschätzt)'}</span>
-            ) : place.time_slot ? (
-              <span>· {place.time_slot}</span>
-            ) : null}
-            {place.duration_min && !win ? <span>· {fmtDuration(place.duration_min)}</span> : null}
-            {place.travel_time ? <span title="Fahrzeit vom Hotel">· 🚈 {place.travel_time}</span> : null}
+            {nr && !showDate ? null : null}
             {place.price_eur !== null && place.price_eur !== undefined ? (
               <span className="text-slate-200">
                 · <Money value={place.price_eur} />
@@ -142,6 +139,16 @@ export function PlaceCard({
         </div>
 
         <div className="no-print flex shrink-0 items-start gap-0.5 opacity-70 transition group-hover:opacity-100">
+          {onUp || onDown ? (
+            <span className="mr-0.5 flex flex-col gap-0.5">
+              <button className="icon-btn !h-5 !text-[10px]" title="eine Stelle höher" onClick={onUp} disabled={!onUp}>
+                ▲
+              </button>
+              <button className="icon-btn !h-5 !text-[10px]" title="eine Stelle tiefer" onClick={onDown} disabled={!onDown}>
+                ▼
+              </button>
+            </span>
+          ) : null}
           {onMove ? (
             <span className="mr-0.5 flex gap-0.5">
               <button className="icon-btn" title="einen Tag zurück" onClick={() => onMove(-1)}>
@@ -178,7 +185,7 @@ export function PlaceCard({
         <div className="border-t border-white/[0.07] p-2.5">
           <MapPreview
             place={place}
-            query={`${place.name} ${place.district ?? ''} ${place.city ?? ''}`.replace(/\s+/g, ' ').trim()}
+            query={`${place.name} ${place.city ?? ''}`.replace(/\s+/g, ' ').trim()}
             height={190}
             zoom={place.lat !== null ? 16 : 13}
             heading={place.name}

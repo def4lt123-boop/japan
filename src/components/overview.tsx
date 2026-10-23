@@ -11,7 +11,7 @@ import React, { useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { useEditor } from './EditorProvider';
 import { Button, Card, Empty, LinkTag, Money, ProgressBar, SectionTitle, cx } from './ui';
-import { AXIS_SPAN, AXIS_START, type CityLoad, type DayCell, type GapItem, type Sample, type Stay, bestDaysFor, cityLoad, loadTone, minToTime } from '../lib/overview';
+import { DAY_CAPACITY, type CityLoad, type DayCell, type GapItem, type Sample, type Stay, bestDaysFor, cityLoad, loadLabel, loadTone } from '../lib/overview';
 import { STATUS_META, TICKET_META, categoryMeta } from '../lib/categories';
 import { assign } from '../lib/dayplan';
 import { fmtDate, fmtDuration, fmtMoney, plural } from '../lib/format';
@@ -81,7 +81,7 @@ export function TripRibbon({ tripId, cells, stays }: { tripId: string; cells: Da
             <a
               key={c.date}
               href={`#day-${c.date}`}
-              title={`${fmtDate(c.date, { weekday: 'long', day: 'numeric', month: 'long' })} · ${plural(c.blocks.length, 'Aktivität', 'Aktivitäten')} · ${c.plannedMin ? fmtDuration(c.plannedMin) : 'kein Programm'}${c.hotel ? ` · 🛏 ${c.hotel.name}` : ''}`}
+              title={`${fmtDate(c.date, { weekday: 'long', day: 'numeric', month: 'long' })} · ${plural(c.count, 'Aktivität', 'Aktivitäten')}${c.count ? '' : ' · kein Programm'}${c.hotel ? ` · 🛏 ${c.hotel.name}` : ''}`}
               style={colStyle(1, i + 2)}
               className={cx(
                 'rounded-md px-0.5 pb-1 pt-0.5 text-center transition hover:bg-white/10',
@@ -165,7 +165,7 @@ export function TripRibbon({ tripId, cells, stays }: { tripId: string; cells: Da
             <a
               key={`l-${c.date}`}
               href={`#day-${c.date}`}
-              title={`${plural(c.blocks.length, 'Punkt', 'Punkte')} · ${c.plannedMin ? fmtDuration(c.plannedMin) : 'nichts'} geplant${c.freeMin ? ` · ${fmtDuration(c.freeMin)} Luft` : ''}`}
+              title={`${plural(c.count, 'Punkt', 'Punkte')} geplant${c.free ? ` · ${c.free} passen noch dazu` : ''}`}
               style={colStyle(loadRow, i + 2)}
               className="flex h-[30px] items-end overflow-hidden rounded-md bg-white/[0.04] hover:bg-white/[0.09]"
             >
@@ -180,7 +180,7 @@ export function TripRibbon({ tripId, cells, stays }: { tripId: string; cells: Da
         <span>🧷 Check-out</span>
         <span className="text-matcha-200/80">▰ Nacht gedeckt</span>
         <span className="text-shu-200">▨ Nacht ohne Bett</span>
-        <span>Höhe der Säulen = Programmzeit pro Tag (8 h gelten als voll, über 8 h wird es rot)</span>
+        <span>Höhe der Säulen = Punkte pro Tag (${DAY_CAPACITY} gelten als voll, mehr wird rot) – nur der Reihe nach, keine Uhrzeiten</span>
       </div>
     </Card>
   );
@@ -217,7 +217,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
       <SectionTitle
         title="Jeder Tag im Bild"
         icon="🗓️"
-        hint="Zeitachse 07–23 Uhr · gestrichelt = ohne feste Uhrzeit · rot umrandet = Muss noch offen · Karten sind Ablage-Ziele"
+        hint="ein Feld pro Tag · die Zahl = Punkte an diesem Tag · rot umrandet = ein Muss ist noch offen · Felder sind Ablage-Ziele"
         right={
           <>
             <Button size="sm" variant={onlyGaps ? 'primary' : 'ghost'} onClick={() => setOnlyGaps((v) => !v)} title="Nur Tage zeigen, die leer oder voll sind">
@@ -303,44 +303,36 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
                     </p>
                     <p className="mt-0.5 truncate text-[11.5px] text-slate-400">{c.city ?? '—'}</p>
                   </div>
-                  <span className={cx('chip shrink-0 ring-1', c.load > 1.05 ? 'bg-shu-500/15 text-shu-100 ring-shu-400/30' : c.load > 0.6 ? 'bg-matcha-500/15 text-matcha-100 ring-matcha-400/30' : c.plannedMin ? 'bg-white/[0.05] text-slate-300 ring-white/10' : 'bg-white/[0.04] text-slate-500 ring-white/10')}>
-                    {c.plannedMin ? fmtDuration(c.plannedMin) : 'frei'}
+                  <span className={cx('chip shrink-0 ring-1', c.load > 1.05 ? 'bg-shu-500/15 text-shu-100 ring-shu-400/30' : c.load > 0.6 ? 'bg-matcha-500/15 text-matcha-100 ring-matcha-400/30' : c.count ? 'bg-white/[0.05] text-slate-300 ring-white/10' : 'bg-white/[0.04] text-slate-500 ring-white/10')}>
+                    {loadLabel(c)}
                   </span>
                 </div>
 
-                {/* Zeitachse */}
-                <div
-                  className="relative mt-2 h-9 overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.03]"
-                  style={{ backgroundImage: 'repeating-linear-gradient(to right, rgba(255,255,255,0.07) 0 1px, transparent 1px calc(100% / 16))' }}
-                  title={`07–23 Uhr · ${plural(c.blocks.length, 'Block', 'Blöcke')}`}
-                >
-                  {c.blocks.map((b) => {
-                    const left = ((b.start - AXIS_START) / AXIS_SPAN) * 100;
-                    const width = Math.max(3.5, ((b.end - b.start) / AXIS_SPAN) * 100);
+                {/* was an diesem Tag ansteht – der Reihe nach */}
+                <div className="mt-2 space-y-0.5">
+                  {c.places.slice(0, 4).map((b, i) => {
+                    const meta = categoryMeta(b.category);
                     return (
                       <button
                         key={b.id}
                         onClick={() => open({ kind: 'place', id: b.id })}
-                        title={`${b.name} · ${minToTime(b.start)}–${minToTime(b.end)}${b.timed ? '' : ' (geschätzt)'}${b.span > 1 ? ` · ${b.span} Tage` : ''}${b.price_eur ? ` · ${fmtMoney(b.price_eur)}` : ''} · ${(TICKET_META[(b.place.ticket_status ?? 'unklar') as keyof typeof TICKET_META] ?? TICKET_META.unklar).label}`}
-                        className={cx('absolute top-1 flex h-[26px] items-center overflow-hidden rounded px-1 text-[10px] font-medium text-white/95 transition hover:z-10 hover:brightness-125', !b.timed && 'border border-dashed border-white/40', b.priority === 'muss' && b.booking_status === 'offen' && 'ring-1 ring-inset ring-shu-300/80')}
-                        style={{ left: `${left}%`, width: `${width}%`, background: `${b.color}${b.timed ? 'd9' : '66'}` }}
+                        title={`${i + 1}. ${b.name} · ${meta.label}${b.price_eur ? ` · ${fmtMoney(b.price_eur)}` : ''} · ${(TICKET_META[(b.ticket_status ?? 'unklar') as keyof typeof TICKET_META] ?? TICKET_META.unklar).label}`}
+                        className={cx(
+                          'flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left text-[11.5px] transition hover:bg-white/[0.07]',
+                          b.priority === 'muss' && b.booking_status === 'offen' && 'ring-1 ring-inset ring-shu-300/50',
+                        )}
                       >
-                        <span aria-hidden className="mr-0.5">
-                          {b.icon}
+                        <span className="w-3 shrink-0 text-right tabular-nums text-slate-500">{i + 1}</span>
+                        <span aria-hidden style={{ color: meta.color }}>
+                          {meta.icon}
                         </span>
-                        <span className="truncate">{b.name}</span>
-                        {b.span > 1 ? <span className="ml-1 shrink-0 rounded bg-black/30 px-1 text-[9px] tabular-nums">{b.span}T</span> : null}
+                        <span className={cx('min-w-0 flex-1 truncate', b.booking_status === 'erledigt' ? 'text-slate-500 line-through' : 'text-slate-200')}>{b.name}</span>
+                        {b.priority === 'muss' ? <span className="shrink-0 text-[10px] text-shu-300">★</span> : null}
                       </button>
                     );
                   })}
-                  {!c.blocks.length ? <span className="absolute inset-0 grid place-items-center text-[11px] text-slate-600">{c.journeys.length ? 'Reisetag' : 'noch nichts geplant'}</span> : null}
-                </div>
-                <div className="mt-0.5 flex justify-between text-[9px] tabular-nums text-slate-600">
-                  <span>07</span>
-                  <span>11</span>
-                  <span>15</span>
-                  <span>19</span>
-                  <span>23</span>
+                  {!c.places.length ? <p className="px-1 py-1.5 text-[11px] text-slate-600">{c.journeys.length ? 'Reisetag' : 'noch nichts geplant'}</p> : null}
+                  {c.places.length > 4 ? <p className="px-1 text-[10.5px] tabular-nums text-slate-500">+{c.places.length - 4} weitere</p> : null}
                 </div>
 
                 {/* Bett */}
@@ -400,9 +392,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
                   <Button size="sm" variant="quiet" onClick={() => open({ kind: 'place', defaults: { date: c.date, city: c.city ?? '' } })}>
                     ＋ Eintrag
                   </Button>
-                  <span className="ml-auto text-[10.5px] tabular-nums text-slate-500">
-                    {c.blocks.length} · {c.freeMin ? `${fmtDuration(c.freeMin)} frei` : 'voll'}
-                  </span>
+                  <span className="ml-auto text-[10.5px] tabular-nums text-slate-500">{loadLabel(c)}</span>
                 </div>
               </div>
             );
@@ -529,7 +519,7 @@ export function CapacityPanel({
   const store = useStore();
   const { open } = useEditor();
   const freeDays = cells.filter((c) => c.empty && !c.travelOnly);
-  const halfDays = cells.filter((c) => c.load > 0 && c.load < 0.55).length;
+  const lightDays = cells.filter((c) => c.count > 0 && c.count * 2 < DAY_CAPACITY).length;
   const maxPlaces = Math.max(1, ...cities.map((c) => c.places));
 
   const spread = () => {
@@ -551,7 +541,7 @@ export function CapacityPanel({
         <SectionTitle
           title="Was noch verfügbar ist"
           icon="🈳"
-          hint={pool.length ? `${plural(pool.length, 'Punkt', 'Punkte')} warten auf einen Tag · ${plural(freeDays.length, 'Tag', 'Tage')} noch ganz frei` : 'Jeder Wunsch hat einen Tag – freie Zeit bleibt trotzdem genug.'}
+          hint={pool.length ? `${plural(pool.length, 'Punkt', 'Punkte')} warten auf einen Tag · ${plural(freeDays.length, 'Tag', 'Tage')} noch ganz frei` : 'Jeder Wunsch hat einen Tag – es bleiben trotzdem Plätze frei.'}
           right={
             freeDays.length && pool.length ? (
               <Button size="sm" variant="primary" onClick={spread} title={`${plural(pool.length, 'Wunsch', 'Wünsche')} gleichmäßig auf die leeren Tage verteilen`}>
@@ -563,11 +553,11 @@ export function CapacityPanel({
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
             { label: 'Tage ganz frei', value: freeDays.length, hint: freeDays.length ? fmtDate(freeDays[0].date, { day: '2-digit', month: '2-digit' }) + ' bis ' + fmtDate(freeDays[freeDays.length - 1].date, { day: '2-digit', month: '2-digit' }) : '—' },
-            { label: 'halbe Tage frei', value: halfDays, hint: 'unter 4,5 h Programm' },
+            { label: 'Tage fast frei', value: lightDays, hint: 'ein oder zwei Punkte' },
             {
-              label: 'Luft insgesamt',
-              value: fmtDuration(cells.reduce((a, c) => a + c.freeMin, 0)) || '0 Min',
-              hint: `${plural(cells.length, 'Tag', 'Tage')} à 8 h Ziel`,
+              label: 'Plätze insgesamt',
+              value: `${cells.reduce((a, c) => a + c.free, 0)}`,
+              hint: `${plural(cells.length, 'Tag', 'Tage')} à ${DAY_CAPACITY} Punkte`,
             },
             { label: 'Ohne Tag', value: pool.length, hint: pool.length ? 'in der Aktivitätsliste' : 'alles platziert' },
           ].map((s) => (

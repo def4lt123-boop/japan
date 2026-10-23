@@ -75,21 +75,12 @@ export function routeEmbedUrl(opts: {
   return `https://maps.google.com/maps?saddr=${enc(target(opts.origin))}&daddr=${enc(target(opts.destination))}&dirflg=${dirflg}&hl=de&output=embed`;
 }
 
-const SLOT_START: Record<string, number> = { Morgen: 6 * 60, Vormittag: 9 * 60, Mittag: 12 * 60, Nachmittag: 15 * 60, Abend: 18 * 60, 'Ganzer Tag': 8 * 60 };
-
-const timeKey = (p: Place) => {
-  const h = p.start_time?.split(':');
-  if (h && h.length >= 2) return Number(h[0]) * 60 + Number(h[1]);
-  return p.time_slot ? SLOT_START[p.time_slot] ?? 9 * 60 : 9 * 60 + Math.min(60, p.sort_order);
-};
-
 /** Die Punkte eines Tages in Besuchsreihenfolge – nur die mit Kartenpunkt sind Zwischenstopps */
 export function dayStops(places: Place[], withCoordsOnly = true): Place[] {
-  const list = places
+  return places
     .filter((p) => (withCoordsOnly ? hasCoords(p) : true))
     .slice()
-    .sort((a, b) => timeKey(a) - timeKey(b) || a.sort_order - b.sort_order);
-  return list;
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name, 'de'));
 }
 
 /** Die Unterkunft, in der man an diesem Tag schläft (erst Datum, dann Stadt) */
@@ -107,11 +98,9 @@ export function placesToKml(places: Place[], title: string): string {
     .filter((p) => hasCoords(p))
     .map((p) => {
       const bits = [
-        p.date ? `Tag: ${p.date}${p.end_date && p.end_date !== p.date ? `–${p.end_date}` : ''}` : 'noch ohne Tag',
-        p.start_time ? `Uhrzeit: ${p.start_time}` : '',
+        p.date ? `Nr. ${(p.sort_order ?? 0) + 1} am ${p.date}${p.end_date && p.end_date !== p.date ? `–${p.end_date}` : ''}` : 'noch ohne Tag',
         p.category ? `Art: ${p.category}` : '',
-        p.city ? `Stadt: ${p.city}${p.district ? ` (${p.district})` : ''}` : '',
-        p.travel_time ? `Vom Hotel: ${p.travel_time}` : '',
+        p.city ? `Stadt: ${p.city}` : '',
         p.price_eur ? `Preis: ${p.price_eur} €` : p.price_note ? `Preis: ${p.price_note}` : '',
         p.ticket_status && p.ticket_status !== 'unklar' ? `Ticket: ${p.ticket_status}${p.ticket_note ? ` – ${p.ticket_note}` : ''}` : '',
         p.notes ? `Hinweise: ${p.notes}` : '',
