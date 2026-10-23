@@ -1,9 +1,9 @@
 /**
  * Rechenprobe für „wo in der Reise stehen wir\" und „Reise auf ein anderes Datum schieben\",
- * dazu die Ortswechsel. Aufruf: npm run test:today
+ * dazu die Ortswechsel, die nur aus den Betten gelesen werden. Aufruf: npm run test:today
  */
 import { dayContext, shiftTrip, upcoming } from '../src/lib/today.ts';
-import { cityOfDay, locusChanges, applyMove, stayOn } from '../src/lib/locus.ts';
+import { cityOfDay, locusChanges, stayOn, trimPreviousStay } from '../src/lib/locus.ts';
 import { addDays } from '../src/lib/format.ts';
 
 const errors: string[] = [];
@@ -71,62 +71,40 @@ step('Ausblick nennt nur die Tage danach', upcoming([{ date: '2027-03-07' }, { d
   step('Start auf demselben Tag ändert nichts', patches.length === 0);
 }
 
-// ── Ortswechsel ─────────────────────────────────────────────────────────────
+// ── Ortswechsel: nur die Betten entscheiden ─────────────────────────────────
 const osaka = hotel({ id: 'h-osaka', name: 'Hotel Nikko Osaka', city: 'Osaka', check_in: '2027-03-06', check_out: '2027-03-09', nights: 3 });
 const tokyo = hotel({ id: 'h-tokyo', name: 'Hotel Rygg Tokio', city: 'Tokio', check_in: '2027-03-09', check_out: '2027-03-13', nights: 4 });
 {
   step('Nacht 08.03. gehört noch zu Osaka', stayOn([osaka, tokyo], '2027-03-08')!.id === 'h-osaka');
   step('Nacht 09.03. gehört zu Tokio', stayOn([osaka, tokyo], '2027-03-09')!.id === 'h-tokyo');
-  step('Stadt des Tages kommt aus der Unterkunft', cityOfDay([], [osaka, tokyo], '2027-03-07') === 'Osaka');
-  step('ohne Unterkunft hilft die Planung', cityOfDay([place({ city: 'Kyoto', date: '2027-03-07' })], [], '2027-03-07') === 'Kyoto');
+  step('Stadt des Tages kommt aus dem Bett', cityOfDay([osaka, tokyo], '2027-03-07') === 'Osaka');
+  step('ohne Bett gibt es keinen Ort', cityOfDay([], '2027-03-07') === null);
+  step('Aktivitäten allein erfinden keinen Ort', cityOfDay([], '2027-03-07') === null && cityOfDay([osaka], '2027-03-07') === 'Osaka');
   const days = ['2027-03-06', '2027-03-07', '2027-03-08', '2027-03-09', '2027-03-10'];
-  const changes = locusChanges([], [osaka, tokyo], days);
+  const changes = locusChanges([osaka, tokyo], days);
   step('ein Wechsel gefunden', changes.length === 1, changes.map((c) => `${c.date} ${c.from}→${c.to}`));
   step('Wechsel nennt beide Unterkünfte', changes[0]?.fromHotel === 'Hotel Nikko Osaka' && changes[0]?.toHotel === 'Hotel Rygg Tokio');
-  step('Wechsel zählt Tage der alten Stadt', changes[0]?.daysInOld === 3, changes[0]?.daysInOld);
+  step('Wechsel zählt Nächte der alten Stadt', changes[0]?.nightsInOld === 3, changes[0]?.nightsInOld);
+  step('Wechsel fällt auf den Check-in-Tag', changes[0]?.date === '2027-03-09', changes[0]?.date);
+  const planOnly = locusChanges([hotel({ check_in: null, check_out: null })], days);
+  step('ein Punkt ohne Bett ist kein Umzug', locusChanges([], days).length === 0 && planOnly.length === 0);
+  const journey = { id: 'j', trip_id: 't', title: 'Shinkansen', mode: 'Zug', date: '2027-03-09', to_city: 'Tokio' } as any;
+  step('die Fahrt am Wechseltag wird angehängt', locusChanges([osaka, tokyo], days, [journey])[0]?.journey?.title === 'Shinkansen');
 }
 {
-  const { store, patches, rows } = fakeStore();
-  const places = [
-    place({ id: 'a', city: 'Osaka', date: '2027-03-08' }),
-    place({ id: 'b', city: 'Osaka', date: '2027-03-09' }),
-    place({ id: 'c', city: 'Osaka', date: '2027-03-10' }),
-    place({ id: 'd', city: 'Tokio', date: '2027-03-10' }),
-  ];
-  const out = applyMove(store, { trip, places, hotels: [osaka, { ...tokyo, check_in: null, check_out: null, nights: 2 }], journeys: [] }, {
-    date: '2027-03-09',
-    toCity: 'Tokio',
-    hotelId: 'h-tokyo',
-    scope: 'onwards',
-    movePlaces: true,
-    updateHotels: true,
-    addJourney: true,
-    mode: 'Shinkansen',
-  } as any);
-  const moved = patches
-    .filter((x) => x.table === 'places')
-    .map((x) => x.id)
-    .sort();
-  step('Tage ab dem Wechsel gehören zur neuen Stadt', moved.join() === 'b,c', moved);
-  step('Punkt in der neuen Stadt bleibt unangetastet', !moved.includes('d'));
-  const hOsaka = patches.find((x) => x.id === 'h-osaka')!.patch;
-  const hTokyo = patches.find((x) => x.id === 'h-tokyo')!.patch;
-  step('alte Unterkunft checkt am Wechseltag aus', hOsaka.check_out === '2027-03-09' && hOsaka.nights === 3, hOsaka);
-  step('neue Unterkunft beginnt am Wechseltag', hTokyo.check_in === '2027-03-09' && hTokyo.check_out === addDays('2027-03-09', 2), hTokyo);
-  step('Fahrt wird eingetragen', rows.length === 1 && rows[0].mode === 'Shinkansen' && rows[0].to_city === 'Tokio', rows[0]);
-  step('Meldung zählt alles', /2 Aktivitäten in Tokio/.test(out.text) && /2 Unterkünfte/.test(out.text) && /Fahrt eingetragen/.test(out.text), out.text);
-}
-{
-  const { store, patches } = fakeStore();
-  const out = applyMove(store, { trip, places: [place({ city: 'Tokio', date: '2027-03-09' })], hotels: [tokyo], journeys: [] }, {
-    date: '2027-03-09',
-    toCity: 'Tokio',
-    scope: 'day',
-    movePlaces: true,
-    updateHotels: false,
-    addJourney: false,
-  } as any);
-  step('nichts zu ändern ist kein Fehler', patches.length === 0 && out.text === 'Es gab nichts zu ändern.');
+  /** neues Bett in anderer Stadt ⇒ das alte endet dort – der Umzug, ohne dass einer tippt */
+  const lang = { ...osaka, check_out: '2027-03-13', nights: 7 }; // durchgebucht, dabei geht es früher weiter
+  const trim = trimPreviousStay([lang, { ...tokyo, check_in: null, check_out: null, nights: 4 }], tokyo);
+  step('altes Bett wird auf den neuen Check-in gekürzt', trim?.id === 'h-osaka' && trim?.patch.check_out === '2027-03-09', trim);
+  step('Nächte des alten Bettes stimmen weiter', trim?.patch.nights === 3, trim?.patch);
+  step('saubere Aneinanderreihung bleibt unangetastet', trimPreviousStay([osaka], tokyo) === null);
+  const sameCity = hotel({ id: 'h-usj', name: 'Park Front at Universal Studios Japan', city: 'Osaka', check_in: '2027-03-07', check_out: '2027-03-08', nights: 1 });
+  step('zwei Betten in derselben Stadt bleiben beide stehen', trimPreviousStay([osaka], sameCity) === null);
+  step('ohne Stadt wird nichts gekürzt', trimPreviousStay([osaka], { ...tokyo, city: '' }) === null);
+  step('danach ist der Umzug gelesen', (() => {
+    const cut = { ...osaka, check_out: '2027-03-09', nights: 3 };
+    return locusChanges([cut, tokyo], ['2027-03-08', '2027-03-09']).length === 1;
+  })());
 }
 
 console.log(errors.length ? `\n❌ ${errors.length} Probe(n) fehlgeschlagen\n` : '\n🎉 Reisetage und Ortswechsel passen\n');

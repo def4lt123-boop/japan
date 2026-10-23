@@ -17,7 +17,7 @@ import { endTrip, liveDay, nextUp, startHint, startTrip } from '../../../../lib/
 import { dayPlaces, shiftWithin } from '../../../../lib/dayplan';
 import { dayContext } from '../../../../lib/today';
 import { locusChanges, stayOn } from '../../../../lib/locus';
-import { ChangeStrip } from '../../../../components/Ortswechsel';
+import { ChangeStrip } from '../../../../components/ChangeStrip';
 import { dayPlan } from '../../../../lib/stats';
 import { TICKET_META, categoryMeta, mapsUrl } from '../../../../lib/categories';
 import { dayStops, routeUrl } from '../../../../lib/maps';
@@ -35,7 +35,7 @@ export default function TodayPage() {
 
   const iso = liveDay(bundle.trip, today())?.iso ?? today();
   const days = useMemo(() => (bundle.trip ? dayPlan(bundle) : []), [bundle]);
-  const changes = useMemo(() => locusChanges(bundle.places, bundle.hotels, days.map((d) => d.date), bundle.journeys), [bundle, days]);
+  const changes = useMemo(() => locusChanges(bundle.hotels, days.map((d) => d.date), bundle.journeys), [bundle, days]);
   const day = days.find((d) => d.date === iso) ?? null;
   const list = dayPlaces(bundle.places, iso);
 
@@ -194,7 +194,7 @@ function Unterwegs({ bundle, tripId, open, store, iso, list, days, changes, offe
 
       {change ? (
         <Card className="overflow-hidden p-0">
-          <ChangeStrip date={change.date} from={change.from ?? '—'} to={change.to} fromHotel={change.fromHotel} toHotel={change.toHotel} daysInOld={change.daysInOld} onOpen={() => open({ kind: 'move', date: change.date })} />
+          <ChangeStrip date={change.date} from={change.from} to={change.to} fromHotel={change.fromHotel} toHotel={change.toHotel} nightsInOld={change.nightsInOld} journey={change.journey?.title ?? null} />
         </Card>
       ) : null}
 

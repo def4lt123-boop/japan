@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useStore, useTrip } from '../../../../lib/store';
 import { useEditor } from '../../../../components/EditorProvider';
@@ -55,9 +56,6 @@ export default function HotelsPage() {
             <Button size="sm" variant="ghost" onClick={() => setSortBy((s) => (s === 'datum' ? 'preis' : 'datum'))}>
               {sortBy === 'datum' ? '↓ Preis' : '↑ Datum'}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => open({ kind: 'move' })} title="Stadt und Betten an einem Tag tauschen">
-              🔀 Ortswechsel
-            </Button>
             <Button size="sm" variant="primary" onClick={() => open({ kind: 'hotel' })}>
               ＋ Unterkunft
             </Button>
@@ -67,31 +65,27 @@ export default function HotelsPage() {
 
       {(() => {
         const days = trip ? dayPlan({ ...bundle, trip }) : [];
-        const changes = locusChanges(bundle.places, bundle.hotels, days.map((d) => d.date), bundle.journeys);
+        const changes = locusChanges(bundle.hotels, days.map((d) => d.date), bundle.journeys);
         if (!changes.length) return null;
         return (
           <Card className="p-3">
             <div className="mb-2 flex items-center gap-2">
               <h3 className="text-[13px] font-semibold text-white">🔀 Ortswechsel</h3>
-              <span className="text-[11.5px] text-slate-500">{plural(changes.length, 'Umzug', 'Umzüge')} zwischen den Städten</span>
-              <button className="btn-quiet ml-auto !px-2 !py-0.5 !text-[11.5px] normal-case tracking-normal" onClick={() => open({ kind: 'move', date: changes[0].date })}>
-                eintragen ändern
-              </button>
+              <span className="text-[11.5px] text-slate-500">{plural(changes.length, 'Umzug', 'Umzüge')} – aus den Betten gelesen</span>
+              <Link href={`/t/${tripId}/karte`} className="ml-auto text-[11.5px] text-slate-400 underline-offset-2 hover:text-white hover:underline">
+                auf der Karte
+              </Link>
             </div>
             <ol className="space-y-1.5">
               {changes.map((c) => (
-                <li key={c.date} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-black/20 px-2.5 py-1.5 text-[12.5px]">
+                <li key={c.date} data-change={c.date} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-black/20 px-2.5 py-1.5 text-[12.5px]">
                   <span className="font-medium tabular-nums text-white">{fmtDate(c.date, { weekday: 'short', day: '2-digit', month: '2-digit' })}</span>
                   <span className="text-slate-300">
                     {c.from} → {c.to}
                   </span>
-                  <span className={cx('text-slate-500', !c.toHotel && 'text-amber-200/80')}>
-                    {c.toHotel ? `🏨 ${c.toHotel}` : `🏨 noch keine Unterkunft in ${c.to}`}
-                  </span>
-                  {c.daysInOld ? <span className="text-slate-600">· {plural(c.daysInOld, 'Nacht', 'Nächten')} in {c.from}</span> : null}
-                  <button className="ml-auto text-[11.5px] text-slate-400 underline-offset-2 hover:text-white hover:underline" onClick={() => open({ kind: 'move', date: c.date })}>
-                    anpassen
-                  </button>
+                  <span className="text-slate-500">🏨 {c.toHotel}</span>
+                  {c.nightsInOld ? <span className="text-slate-600">· {plural(c.nightsInOld, 'Nacht', 'Nächten')} in {c.from}</span> : null}
+                  {c.journey ? <span className="text-slate-600">· 🚄 {c.journey.title}</span> : <span className="text-amber-200/70">· 🚄 Fahrt fehlt</span>}
                 </li>
               ))}
             </ol>

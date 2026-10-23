@@ -10,7 +10,6 @@ import { Button, Card, Menu, cx } from '../../../components/ui';
 import { daysBetween, fmtMoney, fmtRange, plural } from '../../../lib/format';
 import { costsOf, dayPlan } from '../../../lib/stats';
 import { endTrip, startHint, startTrip, tripMode } from '../../../lib/mode';
-import { locusChanges } from '../../../lib/locus';
 import { today } from '../../../lib/format';
 import { needsCategory } from '../../../lib/categories';
 import { checkTrip } from '../../../lib/checks';
@@ -86,7 +85,6 @@ function TripTopBar({ tripId }: { tripId: string }) {
   const needsCat = bundle.places.filter((p) => needsCategory(p)).length;
   const openPool = bundle.places.filter((p) => !p.date).length;
   const planDays = bundle.trip ? dayPlan(bundle) : [];
-  const changeCount = locusChanges(bundle.places, bundle.hotels, planDays.map((d) => d.date), bundle.journeys).length;
   const days = trip?.start_date && trip?.end_date ? daysBetween(trip.start_date, trip.end_date) : 0;
   const live = tripMode(bundle.trip) === 'live';
   const offenHeute = bundle.places.filter((p) => p.date === today() && p.booking_status !== 'erledigt').length;
@@ -169,7 +167,6 @@ function TripTopBar({ tripId }: { tripId: string }) {
               ? [{ icon: '▶️', label: 'Reise starten', hint: startHint({ ...bundle }) || 'die Unterwegs-Seite öffnet sich', run: () => startTrip(store, bundle) }]
               : []),
             ...(live ? [{ icon: '🚶', label: 'Heutiger Tag', hint: offenHeute ? `${plural(offenHeute, 'Punkt', 'Punkte')} heute noch offen` : 'alles erledigt', href: `/t/${tripId}/heute` }] : []),
-            { icon: '🔀', label: 'Ortswechsel eintragen', hint: changeCount ? `${plural(changeCount, 'Wechsel', 'Wechsel')} erkannt` : 'Stadt und Bett an einem Tag tauschen', run: () => open({ kind: 'move' }) },
             ...(missingCoords
               ? [{ icon: '🌍', label: `${missingCoords} Punkte ohne Ort`, hint: 'die Kartensuche setzt den Punkt', run: () => void geocodeAll() }]
               : []),

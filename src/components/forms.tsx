@@ -263,7 +263,7 @@ export function PlaceForm({
   jpyRate?: number;
   tripStart?: string | null;
   tripEnd?: string | null;
-  onSubmit: (place: Place) => void;
+  onSubmit: (place: Place, again?: boolean) => void;
   onCancel: () => void;
   onDelete?: (place: Place) => void;
 }) {
@@ -307,17 +307,20 @@ export function PlaceForm({
   const knownCategories = useMemo(() => store.places.filter((x) => x.trip_id === tripId).map((x) => x.category), [store.places, tripId]);
   const amTag = draft.date ? store.places.filter((p) => p.date === draft.date && p.id !== value?.id).length : 0;
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = (e: React.FormEvent, again = false) => {
+    e.preventDefault?.();
     if (!draft.name.trim()) return;
     const { name, city } = draft;
-    onSubmit({
-      ...draft,
-      name: name.trim(),
-      city: city.trim() || 'Unbekannt',
-      ticket_status: (draft.ticket_status ?? 'unklar') as TicketStatus,
-      sort_order: draft.sort_order ?? 0,
-    });
+    onSubmit(
+      {
+        ...draft,
+        name: name.trim(),
+        city: city.trim() || 'Unbekannt',
+        ticket_status: (draft.ticket_status ?? 'unklar') as TicketStatus,
+        sort_order: draft.sort_order ?? 0,
+      },
+      again,
+    );
   };
 
   return (
@@ -335,6 +338,15 @@ export function PlaceForm({
           <Button variant="quiet" onClick={onCancel}>
             Abbrechen
           </Button>
+          {isNew ? (
+            <Button
+              variant="ghost"
+              title="speichern und weitertippen – Tag, Stadt und Status bleiben im Formular stehen"
+              onClick={(e) => submit(e as unknown as React.FormEvent, true)}
+            >
+              ✓ speichern &amp; weiter
+            </Button>
+          ) : null}
           <Button variant="primary" onClick={(e) => submit(e as unknown as React.FormEvent)}>
             Speichern <span className="opacity-60">(⌘↵)</span>
           </Button>
@@ -475,7 +487,7 @@ export function HotelForm({
   cities: string[];
   tripStart?: string | null;
   tripEnd?: string | null;
-  onSubmit: (h: Hotel) => void;
+  onSubmit: (h: Hotel, again?: boolean) => void;
   onCancel: () => void;
   onDelete?: (h: Hotel) => void;
 }) {
@@ -534,6 +546,18 @@ export function HotelForm({
           <Button variant="quiet" onClick={onCancel}>
             Abbrechen
           </Button>
+          {isNew ? (
+            <Button
+              variant="ghost"
+              title="speichern und gleich das nächste Bett in derselben Stadt ansetzen – ab dem Check-out von hier"
+              onClick={() => {
+                if (!draft.name.trim()) return;
+                onSubmit({ ...draft, name: draft.name.trim(), price_per_night_eur: derived.perNight ?? null }, true);
+              }}
+            >
+              ✓ speichern &amp; weiter
+            </Button>
+          ) : null}
           <Button
             variant="primary"
             onClick={() => {
@@ -755,7 +779,7 @@ export function ExpenseForm({
   jpyRate?: number;
   tripStart?: string | null;
   tripEnd?: string | null;
-  onSubmit: (e: Expense) => void;
+  onSubmit: (e: Expense, again?: boolean) => void;
   onCancel: () => void;
   onDelete?: (e: Expense) => void;
 }) {
@@ -787,6 +811,15 @@ export function ExpenseForm({
           <Button variant="quiet" onClick={onCancel}>
             Abbrechen
           </Button>
+          {isNew ? (
+            <Button
+              variant="ghost"
+              title="speichern und den nächsten Bon eintippen – Datum, Kategorie und Wer-zahlte bleiben stehen"
+              onClick={() => onSubmit({ ...draft, amount_eur: draft.amount_eur ?? 0 }, true)}
+            >
+              ✓ speichern &amp; weiter
+            </Button>
+          ) : null}
           <Button variant="primary" onClick={() => onSubmit({ ...draft, amount_eur: draft.amount_eur ?? 0 })}>
             Speichern
           </Button>
@@ -807,8 +840,8 @@ export function ExpenseForm({
           <Field label="Kategorie">
             <Select options={EXPENSE_CATEGORIES} value={draft.category} onChange={(e) => set({ category: e.target.value })} />
           </Field>
-          <Field label="Wer war in Vorleistung?">
-            <TextInput value={draft.payer ?? ''} onChange={(e) => set({ payer: e.target.value })} placeholder="z. B. Satzi / Anna" />
+          <Field label="Wer war in Vorleistung?" hint="ein Name pro Anteil – `Satzi / Satzi / Anna` heißt: Satzi trug zwei der drei Anteile">
+            <TextInput value={draft.payer ?? ''} onChange={(e) => set({ payer: e.target.value })} placeholder="Satzi / Satzi / Anna" />
           </Field>
         </div>
         <Field label="Betrag in ¥" hint="beim Verlassen: Umrechnung mit dem Kurs der Reise">

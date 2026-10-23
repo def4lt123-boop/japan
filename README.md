@@ -15,13 +15,17 @@ Fünf Reiter, alles Wichtige vorn, der Rest hinter `⋯`. Wer die Reise startet,
 | Reiter | Inhalt |
 | --- | --- |
 | 🚶 **Unterwegs** | (nur im gestarteten Modus) der Tag als App für die Hosentasche: Tageskopf mit *Tag 3 von 40*, Stadt, Bett und *2/5 erledigt*, darunter **als nächstes** = der erste noch offene Punkt der Liste mit 🗺️ Route und ✓ abhaken, danach die nummerierte Liste des Tages zum Umhängen, dann der **Reiseplan** der drei nächsten Tage und der 🔀 Ortswechsel. Editieren ist nur das kleine ✎ daneben |
-| 🗓️ **Tage** | **oben die Liste „Noch ohne Tag“**: jeder neue Punkt landet hier, Tag im Dropdown wählen und **✓ hinlegen** – der Punkt rutscht ans Ende dieses Tages. Darunter ein Kartenstapel pro Reisetag: **die Punkte des Tages als nummerierte Liste**. Auf den Tag ziehen = ans Ende, auf eine Zeile ziehen = dort einfügen, ▲▼ = eine Stelle rauf oder runter. Im `⋯` des Tages: 🗺️ Karte inline, 🧭 Tagesroute bei Google Maps, ✨ obersten Wunsch hierher legen und 🔀 **Ortswechsel an diesem Tag** · oben eine schmale Navigation mit dem Zähler je Tag |
+| 🗓️ **Tage** | **oben die Liste „Noch ohne Tag“**: jeder neue Punkt landet hier, Tag im Dropdown wählen und **✓ hinlegen** – der Punkt rutscht ans Ende dieses Tages. Darunter ein Kartenstapel pro Reisetag: **die Punkte des Tages als nummerierte Liste**. Auf den Tag ziehen = ans Ende, auf eine Zeile ziehen = dort einfügen, ▲▼ = eine Stelle rauf oder runter. Im `⋯` des Tages: 🗺️ Karte inline, 🧭 Tagesroute bei Google Maps und ✨ obersten Wunsch hierher legen · oben eine schmale Navigation mit dem Zähler je Tag |
 | 🗂️ **Aktivitäten** | alles als Liste untereinander: oben, was noch **ohne Tag** ist, darunter die Tage mit ihrer Nummer. Tag, **🏷️ Kategorie**, Ticket und Status direkt in der Zeile (ein Dropdown, kein Tippen) – **derselbe Punkt zweimal am selben Tag wird abgewiesen** |
 | 🗺️ **Karte** | Marker (Farbe = Kategorie, hohle Kontur = noch ohne Tag), Route des Tages als Linie, 🏨 Unterkünfte · **Hintergrund: offene OpenStreetMap-Kacheln** – kein API-Key, keine Testphase, keine Rechnung, dunkel gefiltert oder hell umschaltbar · rechte Spalte dieselbe Ansicht bei Google Maps, Punkte ohne Ort lassen sich einzeln oder auf einen Schlag suchen · **Filter nach Tag, Stadt und Kategorie**, im Popup des Punktes die Kategorie gleich umstellen |
 | 🧳 **Reise** | Unterkünfte · Fahrten · Kosten in einem Screen (Umschalter oben), darunter alle Downloads: CSV, JSON, KML |
 | 📊 **Übersicht** | grafische Reisekarte: Bett-Band über alle Tage, jeder Tag als Feld mit Zähler und Säulenhöhe, Ring „Planungsgrad“, Checklist „was noch fehlt“ und „was noch frei ist“ |
 
 Kategorien sind ein **Dropdown** mit 16 festen Begriffen plus allem, was in der Reise schon drinsteht – nichts verschwindet. **🏷️ automatisch kategorisieren** (unten in der Karten-Legende und im `⋯`-Menü) gibt allen Punkten, die noch keinen passenden Begriff haben, eine Kategorie aus Name und Notiz; was schon sauber dasteht, wird nicht angefasst.
+
+**Alles wird getippt, also ist das Tippen der Weg.** In jeder neuen Maske steht außer dem Namen schon so viel wie möglich da: Tag und Stadt kommen aus dem Bett des Tages, Status und Kategorie bleiben vom letzten Punkt, die neue Aktivität rutscht ans Ende der Tagesliste (die Tipp-Reihenfolge ist die Reihenfolge) und in 📋 Tabelle lässt sich die Stelle auch eintippen – 3 und Enter, der Rest des Tages zieht nach. **✓ speichern & weiter** in Aktivität, Unterkunft und Ausgabe schließt das Formular nicht, sondern leert nur das Nötigste: weiter geht's zum nächsten Punkt, zum nächsten Bett (Check-in schon am alten Check-out) oder zum nächsten Bon (Datum, Kategorie und Zahler bleiben stehen). Beim Verlassen rechnet die Maske ¥ → € und zeigt den Umrechnerkurs, ⌘↵ speichert wie immer.
+
+**Wer war in Vorleistung?** ist ein Feld, das mehrere Köpfe annimmt: `Satzi / Anna` teilt die Ausgabe durch zwei, `Satzi / Satzi / Anna` heißt – Satzi trug zwei der drei Anteile. Auf 💶 Kosten steht daraus die Rechnung: wer vorgestreckt hat, was ein Kopf tragen müsste und wer wem was zurückgibt. Ausgaben ohne Zahler laufen nicht mit, sie werden genannt.
 
 Jedes `⋯`-Menü sitzt am **Viewport** verankert – auf dem Handy als Blech von unten mit großen Feldern, auf dem Desktop als Panel, das nie über den Rand läuft und sich nach oben öffnet, wenn darunter zu wenig Platz ist (`npm run test:layout` prüft 60 Geräte-/Knopf-Kombinationen, `npm run test:mode` das Starten und Zurücknehmen des Unterwegs-Modus).
 
@@ -31,7 +35,7 @@ Zwei Zustände, ein Reiseplan: **🗓️ planen** und **🚶 unterwegs**. **▶�
 
 Der **Nächte-Check** auf der Unterkünfte-Seite zeigt jede Nacht der Reise als Kachel – eingefärbt in der Farbe der Unterkunft, mit einer neuen Gruppe dort, wo das Bett wechselt. Eine Nacht antippen öffnet das Bett (oder trägt für eine Lücke sofort eines ein, Stadt aus der Nachbar-Nacht vorbelegt). Auf 🗓️ Tage steht dieselbe Information als farbige Zeile unter den Fahrten des Tages. Gezählt wird bis einen Tag vor Abreise – die Nacht am Abreisetag ist keine Nacht mehr.
 
-Der **🔀 Ortswechsel** (Unterkünfte, Karte des Tages, ⋯-Menü) trägt einen Stadtwechsel in einem Schritt ein: der Dialog zeigt, in welcher Stadt du an dem Tag schläfst, und schreibt dann die Aktivitäten (nur diesen Tag oder alles Danach), die Unterkünfte (alter Check-out, neuer Check-in, Nächte) und – wenn gewünscht – die passende Fahrt ins Fahrten-Log. Erkannte Wechsel stehen chronologisch auf der Unterkünfte-Seite und als Streifen auf 🗓️ Tage und 🚶 Unterwegs.
+**Wo du bist, steht in den Betten.** Die Stadt eines Tages ist die Stadt der Unterkunft, die diese Nacht deckt; wechselt sie, ist das der Ortswechsel – es gibt dafür kein Formular und nichts einzutragen. Trägst du in einer anderen Stadt ein Bett ein, das mitten in einen alten Block fällt, endet der Block an diesem Check-in von selbst (zwei Betten in derselben Stadt, etwa Osaka plus USJ-Nacht, bleiben beide stehen). Die Wechsel stehen chronologisch auf 🏨 Unterkünfte und als schmaler Streifen auf 🗓️ Tage und 🚶 Unterwegs; die Fahrt an dem Tag wird angehängt, wenn sie schon im Fahrten-Log steht, sonst kommt 🚄 *Fahrt fehlt*.
 
 Immer nur zwei Knöpfe oben rechts: **＋ Anlegen** (Aktivität, Unterkunft, Fahrt, Ausgabe – mit kurzer Erklärung, was die Kachel tut) und
 **⋯** (Reise bearbeiten, Punkte nachziehen, alle Tage sortieren, als Tabelle öffnen, exportieren, drucken). Feinfilter, Tabellenansicht,
@@ -62,6 +66,8 @@ npm run test:render  # alle Seiten + Formulare werden wirklich gerendert
 npm run test:dayplan # Rechenprobe: Liste, Reihenfolge, Duplikate
 npm run test:dates   # Tage & Nächte – absichtlich in Europe/Vienna, ohne UTC-Sprung
 npm run test:checks  # Prüfrundgang: Löcher, Doppelbetten, versetzter Zeitraum
+npm run test:today   # Reisetage, Stadt des Tages und die Umzüge aus den Betten
+npm run test:shares  # Vorleistung: Namen, Anteile und Ausgleich pro Kopf
 npm run test:all     # Typecheck + alle Proben
 npm run seed:sql     # data/seed.json → supabase/seed.sql
 ```

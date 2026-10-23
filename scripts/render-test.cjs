@@ -71,7 +71,7 @@ const PAGES = [
   { name: 'Unterkünfte', path: '/t/trip-2027/unterkuenfte', file: '../src/app/t/[tripId]/unterkuenfte/page.tsx', expect: [/Nächte-Check/, /Hotel Tokio/] },
   { name: 'Tages-Ausdruck', path: '/t/trip-2027/druck', file: '../src/app/t/[tripId]/druck/page.tsx', expect: [/Tages-Ausdruck/, /Tag 1 ·/, /Notizen/, /ganze Reise/] },
   { name: 'Reise prüfen', path: '/t/trip-2027/pruefen', file: '../src/app/t/[tripId]/pruefen/page.tsx', expect: [/Reise prüfen/, /ohne Bett/, /Betten ansehen/] },
-  { name: 'Kosten', path: '/t/trip-2027/kosten', file: '../src/app/t/[tripId]/kosten/page.tsx', expect: [/Budgetauslastung/, /Alle Posten/] },
+  { name: 'Kosten', path: '/t/trip-2027/kosten', file: '../src/app/t/[tripId]/kosten/page.tsx', expect: [/Budgetauslastung/, /Alle Posten/, /Wer hat vorgestreckt/] },
   { name: 'Reiseverlauf', path: '/t/trip-2027/verlauf', file: '../src/app/t/[tripId]/verlauf/page.tsx', expect: [/Reiseverlauf/, /Ankunft/] },
   { name: 'Referenz 2025', path: '/t/trip-2025/uebersicht', file: '../src/app/t/[tripId]/uebersicht/page.tsx', expect: [/Japan 2025|Reisedauer/] },
   { name: 'Reise', path: '/t/trip-2027/reise', file: '../src/app/t/[tripId]/reise/page.tsx', expect: [/Unterkünfte/, /Fahrten/, /Dateien/] },
@@ -412,6 +412,36 @@ async function render(name, Page, tripId) {
   const selects = c3.querySelectorAll('tbody select').length;
   const tickets = c3.querySelectorAll('tbody select').length;
   const tableOk = rows > 60 && inputs === rows && selects === rows * 4;
+  // Stelle in der Tabelle eintippen: ein Number-Feld pro Tag-Zeile, 3 übernehmen
+  const numInputs = [...c3.querySelectorAll('tbody input[type="number"][data-order]')];
+  const dated = [...c3.querySelectorAll('tbody input[type="date"]')].filter((i) => i.value).length;
+  const dateOf = (inp) => inp.closest('tr').querySelector('input[type="date"]').value;
+  const perDay = {};
+  for (const i of numInputs) {
+    const d = dateOf(i);
+    perDay[d] = (perDay[d] || 0) + 1;
+  }
+  const target = numInputs.find((i) => i.value === '1' && perDay[dateOf(i)] >= 3);
+  let moved = false;
+  if (target) {
+    const id = target.getAttribute('data-order');
+    const setter = Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set;
+    await act(async () => {
+      setter.call(target, '3');
+      target.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      target.dispatchEvent(new dom.window.Event('blur', { bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 40));
+    });
+    const after = c3.querySelector(`tbody input[data-order="${id}"]`);
+    moved = Boolean(after && after.value === '3');
+  }
+  const orderOk = numInputs.length === dated && dated > 0 && moved;
+  console.log((orderOk ? '✅' : '❌') + ` Tabelle: ${numInputs.length} Stelle-Felder (eine pro Tag-Zeile), Umsetzen auf 3 ${moved ? 'funktioniert' : 'klappte nicht'}`);
+  if (!orderOk) failures.push('Reihe eintippen');
   console.log((tableOk ? '✅' : '❌') + ` Tabelle: ${rows} Zeilen, ${inputs} Datums-Edits, ${selects} Status/Ticket/Prio/Kategorie-Selects`);
   if (!tableOk) console.log('   erwartet: rows*4 Selects, gefunden ' + tickets);
   if (!tableOk) failures.push('Tabelle Inline-Edits');
@@ -483,7 +513,7 @@ async function render(name, Page, tripId) {
     console.log('   text:', backText.slice(0, 300));
   }
 
-  // 🔀 Ortswechsel: Dialog vom Unterkünfte-Block
+  // Unterkünfte: Container für die Blöcke darunter
   nav.setPath('/t/trip-2027/unterkuenfte');
   const HotelsPage = require('../src/app/t/[tripId]/unterkuenfte/page.tsx').default;
   const cHot = document.createElement('div');
@@ -533,22 +563,96 @@ async function render(name, Page, tripId) {
   console.log((nightEditor ? '✅' : '❌') + ' Nacht antippen öffnet die passende Unterkunft');
   if (!nightEditor) failures.push('Nacht antippen');
 
-  const openMove = [...cHot.querySelectorAll('button')].find((b) => /eintragen ändern|🔀 Ortswechsel/.test(b.textContent || ''));
-  if (openMove) {
+  // 🔀 Ortswechsel: aus den Betten gelesen – es gibt nichts einzutragen
+  {
+    const rows = [...cHot.querySelectorAll('[data-change]')];
+    const hotText = cHot.textContent || '';
+    const readFromBeds = /🔀 Ortswechsel/.test(hotText) && /aus den Betten gelesen/.test(hotText);
+    const noEntry = ![...cHot.querySelectorAll('button')].some((b) => /Ortswechsel|eintragen|anpassen/i.test(b.textContent || ''));
+    const movesOk = rows.length > 0 && readFromBeds && noEntry;
+    console.log((movesOk ? '✅' : '❌') + ` 🔀 Ortswechsel: ${rows.length} Umzüge aus den Betten gelesen, kein Formular mehr nötig`);
+    if (!movesOk) {
+      failures.push('Ortswechsel aus Betten');
+      console.log('   text:', hotText.slice(0, 300));
+    }
+    // Tagesseite: der Streifen informiert, er öffnet nichts
+    nav.setPath('/t/trip-2027/tage');
+    const TagePage = require('../src/app/t/[tripId]/tage/page.tsx').default;
+    const cTage2 = document.createElement('div');
+    document.body.appendChild(cTage2);
+    const rTage2 = createRoot(cTage2);
     await act(async () => {
-      openMove.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+      rTage2.render(React.createElement(StoreProvider, null, React.createElement(EditorProvider, { tripId: 'trip-2027' }, React.createElement(TagePage))));
     });
     await act(async () => {
-      await new Promise((r) => setTimeout(r, 80));
+      await new Promise((r) => setTimeout(r, 60));
     });
+    const strips = [...cTage2.querySelectorAll('[data-change]')];
+    const stripOk =
+      strips.length === rows.length &&
+      strips.every((el) => el.tagName === 'DIV' && !el.closest('button') && el.querySelectorAll('button').length === 0) &&
+      strips.every((el) => /→/.test(el.textContent || '') && /aus den Betten/.test(el.textContent || ''));
+    console.log((stripOk ? '✅' : '❌') + ` 🔀 Tageskarten: ${strips.length} Streifen, reine Info – nichts anzuklicken`);
+    if (!stripOk) failures.push('Ortswechsel-Streifen ohne Dialog');
+    await act(async () => rTage2.unmount());
+    cTage2.remove();
   }
-  const bodyText = document.body.textContent || '';
-  const dialogOk = Boolean(openMove) && /Neue Stadt/.test(bodyText) && /Wechsel eintragen/.test(bodyText) && /Was soll mitwandern/.test(bodyText);
-  console.log((dialogOk ? '✅' : '❌') + ' 🔀 Ortswechsel-Dialog: Stadt, Betten und Fahrt in einem Schritt');
-  if (!dialogOk) {
-    failures.push('Ortswechsel-Dialog');
-    console.log('   text:', bodyText.slice(-400));
+
+  // ⌨️ Tipp-Komfort: „✓ speichern & weiter" lässt das Formular offen
+  {
+    const { PlaceForm, HotelForm, ExpenseForm } = require('../src/components/forms.tsx');
+    const cForms = document.createElement('div');
+    document.body.appendChild(cForms);
+    const rForms = createRoot(cForms);
+    const seen = [];
+    const forms = [PlaceForm, HotelForm, ExpenseForm];
+    const props = [
+      { tripId: 'trip-2027', cities: ['Osaka'], value: {} },
+      { tripId: 'trip-2027', cities: ['Osaka'], value: {} },
+      { tripId: 'trip-2027', value: {} },
+    ];
+    await act(async () => {
+      rForms.render(
+        React.createElement(
+          StoreProvider,
+          null,
+          ...forms.map((Form, i) =>
+            React.createElement(Form, {
+              key: Form.name,
+              ...props[i],
+              onSubmit: (v, again) => seen.push([Form.name, again === true]),
+              onCancel: () => {},
+            }),
+          ),
+        ),
+      );
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 40));
+    });
+    const weiter = [...cForms.querySelectorAll('button')].filter((b) => /speichern & weiter/.test(b.textContent || ''));
+    const named = cForms.querySelector('#place-name-input');
+    const typed = (() => {
+      if (!named) return false;
+      const setter = Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set;
+      setter.call(named, 'Dotonbori');
+      named.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+      return true;
+    })();
+    if (typed) {
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 40));
+      });
+      const again = [...cForms.querySelectorAll('button')].find((b) => /speichern & weiter/.test(b.textContent || ''));
+      if (again) await act(async () => { again.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    }
+    const comfortOk = weiter.length === 3 && seen.some(([n, a]) => n === 'PlaceForm' && a === true);
+    console.log((comfortOk ? '✅' : '❌') + ` ⌨️ „✓ speichern & weiter“ in ${weiter.length}/3 Masken – Weiter-Tipp liefert wieder (${JSON.stringify(seen)})`);
+    if (!comfortOk) failures.push('Weiter-Tipp in den Masken');
+    await act(async () => rForms.unmount());
+    cForms.remove();
   }
+
   // Tages-Ausdruck: ein Blatt pro Reisetag, Bett und Nummerierung auf Papier
   {
     nav.setPath('/t/trip-2027/druck');

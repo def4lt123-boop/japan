@@ -18,7 +18,7 @@ import { assign, dayPlaces, moveToIndex, shiftWithin } from '../../../../lib/day
 import { Button, Card, Empty, Menu, SectionTitle, cx } from '../../../../components/ui';
 import { dayPlan, nightCoverage } from '../../../../lib/stats';
 import { locusChanges } from '../../../../lib/locus';
-import { ChangeStrip } from '../../../../components/Ortswechsel';
+import { ChangeStrip } from '../../../../components/ChangeStrip';
 import { addDays, today } from '../../../../lib/format';
 import { fmtDate, plural } from '../../../../lib/format';
 import { tintFor } from '../../../../lib/palette';
@@ -48,7 +48,7 @@ export default function DaysPage() {
   const pool = bundle.places.filter((p) => !p.date);
   const coverage = new Map(bundle.trip ? nightCoverage(bundle).map((n) => [n.date, n]) : []);
   const dateIndex = new Map(days.map((d, i) => [d.date, i]));
-  const changeByDate = new Map(locusChanges(bundle.places, bundle.hotels, days.map((d) => d.date), bundle.journeys).map((c) => [c.date, c]));
+  const changeByDate = new Map(locusChanges(bundle.hotels, days.map((d) => d.date), bundle.journeys).map((c) => [c.date, c]));
   const now = today();
 
   const moveDay = (placeId: string, from: string | null, dir: -1 | 1) => {
@@ -184,7 +184,6 @@ export default function DaysPage() {
                       ...(stops.length > 1 ? [{ icon: '🧭', label: 'Tag als Route bei Google Maps', hint: `${stops.length} Halte, in der Reihenfolge der Liste`, href: routeUrl({ origin: origin!, destination: destination!, stops: via, mode: 'transit' as const }) }] : []),
                       ...(stops.length ? [{ icon: '🗺️', label: mapDay === d.date ? 'Karte ausblenden' : 'Karte zu diesem Tag zeigen', run: () => setMapDay((cur) => (cur === d.date ? null : d.date)) }] : []),
                       ...(pool.length ? [{ icon: '✨', label: 'Obersten Wunsch hierher legen', hint: pool[0].name, run: () => { const candidate = pool.find((x) => x.city === d.places[0]?.city) ?? pool[0]; if (candidate) assign(store, bundle.places, candidate, { date: d.date }); } }] : []),
-                      { icon: '🔀', label: 'Ortswechsel an diesem Tag', hint: 'Stadt, Bett und Fahrt umtragen', run: () => open({ kind: 'move', date: d.date }) },
                       { icon: '🗂️', label: 'Alle Aktivitäten der Reise', href: `/t/${tripId}/aktivitaeten` },
                     ]}
                   />
@@ -198,8 +197,8 @@ export default function DaysPage() {
                   to={changeByDate.get(d.date)!.to}
                   fromHotel={changeByDate.get(d.date)!.fromHotel}
                   toHotel={changeByDate.get(d.date)!.toHotel}
-                  daysInOld={changeByDate.get(d.date)!.daysInOld}
-                  onOpen={() => open({ kind: 'move', date: d.date })}
+                  nightsInOld={changeByDate.get(d.date)!.nightsInOld}
+                  journey={changeByDate.get(d.date)!.journey?.title ?? null}
                 />
               ) : null}
 

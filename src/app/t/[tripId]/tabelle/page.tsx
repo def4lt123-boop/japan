@@ -10,14 +10,14 @@ import { STATUS_META, TICKET_META, TICKET_ORDER, categoryMeta, mapsUrl } from '.
 import { CategoryPicker } from '../../../../components/CategoryPicker';
 import { BOOKING_STATUSES, PRIORITIES, TICKET_STATUSES, type Place } from '../../../../lib/types';
 import { fmtDate, fmtMoney } from '../../../../lib/format';
-import { dayPlaces } from '../../../../lib/dayplan';
+import { dayPlaces, moveToIndex } from '../../../../lib/dayplan';
 import { download, placeCsv } from '../../../../lib/export';
 
 type SortKey = 'date' | 'reihe' | 'city' | 'name' | 'category' | 'price' | 'status' | 'prio' | 'ticket';
 
 const COLS: { key: SortKey | null; label: string; hint?: string; className?: string }[] = [
   { key: 'date', label: 'Tag', hint: 'Wann – leer = noch an keinem Tag' },
-  { key: 'reihe', label: 'Reihe', hint: 'Stelle an diesem Tag – auf der Tagesseite ziehen oder ▲▼' },
+  { key: 'reihe', label: 'Reihe', hint: 'Stelle an diesem Tag – Zahl eintippen und mit Enter übernehmen' },
   { key: 'city', label: 'Stadt' },
   { key: 'name', label: 'Aktivität' },
   { key: 'category', label: 'Kategorie' },
@@ -156,7 +156,32 @@ export default function TablePage() {
                         title={p.date ? fmtDate(p.date, { weekday: 'long' }) : 'noch kein Tag – steht in der Liste unter Aktivitäten'}
                       />
                     </td>
-                    <td className="cell whitespace-nowrap text-center tabular-nums text-slate-400">{p.date ? reihe.get(p.id) ?? '—' : '—'}</td>
+                    <td className="cell whitespace-nowrap text-center">
+                      {p.date ? (
+                        <input
+                          key={`${p.id}-${reihe.get(p.id) ?? 0}`}
+                          data-order={p.id}
+                          type="number"
+                          min={1}
+                          max={99}
+                          defaultValue={reihe.get(p.id) ?? 1}
+                          onBlur={(e) => {
+                            const want = Number.parseInt(e.target.value, 10);
+                            const now = reihe.get(p.id) ?? 0;
+                            if (!Number.isFinite(want) || want < 1 || want === now) return;
+                            moveToIndex(store, bundle.places, p.id, p.date as string, want - 1);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                          }}
+                          className="w-[46px] rounded border border-transparent bg-transparent px-1 py-0.5 text-center text-[12px] tabular-nums text-slate-300 outline-none hover:border-white/15 focus:border-shu-400/70 focus:bg-black/30"
+                          title="Stelle an diesem Tag – 3 und Enter setzt den Punkt an dritte Stelle"
+                          aria-label={`Stelle für ${p.name}`}
+                        />
+                      ) : (
+                        <span className="text-[12px] tabular-nums text-slate-500">—</span>
+                      )}
+                    </td>
                     <td className="cell whitespace-nowrap">
                       <span className="block text-[12.5px] font-medium text-slate-200">{p.city}</span>
                     </td>
