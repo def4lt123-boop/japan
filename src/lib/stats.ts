@@ -88,7 +88,14 @@ export function nightCoverage(bundle: BundleLike): { date: string; covered: bool
     stayCount.set(h.id, n);
   }
   return nights.map((date) => {
-    const hit = bundle.hotels.find((h) => h.check_in && h.check_out && date >= h.check_in && date < h.check_out);
+    const hits = bundle.hotels.filter((h) => h.check_in && h.check_out && date >= h.check_in && date < h.check_out);
+    // mehrere Betten für eine Nacht → das engere gewinnt: wer eine Durchgangs-Unterkunft
+    // mit einer Nacht außer Haus kombiniert, hat die kurze ja wirklich gebucht
+    const hit = hits.sort(
+      (a, b) =>
+        (stayCount.get(a.id) ?? 0) - (stayCount.get(b.id) ?? 0) ||
+        (a.check_in! === b.check_in! ? 0 : a.check_in! < b.check_in! ? 1 : -1),
+    )[0];
     return { date, covered: Boolean(hit), hotel: hit?.name ?? null, hotelId: hit?.id ?? null, stays: hit ? (stayCount.get(hit.id) ?? 0) : 0 };
   });
 }

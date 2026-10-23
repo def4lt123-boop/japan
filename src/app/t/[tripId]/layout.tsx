@@ -13,6 +13,7 @@ import { endTrip, startHint, startTrip, tripMode } from '../../../lib/mode';
 import { locusChanges } from '../../../lib/locus';
 import { today } from '../../../lib/format';
 import { needsCategory } from '../../../lib/categories';
+import { checkTrip } from '../../../lib/checks';
 import { applyCategories } from '../../../lib/categorize';
 
 /**
@@ -89,6 +90,8 @@ function TripTopBar({ tripId }: { tripId: string }) {
   const days = trip?.start_date && trip?.end_date ? daysBetween(trip.start_date, trip.end_date) : 0;
   const live = tripMode(bundle.trip) === 'live';
   const offenHeute = bundle.places.filter((p) => p.date === today() && p.booking_status !== 'erledigt').length;
+  // der Prüfrundgang hängt an den Daten – die Zahl im Menü ist deshalb immer aktuell
+  const check = useMemo(() => checkTrip(bundle, tripId).filter((f) => f.tone !== 'info'), [bundle, tripId]);
 
   return (
     <section className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
@@ -174,8 +177,9 @@ function TripTopBar({ tripId }: { tripId: string }) {
               ? [{ icon: '🏷️', label: `${needsCat} eine Kategorie geben`, hint: 'aus Name und Notiz abgeleitet', run: () => applyCategories(store, bundle.places) }]
               : []),
             { icon: '🗂️', label: 'Alles als Tabelle', hint: 'jedes Feld in einer Zeile', href: `/t/${tripId}/tabelle` },
+            { icon: '🖨️', label: 'Tages-Ausdruck', hint: 'ein Tag pro Seite – zum Drucken oder als PDF', href: `/t/${tripId}/druck` },
+            { icon: '🧯', label: 'Reise prüfen', hint: check.length ? `${plural(check.length, 'Ding', 'Dinge')} gefunden` : 'Zeiträume, Betten, Tage – nichts gefunden', href: `/t/${tripId}/pruefen` },
             { icon: '⇩', label: 'Dateien & Export', hint: 'CSV, Google-Maps-KML, JSON', href: `/t/${tripId}/reise#export` },
-            { icon: '🖨', label: 'Drucken / PDF', hint: 'Tagesplan inklusive', run: () => window.print() },
           ]}
         />
       </div>

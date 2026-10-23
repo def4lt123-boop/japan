@@ -173,6 +173,22 @@ body {
   animation: pop-in 0.14s ease-out both;
 }
 
+/* Papier – der Tages-Ausdruck sieht aus wie das Blatt, das aus dem Drucker kommt */
+.paper {
+  background: #fff;
+  color: #1c1917;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+}
+.paper a {
+  color: #1d4ed8;
+}
+
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
 @media print {
   :root {
     --bg: #ffffff;
@@ -208,4 +224,25 @@ body {
   .app-shell {
     padding: 0 !important;
   }
+  .paper {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+  /* ein Tag = eine Seite – das ist der ganze Trick am Ausdruck */
+  .print-page {
+    break-after: page;
+    page-break-after: always;
+  }
+  .print-page:last-child,
+  .paper.print-block:last-of-type {
+    break-after: auto;
+    page-break-after: auto;
+  }
+  .paper a {
+    color: #000 !important;
+    text-decoration: none !important;
+  }
+
 }

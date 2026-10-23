@@ -494,6 +494,10 @@ export function GapPanel({ tripId, items }: { tripId: string; items: GapItem[] }
           );
         })}
       </ul>
+      <p className="mt-2.5 border-t border-white/[0.06] pt-2 text-[11.5px] text-slate-500">
+        Lücken, Doppelbuchungen und verrutschte Zeiträume listet{' '}
+        <LinkTag href={`/t/${tripId}/pruefen`}>🧯 Reise prüfen</LinkTag> – dort sitzt auch der Knopf zum Nachziehen.
+      </p>
     </Card>
   );
 }
