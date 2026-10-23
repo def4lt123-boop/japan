@@ -1,9 +1,11 @@
 /**
- * Rechenprobe für Daten und Nächte – und zwar in einer Zeitzone östlich von UTC.
- * Genau dort rutscht ein `toISOString()`-Datum einen Tag zurück, und das hat mal
- * den Nächte-Check einen Tag zu kurz gemacht. Aufruf: npm run test:dates
+ * Rechenprobe für Daten und Nächte – absichtlich in einer Zeitzone, die von UTC
+ * abweicht (sonst Europe/Vienna): genau dort rutscht ein `toISOString()`-Datum um
+ * einen Tag zurück, und das hat den Nächte-Check schon einmal einen Tag zu kurz
+ * gemacht. Eine andere Zone setzen ist erlaubt: TZ=Asia/Tokyo npm run test:dates
  */
-if (!process.env.TZ) process.env.TZ = 'Europe/Vienna';
+const utcish = ['UTC', 'Etc/UTC', 'GMT', 'Etc/GMT'];
+if (!process.env.TZ || utcish.includes(process.env.TZ)) process.env.TZ = 'Europe/Vienna';
 
 const { addDays, daysBetween, eachDate, fmtDate, today } = await import('../src/lib/format.ts');
 const { shiftDate } = await import('../src/lib/planner.ts');
@@ -18,7 +20,12 @@ const step = (name: string, ok: boolean, detail?: unknown) => {
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-step(`Zeitzone wird geprüft (${process.env.TZ})`, process.env.TZ === 'Europe/Vienna');
+const offset = -new Date('2027-07-15T00:00:00').getTimezoneOffset() / 60;
+step(
+  `Rechnung läuft versetzt zu UTC (${process.env.TZ}, ${offset > 0 ? '+' : ''}${offset} h)`,
+  offset !== 0,
+  'sonst ist die Probe wertlos',
+);
 
 // ── Tages-Rechnerei ──────────────────────────────────────────────────────────
 step('addDays bleibt auf dem Tag', addDays('2027-04-01', 1) === '2027-04-02', addDays('2027-04-01', 1));
