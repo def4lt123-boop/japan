@@ -618,6 +618,176 @@ async function render(name, Page, tripId) {
     await act(async () => rCheck.unmount());
     cCheck.remove();
   }
+  // ⇪ Einfügen: Text rein, Vorschau ansehen, ein Klick – die Punkte sind da
+  {
+    nav.setPath('/t/trip-2027/aktivitaeten');
+    const Acts = require('../src/app/t/[tripId]/aktivitaeten/page.tsx').default;
+    const cImp = document.createElement('div');
+    document.body.appendChild(cImp);
+    const rImp = createRoot(cImp);
+    await act(async () => {
+      rImp.render(React.createElement(StoreProvider, null, React.createElement(EditorProvider, { tripId: 'trip-2027' }, React.createElement(Acts))));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 80));
+    });
+    const count = () => Number((/(Alle|Ohne Tag)\s*(\d+)/.exec(cImp.textContent || '') || [])[2] || 0);
+    const before = count();
+    const openBtn = [...cImp.querySelectorAll('button')].find((b) => /einfügen/.test(b.textContent || ''));
+    let dialogText = '';
+    if (openBtn) {
+      await act(async () => {
+        openBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+      });
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 60));
+      });
+      dialogText = cImp.textContent || '';
+      const filled = [...cImp.querySelectorAll('button')].find((b) => /dieses Beispiel ins Feld/.test(b.textContent || ''));
+      if (filled) {
+        await act(async () => {
+          filled.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+        });
+        await act(async () => {
+          await new Promise((r) => setTimeout(r, 60));
+        });
+      }
+    }
+    const preview = cImp.textContent || '';
+    const previewOk = /Fushimi Inari/.test(preview) && /Nishiki Markt/.test(preview) && /Zeilen gelesen/.test(preview);
+    const modal = cImp.querySelector('.pop-in') || cImp;
+    const insertBtn = [...modal.querySelectorAll('button')].filter((b) => /⇪/.test(b.textContent || '')).slice(-1)[0];
+    let inserted = false;
+    if (insertBtn) {
+      await act(async () => {
+        insertBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+      });
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 90));
+      });
+      const after = count();
+      inserted = after >= before + 1 && !/Einfügen – Aktivitäten/.test(cImp.textContent || '');
+    }
+    const dialogOk = /Einfügen – Aktivitäten/.test(dialogText);
+    console.log((dialogOk ? '✅' : '❌') + ' ⇪ Einfügen: Dialog mit Zielauswahl und Vorschau');
+    if (!dialogOk) {
+      failures.push('Import-Dialog');
+      console.log('   text:', dialogText.slice(0, 240));
+    }
+    console.log((previewOk ? '✅' : '❌') + ' Vorschau liest die Zeilen (Name, Tag, Kategorie, Status)');
+    if (!previewOk) {
+      failures.push('Import-Vorschau');
+      console.log('   vorschau:', preview.replace(/\s+/g, ' ').slice(0, 300));
+    }
+    console.log((inserted ? '✅' : '❌') + ` ⇪ Klick legt die Punkte an und schließt den Dialog (Reise: ${before} → ${count()} Punkte)`);
+    if (!inserted) {
+      failures.push('Import einfügen');
+      console.log('   offen?', /Einfügen – Aktivitäten/.test(cImp.textContent || ''), '· text:', (cImp.textContent || '').replace(/\s+/g, ' ').slice(0, 200));
+    }
+    await act(async () => rImp.unmount());
+    cImp.remove();
+  }
+
+  // ── frische Reise: bei null anfangen – so entsteht eine neue Reise ──────────
+  {
+    const fresh = {
+      trips: [
+        {
+          id: 'trip-neu',
+          name: 'Herbst 2027',
+          destination: 'Japan',
+          start_date: '2027-10-24',
+          end_date: '2027-10-28',
+          travelers: 2,
+          budget_eur: null,
+          jpy_rate: null,
+          notes: null,
+          archived: false,
+          started: false,
+          started_at: null,
+          planned_start: null,
+          planned_end: null,
+        },
+      ],
+      places: [],
+      hotels: [],
+      journeys: [],
+      expenses: [],
+    };
+    const keep = localStorage.getItem('urlaubsplaner.v2');
+    localStorage.setItem('urlaubsplaner.v2', JSON.stringify(fresh));
+    const neu = [];
+    for (const page of [
+      ['Tage', '../src/app/t/[tripId]/tage/page.tsx', /Tagesplan/],
+      ['Aktivitäten', '../src/app/t/[tripId]/aktivitaeten/page.tsx', /Noch ohne Tag|Aktivität/],
+      ['Unterkünfte', '../src/app/t/[tripId]/unterkuenfte/page.tsx', /Nächte-Check/],
+      ['Übersicht', '../src/app/t/[tripId]/uebersicht/page.tsx', /Reise/],
+      ['Karte', '../src/app/t/[tripId]/karte/page.tsx', /Karte/],
+      ['Tabelle', '../src/app/t/[tripId]/tabelle/page.tsx', /Aktivität/],
+      ['Kosten', '../src/app/t/[tripId]/kosten/page.tsx', /Budget|Kosten/],
+      ['Reise', '../src/app/t/[tripId]/reise/page.tsx', /Unterkunft/],
+      ['Fahrten', '../src/app/t/[tripId]/verlauf/page.tsx', /Fahrten|Reiseverlauf/],
+      ['Tages-Ausdruck', '../src/app/t/[tripId]/druck/page.tsx', /Tages-Ausdruck/],
+      ['Reise prüfen', '../src/app/t/[tripId]/pruefen/page.tsx', /Reise prüfen/],
+    ]) {
+      const [name, file, expect] = page;
+      nav.setPath(`/t/trip-neu/${name === 'Fahrten' ? 'verlauf' : name === 'Reise prüfen' ? 'pruefen' : name === 'Tages-Ausdruck' ? 'druck' : { Tage: 'tage', Aktivitäten: 'aktivitaeten', Unterkünfte: 'unterkuenfte', Übersicht: 'uebersicht', Karte: 'karte', Tabelle: 'tabelle', Kosten: 'kosten', Reise: 'reise' }[name]}`);
+      const Page = require(file).default;
+      const { text, errors } = await render(`leer · ${name}`, Page, 'trip-neu');
+      const ok = errors.length === 0 && expect.test(text);
+      if (!ok) {
+        neu.push(name);
+        console.log(`   ❌ leere Reise · ${name}: ${errors.slice(0, 2).map((e) => e.slice(0, 200)).join(' | ') || 'erwarteter Text fehlt'}`);
+        console.log('   text:', (text || '').replace(/\s+/g, ' ').slice(0, 300));
+      }
+    }
+    console.log((neu.length ? '❌ ' : '✅ ') + `Leere Reise: ${11 - neu.length} von 11 Seiten laufen ohne einen einzigen Eintrag`);
+    if (neu.length) failures.push('leere Reise: ' + neu.join(', '));
+
+    // die Lücke selbst schließen: Nacht antippen → Formular mit dem Datum der Nacht
+    nav.setPath('/t/trip-neu/unterkuenfte');
+    const Empty = require('../src/app/t/[tripId]/unterkuenfte/page.tsx').default;
+    const cEmpty = document.createElement('div');
+    document.body.appendChild(cEmpty);
+    const rEmpty = createRoot(cEmpty);
+    await act(async () => {
+      rEmpty.render(React.createElement(StoreProvider, null, React.createElement(EditorProvider, { tripId: 'trip-neu' }, React.createElement(Empty))));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 60));
+    });
+    const tiles = [...cEmpty.querySelectorAll('[data-night]')];
+    const offen = tiles.filter((t) => t.getAttribute('data-covered') !== 'ja').length;
+    await act(async () => {
+      tiles[0].dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 60));
+    });
+    const dialog = document.body.textContent || '';
+    // das Formular zeigt den Tag als Kalenderknopf – „Start So 24.10.27“ + „1 Nacht“
+    const prefillOk =
+      /Unterkunft/.test(dialog) &&
+      /Speichern/.test(dialog) &&
+      /Start\s*\S*\s*24\.10\.27/.test(dialog) &&
+      /1 Nacht/.test(dialog);
+    console.log(
+      (prefillOk ? '✅' : '❌') +
+        ` Leere Reise · ${tiles.length} Nächte, ${offen} ohne Bett – Lücke antippen öffnet das Formular mit dem Tag der Nacht`,
+    );
+    if (!prefillOk) {
+      failures.push('leere Reise · Nacht-Vorbelegung');
+      console.log('   dialog:', (document.body.textContent || '').replace(/\s+/g, ' ').slice(0, 320));
+    }
+    if (prefillOk) {
+      const closer = [...document.body.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') || '') === 'Schließen');
+      if (closer) await act(async () => closer.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })));
+    }
+    await act(async () => rEmpty.unmount());
+    cEmpty.remove();
+    if (keep) localStorage.setItem('urlaubsplaner.v2', keep);
+    else localStorage.removeItem('urlaubsplaner.v2');
+  }
   await act(async () => rHot.unmount());
   cHot.remove();
   await act(async () => rToday.unmount());

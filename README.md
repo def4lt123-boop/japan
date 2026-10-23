@@ -27,6 +27,8 @@ Jedes `⋯`-Menü sitzt am **Viewport** verankert – auf dem Handy als Blech vo
 
 Zwei Zustände, ein Reiseplan: **🗓️ planen** und **🚶 unterwegs**. **▶️ Reise starten** (oben rechts, auf der Reisekarte oder im `⋯`-Menü) setzt Tag 1 auf heute – liegt der geplante Zeitraum in der Zukunft oder schon vorbei, rutschen Punkte, Nächte, Fahrten und Ausgaben komplett mit, Reihenfolge und Abstände bleiben gleich; der alte Zeitraum wird gemerkt. Die Unterwegs-Seite wird damit zur Tages-App für die Hosentasche: Ort, Hinweise, Ticket-Status, 🗺️ Route, ✓ – und darunter der Reiseplan der nächsten Tage. **✕ Reise beenden** dreht das um: alles bleibt, was abgehakt ist, die Daten bleiben stehen. **↩ Start zurücknehmen** (nur im `⋯`, wenn ein alter Zeitraum gemerkt ist) schiebt den Plan zusätzlich auf die ursprünglichen Daten zurück, als wäre nie gestartet worden. Archivierte Reisen lassen sich nicht starten.
 
+**⇪ Etwas einfügen** (`⋯`-Menü, auf der Aktivitäten-Seite, bei den Dateien): CSV aus Excel oder Numbers, der eigene Export, Zeilen aus den Notizen (eine pro Punkt, ein führendes `24.10.` wird zum Tag) oder die JSON-Sicherung. Spaltennamen sind egal, Reihenfolge auch, deutsche Zahlen auch – Duplikate in der Reise werden übersprungen und die Vorschau zeigt vorher, was passiert.
+
 **🖨️ Tages-Ausdruck** (im `⋯`-Menü) schreibt die Reise auf Papier neu: ein Blatt pro Tag mit der nummerierten Liste, dem Bett der Nacht samt Adresse, den Maps-Links und – wenn gewünscht – den Wünschen ohne Tag zum Ankreuzen. **🧯 Reise prüfen** (ebenfalls im `⋯`) hält Zeiträume, Betten und Tage gegen sich selbst: Nächte ohne Bett, Nächte mit zwei Betten, Punkte neben dem Reisezeitraum und ein Plan, der komplett um ein, zwei Tage verrutscht ist. Nichts davon wird von selbst geändert – jeder Befund hat seinen Knopf, und der zeigt vorher im `⋯`-Menü, wie viel er gefunden hat.
 
 Der **Nächte-Check** auf der Unterkünfte-Seite zeigt jede Nacht der Reise als Kachel – eingefärbt in der Farbe der Unterkunft, mit einer neuen Gruppe dort, wo das Bett wechselt. Eine Nacht antippen öffnet das Bett (oder trägt für eine Lücke sofort eines ein, Stadt aus der Nachbar-Nacht vorbelegt). Auf 🗓️ Tage steht dieselbe Information als farbige Zeile unter den Fahrten des Tages. Gezählt wird bis einen Tag vor Abreise – die Nacht am Abreisetag ist keine Nacht mehr.
@@ -62,6 +64,7 @@ npm run test:render  # alle Seiten + Formulare werden wirklich gerendert
 npm run test:dayplan # Rechenprobe: Liste, Reihenfolge, Duplikate
 npm run test:dates   # Tage & Nächte – absichtlich in Europe/Vienna, ohne UTC-Sprung
 npm run test:checks  # Prüfrundgang: Löcher, Doppelbetten, versetzter Zeitraum
+npm run test:import  # Import: was der Export schreibt, geht verlustfrei wieder rein
 npm run test:all     # Typecheck + alle Proben
 npm run seed:sql     # data/seed.json → supabase/seed.sql
 ```

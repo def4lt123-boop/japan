@@ -176,6 +176,7 @@ function TripTopBar({ tripId }: { tripId: string }) {
             ...(needsCat
               ? [{ icon: '🏷️', label: `${needsCat} eine Kategorie geben`, hint: 'aus Name und Notiz abgeleitet', run: () => applyCategories(store, bundle.places) }]
               : []),
+            { icon: '⇪', label: 'Einträge einfügen', hint: 'CSV, Text oder Sicherung – Punkte, Betten, Fahrten', run: () => open({ kind: 'import' }) },
             { icon: '🗂️', label: 'Alles als Tabelle', hint: 'jedes Feld in einer Zeile', href: `/t/${tripId}/tabelle` },
             { icon: '🖨️', label: 'Tages-Ausdruck', hint: 'ein Tag pro Seite – zum Drucken oder als PDF', href: `/t/${tripId}/druck` },
             { icon: '🧯', label: 'Reise prüfen', hint: check.length ? `${plural(check.length, 'Ding', 'Dinge')} gefunden` : 'Zeiträume, Betten, Tage – nichts gefunden', href: `/t/${tripId}/pruefen` },

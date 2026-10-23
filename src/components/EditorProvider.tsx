@@ -5,6 +5,8 @@ import type { Expense, Hotel, Journey, Place, Trip } from '../lib/types';
 import { useStore } from '../lib/store';
 import { ExpenseForm, HotelForm, JourneyForm, PlaceForm, TripForm } from './forms';
 import { OrtswechselDialog } from './Ortswechsel';
+import { ImportDialog } from './ImportDialog';
+import type { ImportTarget } from '../lib/import';
 import { geocode, queryFor, sleep } from '../lib/geocode';
 import { fmtDate } from '../lib/format';
 
@@ -15,6 +17,8 @@ type Request =
   | { kind: 'expense'; id?: string; defaults?: Partial<Expense> }
   /** Ortswechsel: Stadt, Betten und Fahrt an einem Tag umtragen */
   | { kind: 'move'; date?: string | null }
+  /** Text, CSV oder Sicherung einlesen und einfügen */
+  | { kind: 'import'; target?: ImportTarget }
   | { kind: 'trip'; id?: string };
 
 interface EditorApi {
@@ -164,6 +168,8 @@ export function EditorProvider({ tripId, children }: { tripId: string; children:
           }
         />
       ) : null}
+
+      {request?.kind === 'import' ? <ImportDialog tripId={tripId} target={request.target} onClose={close} /> : null}
 
       {request?.kind === 'trip' ? (
         <TripForm

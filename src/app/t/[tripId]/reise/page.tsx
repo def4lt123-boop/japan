@@ -31,7 +31,8 @@ export default function TripPage() {
       { label: 'Unterkünfte (CSV)', hint: 'Nächte, Preise, Adresse', run: () => download(`${tripId}-hotels.csv`, hotelCsv(bundle.hotels)) },
       { label: 'Fahrten (CSV)', hint: 'Flüge, Züge, Fähren', run: () => download(`${tripId}-fahrten.csv`, journeyCsv(bundle.journeys)) },
       { label: 'Google Maps (KML)', hint: 'in Google My Maps laden – alle Punkte auf einer Karte', run: () => download(`${tripId}-kml.kml`, placesToKml(bundle.places, bundle.trip?.name ?? 'Reise'), 'application/vnd.google-earth.kml+xml') },
-      { label: 'Alles (JSON)', hint: 'zum Weitersichern oder Importieren', run: () => download(`${tripId}.json`, jsonExport(bundle), 'application/json') },
+      { label: 'Alles (JSON)', hint: 'zum Weitersichern – geht auch wieder rein', run: () => download(`${tripId}.json`, jsonExport(bundle), 'application/json') },
+      { label: '⇪ Etwas einfügen', hint: 'CSV, Textzeilen oder die Sicherung – Vorschau, dann Klick', icon: '⇪', run: () => open({ kind: 'import', target: 'places' }) },
     ],
     [bundle, tripId],
   );
@@ -88,7 +89,7 @@ export default function TripPage() {
                 className="flex w-full items-start gap-2 rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2 text-left transition hover:border-white/20 hover:bg-white/[0.05]"
               >
                 <span aria-hidden className="mt-0.5 text-[13px] text-slate-500">
-                  ⇩
+                  {f.icon ?? '⇩'}
                 </span>
                 <span className="min-w-0">
                   <span className="block text-[13px] font-medium text-slate-100">{f.label}</span>

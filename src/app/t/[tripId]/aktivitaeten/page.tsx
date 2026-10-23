@@ -70,6 +70,9 @@ export default function ActivitiesPage() {
                 {t.label}
               </button>
             ))}
+            <Button size="sm" variant="ghost" onClick={() => open({ kind: 'import', target: 'places' })} title="CSV, Notizen oder die eigene Sicherung einfügen">
+              ⇪ einfügen
+            </Button>
           </>
         }
       />
@@ -86,9 +89,14 @@ export default function ActivitiesPage() {
           title={filter.q || filter.city || filter.ticket ? 'Keine Treffer im Filter' : 'Noch keine Aktivität'}
           hint={filter.q || filter.city || filter.ticket ? 'Filter oben zurücksetzen.' : 'Lege den ersten Punkt an – ohne Tag, der Tag kommt später.'}
           action={
-            <Button variant="primary" onClick={() => open({ kind: 'place' })}>
-              ＋ Aktivität anlegen
-            </Button>
+            <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+              <Button variant="primary" onClick={() => open({ kind: 'place' })}>
+                ＋ Aktivität anlegen
+              </Button>
+              <Button variant="ghost" onClick={() => open({ kind: 'import', target: 'places' })}>
+                ⇪ mehrere einfügen
+              </Button>
+            </div>
           }
         />
       ) : (

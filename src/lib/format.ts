@@ -94,7 +94,12 @@ export function parseDuration(input?: string | null): number | null {
   const hours = s.match(/(\d+(?:[.,]\d+)?)\s*(h|std|stunden|hour)/);
   const mins = s.match(/(\d+)\s*(min|m\b|minute)/);
   if (hours && mins) return Math.round(Number(hours[1].replace(',', '.')) * 60) + Number(mins[1]);
-  if (hours) return Math.round(Number(hours[1].replace(',', '.')) * 60);
+  if (hours) {
+    // „2 h 15" – die nackten Ziffern hinter der Stunde sind Minuten
+    const tail = s.match(/\s(\d{1,2})$/);
+    const extra = tail && Number(tail[1]) < 60 ? Number(tail[1]) : 0;
+    return Math.round(Number(hours[1].replace(',', '.')) * 60) + extra;
+  }
   if (mins) return Number(mins[1]);
   const plain = Number(s.replace(',', '.'));
   return Number.isFinite(plain) && plain > 0 ? Math.round(plain * 60) : null; // ohne Einheit = Stunden
