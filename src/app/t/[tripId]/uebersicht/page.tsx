@@ -41,7 +41,7 @@ export default function OverviewPage() {
   ];
   const nightList = cells.filter((c) => c.nightGap);
   const planned = bundle.places.filter((p) => p.date);
-  const hoursTotal = planned.reduce((a, p) => a + (p.duration_min ?? 0), 0) / 60;
+  const TageMitPlan = new Set(planned.map((p) => p.date as string)).size;
 
   return (
     <div className="space-y-4">
@@ -56,9 +56,9 @@ export default function OverviewPage() {
         <Stat label="Reisedauer" value={cells.length ? plural(cells.length, 'Tag', 'Tage') : '—'} hint={fmtRange(trip.start_date, trip.end_date)} />
         <Stat
           label="Programm"
-          value={cap.avgDayMin ? `${(cap.avgDayMin / 60).toFixed(1)} h/Tag` : '—'}
-          hint={hoursTotal ? `${hoursTotal.toFixed(0)} h gesamt · ${fmtDuration(cap.totalFreeMin)} Luft` : 'noch nichts mit Dauer'}
-          tone={cap.avgDayMin > 8 * 60 ? 'bad' : undefined}
+          value={cap.avgPerDay ? `${cap.avgPerDay} Punkte/Tag` : '—'}
+          hint={planned.length ? `${plural(planned.length, 'Punkt', 'Punkte')} auf ${plural(TageMitPlan, 'Tag', 'Tagen')} · ${cap.totalFree} Plätze noch frei` : 'noch nichts platziert'}
+          tone={cap.avgPerDay > 5 ? 'warn' : undefined}
         />
         <Stat
           label="Nächte mit Bett"

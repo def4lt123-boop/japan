@@ -1,6 +1,6 @@
 # Urlaubsplaner – Japan 🗾
 
-Urlaubsplanung als richtige Web-App: Reisetage, Aktivitäten mit **Fahrzeit ab Hotel**, **Dauer**, **Tageszeit**, **Hinweisen**, **Preisen**, **Buchungsstatus** und **Google-Maps-Koordinaten** – plus Unterkünfte, Reiseverlauf, Budget und eine grafische Übersicht, die pro Tag zeigt, was geplant ist und was noch fehlt. Gebaut mit **Next.js + Tailwind**, gehostet auf **Vercel**, Daten optional in **Supabase (Postgres)**.
+Urlaubsplanung als richtige Web-App: jeder Reisetag als **nummerierte Liste** von Aktivitäten – mit **Hinweisen**, **Preisen**, **Buchungsstatus**, **Ticket-Status** und **Punkt auf der Karte** – plus Unterkünfte, Reiseverlauf, Budget und eine grafische Übersicht, die pro Tag zeigt, was geplant ist und was noch fehlt. Keine Uhrzeiten, keine Dauern: zuerst, dann, danach. Gebaut mit **Next.js + Tailwind**, gehostet auf **Vercel**, Daten optional in **Supabase (Postgres)**.
 
 Ohne Datenbank-Zugangsdaten läuft die App im **Demo-Modus**: alle Daten liegen im Browser (localStorage), die mitgelieferte Vorlage (Japan 2025 als Referenz, Japan 2027 als Planungsreise) ist eingebaut. Sobald `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` gesetzt sind, werden die gleichen Tabellen in Supabase gelesen/geschrieben. Auf der Seite selbst steht dazu nur der Status **„Datenbank verbunden"** – alle Einrichtungsdoku liegt hier im README, nicht im UI.
 
@@ -8,27 +8,29 @@ Ohne Datenbank-Zugangsdaten läuft die App im **Demo-Modus**: alle Daten liegen 
 
 ## Was die App kann
 
-Sechs Reiter, alles Wichtige vorn, der Rest hinter `⋯`:
+Fünf Reiter, alles Wichtige vorn, der Rest hinter `⋯`. Wer die Reise startet, bekommt den sechsten dazu (**🚶 Unterwegs**).
+
+**Das Modell:** ein Tag ist eine Liste. Punkte werden angehängt, gezogen oder mit ▲▼ verschoben – die Nummer ist die Reihenfolge. Mehr als vier Punkte an einem Tag gelten als voll.
 
 | Reiter | Inhalt |
 | --- | --- |
-| ☀️ **Heute** / 🚶 **Unterwegs** | dieselbe Seite in zwei Zuständen. **🗓️ Planung** (nicht gestartet): was heute Morgen, mittags, nachmittags und abends dran ist, dazu die nächsten sechs Tage mit Stunden, Ort und anstehendem 🔀 Ortswechsel – und der Knopf **▶️ Reise starten**. **🚶 Unterwegs** (gestartet): der Tag als App – großer Tageskopf mit *Tag 3 von 40*, Stadt und Bett, **als nächstes** mit Uhrzeit und Fahrzeit, 🗺️ Route, ✓ abhaken, Hinweise aufgeklappt, dazu **Morgen** und der **Reiseplan** der drei nächsten Tage. Editieren ist nur noch das kleine ✎ daneben |
-| 🗓️ **Tage** | **oben die Liste „Noch ohne Tag“**: jeder neue Punkt landet hier und bekommt Tag + Uhrzeit in zwei Dropdowns (der Tag mit der meisten Luft ist vorgeschlagen), ein Klick auf **✓ hinlegen** genügt – oder ⚡ verteilt alle auf einmal. Darunter ein Kartenstapel pro Reisetag: Datum, Stadt, Zahl und Programmstunden in der Zeile, **Zeitband 07–23 Uhr** mit dem belegten Tag: einen **Block ziehen** = neue Uhrzeit (15-Minuten-Schritte), am **rechten Rand ziehen** = Dauer, **Lücke anklicken** = oberster Punkt der Liste rutscht dorthin, ⇧+Pfeiltasten schieben eine Stunde. Im `⋯` des Tages: 🗺️ Karte inline, 🧭 Tagesroute bei Google Maps, **⚡ Tag sortieren** (der Reihe nach, ohne Überschneidung – feste Uhrzeiten bleiben Anker) und 🔀 **Ortswechsel an diesem Tag** · der heutige Tag ist mit einem Ring markiert |
-| 🗂️ **Aktivitäten** |  alles als Liste untereinander: oben, was noch **ohne Tag** ist, darunter die Tage. Tag, Uhrzeit, Dauer und **🏷️ Kategorie direkt in der Zeile** (ein Dropdown, kein Tippen), **Doppelplanung wird abgewiesen**, belegte Zeiten rutschen in die nächste Lücke, ⚡ verteilt automatisch |
-| 🗺️ **Karte** | Marker aus den Koordinaten (Farbe = Kategorie, hohle Kontur = noch ohne Tag), Route des Tages als Linie, 🏨 Unterkünfte · **Hintergrund: offene OpenStreetMap-Kacheln** – kein API-Key, keine Testphase, keine Rechnung, dunkel gefiltert oder hell umschaltbar · rechte Spalte dieselbe Ansicht bei Google Maps, Punkte ohne Koordinaten lassen sich einzeln oder auf einen Schlag nachziehen · **Filter nach Tag, Stadt und Kategorie**, im Popup des Punktes die Kategorie gleich umstellen |
+| 🚶 **Unterwegs** | (nur im gestarteten Modus) der Tag als App für die Hosentasche: Tageskopf mit *Tag 3 von 40*, Stadt, Bett und *2/5 erledigt*, darunter **als nächstes** = der erste noch offene Punkt der Liste mit 🗺️ Route und ✓ abhaken, danach die nummerierte Liste des Tages zum Umhängen, dann der **Reiseplan** der drei nächsten Tage und der 🔀 Ortswechsel. Editieren ist nur das kleine ✎ daneben |
+| 🗓️ **Tage** | **oben die Liste „Noch ohne Tag“**: jeder neue Punkt landet hier, ein Dropdown (der Tag mit der meisten Luft ist vorgeschlagen) und **✓ hinlegen** genügen – ⚡ verteilt alle auf einmal. Darunter ein Kartenstapel pro Reisetag: **die Punkte des Tages als nummerierte Liste**. Auf den Tag ziehen = ans Ende, auf eine Zeile ziehen = dort einfügen, ▲▼ = eine Stelle rauf oder runter. Im `⋯` des Tages: 🗺️ Karte inline, 🧭 Tagesroute bei Google Maps, ✨ obersten Wunsch hierher legen und 🔀 **Ortswechsel an diesem Tag** · oben eine schmale Navigation mit dem Zähler je Tag |
+| 🗂️ **Aktivitäten** | alles als Liste untereinander: oben, was noch **ohne Tag** ist, darunter die Tage mit ihrer Nummer. Tag, **🏷️ Kategorie**, Ticket und Status direkt in der Zeile (ein Dropdown, kein Tippen) – **derselbe Punkt zweimal am selben Tag wird abgewiesen**, ✨ Wunsch hierher legt ihn an den gewählten Tag |
+| 🗺️ **Karte** | Marker (Farbe = Kategorie, hohle Kontur = noch ohne Tag), Route des Tages als Linie, 🏨 Unterkünfte · **Hintergrund: offene OpenStreetMap-Kacheln** – kein API-Key, keine Testphase, keine Rechnung, dunkel gefiltert oder hell umschaltbar · rechte Spalte dieselbe Ansicht bei Google Maps, Punkte ohne Ort lassen sich einzeln oder auf einen Schlag suchen · **Filter nach Tag, Stadt und Kategorie**, im Popup des Punktes die Kategorie gleich umstellen |
 | 🧳 **Reise** | Unterkünfte · Fahrten · Kosten in einem Screen (Umschalter oben), darunter alle Downloads: CSV, JSON, KML |
-| 📊 **Übersicht** | grafische Reisekarte: Bett-Band über alle Tage, jeder Tag als Zeitbild, Ring „Planungsgrad“, Checklist „was noch fehlt“ und „was noch frei ist“ |
+| 📊 **Übersicht** | grafische Reisekarte: Bett-Band über alle Tage, jeder Tag als Feld mit Zähler und Säulenhöhe, Ring „Planungsgrad“, Checklist „was noch fehlt“ und „was noch frei ist“ |
 
 Kategorien sind ein **Dropdown** mit 16 festen Begriffen plus allem, was in der Reise schon drinsteht – nichts verschwindet. **🏷️ automatisch kategorisieren** (unten in der Karten-Legende und im `⋯`-Menü) gibt allen Punkten, die noch keinen passenden Begriff haben, eine Kategorie aus Name und Notiz; was schon sauber dasteht, wird nicht angefasst.
 
 Jedes `⋯`-Menü sitzt am **Viewport** verankert – auf dem Handy als Blech von unten mit großen Feldern, auf dem Desktop als Panel, das nie über den Rand läuft und sich nach oben öffnet, wenn darunter zu wenig Platz ist (`npm run test:layout` prüft 60 Geräte-/Knopf-Kombinationen, `npm run test:mode` das Starten und Zurücknehmen des Unterwegs-Modus).
 
-Zwei Zustände, ein Reiseplan: **🗓️ planen** und **🚶 unterwegs**. **▶️ Reise starten** (oben rechts, auf der Reisekarte oder im `⋯`-Menü) setzt Tag 1 auf heute – liegt der geplante Zeitraum in der Zukunft oder schon vorbei, rutschen Punkte, Nächte, Fahrten und Ausgaben komplett mit, Reihenfolge und Abstände bleiben gleich; der alte Zeitraum wird gemerkt. Die ☀️-Seite wird damit zur Tages-App für die Hosentasche: Standort, Fahrzeit vom Hotel, Hinweise, Ticket-Status, 🗺️ Route, ✓ – und darunter Morgen plus Reiseplan. **✕ Reise beenden** dreht das um: alles bleibt, was abgehakt ist, die Daten bleiben stehen. **↩ Start zurücknehmen** (nur im `⋯`, wenn ein alter Zeitraum gemerkt ist) schiebt den Plan zusätzlich auf die ursprünglichen Daten zurück, als wäre nie gestartet worden. Archivierte Reisen lassen sich nicht starten.
+Zwei Zustände, ein Reiseplan: **🗓️ planen** und **🚶 unterwegs**. **▶️ Reise starten** (oben rechts, auf der Reisekarte oder im `⋯`-Menü) setzt Tag 1 auf heute – liegt der geplante Zeitraum in der Zukunft oder schon vorbei, rutschen Punkte, Nächte, Fahrten und Ausgaben komplett mit, Reihenfolge und Abstände bleiben gleich; der alte Zeitraum wird gemerkt. Die Unterwegs-Seite wird damit zur Tages-App für die Hosentasche: Ort, Hinweise, Ticket-Status, 🗺️ Route, ✓ – und darunter der Reiseplan der nächsten Tage. **✕ Reise beenden** dreht das um: alles bleibt, was abgehakt ist, die Daten bleiben stehen. **↩ Start zurücknehmen** (nur im `⋯`, wenn ein alter Zeitraum gemerkt ist) schiebt den Plan zusätzlich auf die ursprünglichen Daten zurück, als wäre nie gestartet worden. Archivierte Reisen lassen sich nicht starten.
 
-Der **🔀 Ortswechsel** (Unterkünfte, Karte des Tages, ⋯-Menü) trägt einen Stadtwechsel in einem Schritt ein: der Dialog zeigt, in welcher Stadt du an dem Tag schläfst, und schreibt dann die Aktivitäten (nur diesen Tag oder alles Danach), die Unterkünfte (alter Check-out, neuer Check-in, Nächte) und – wenn gewünscht – die passende Fahrt ins Fahrten-Log. Erkannte Wechsel stehen chronologisch auf der Unterkünfte-Seite und auf ☀️ Heute.
+Der **🔀 Ortswechsel** (Unterkünfte, Karte des Tages, ⋯-Menü) trägt einen Stadtwechsel in einem Schritt ein: der Dialog zeigt, in welcher Stadt du an dem Tag schläfst, und schreibt dann die Aktivitäten (nur diesen Tag oder alles Danach), die Unterkünfte (alter Check-out, neuer Check-in, Nächte) und – wenn gewünscht – die passende Fahrt ins Fahrten-Log. Erkannte Wechsel stehen chronologisch auf der Unterkünfte-Seite und als Streifen auf 🗓️ Tage und 🚶 Unterwegs.
 
 Immer nur zwei Knöpfe oben rechts: **＋ Anlegen** (Aktivität, Unterkunft, Fahrt, Ausgabe – mit kurzer Erklärung, was die Kachel tut) und
-**⋯** (Reise bearbeiten, Koordinaten nachziehen, als Tabelle öffnen, exportieren, drucken). Feinfilter, Tabellenansicht,
+**⋯** (Reise bearbeiten, Punkte nachziehen, alle Tage sortieren, als Tabelle öffnen, exportieren, drucken). Feinfilter, Tabellenansicht,
 Einzel screens (`/tabelle`, `/unterkuenfte`, `/kosten`, `/verlauf`) und der Druckbogen hängen dahinter bzw. unter denselben Deep-Links.
 
 ### Begriffe
@@ -37,12 +39,12 @@ Einzel screens (`/tabelle`, `/unterkuenfte`, `/kosten`, `/verlauf`) und der Druc
 
 ### Google Maps
 Jedes Formular zeigt beim Tippen die **Karte von Google Maps direkt im Formular** (Einbettung `maps.google.com/…&output=embed`, kein
-API-Key, keine Abrechnung): erst die Suche nach Name + Viertel + Stadt, sobald Koordinaten da sind der Punkt selbst. Einen
+API-Key, keine Abrechnung): erst die Suche nach Name + Stadt, sobald ein Punkt gesetzt ist der Ort selbst. Einen
 **Google-Maps-Link** kannst du direkt einfügen (`…/@35.6597,139.7007,17z`, `?query=lat,lng`, `!3d…!4d…`, rohe `35.6597, 139.7007`) –
 die Zahlen werden automatisch extrahiert. „öffnen ↗“ führt in die große Ansicht (Adresse, Öffnungszeiten, Navi). Der Tagesplan und die
 Karte bieten zusätzlich die **Route über alle Punkte eines Tages** (Unterkunft → Stopps in geplanter Reihenfolge, bis zu 9 Zwischenhalte,
 Fahrplan über `travelmode=transit`), und der Export-Knopf schreibt eine **KML-Datei** für Google My Maps. Auf 🗺️-Symbol einer Karte
-erscheint die Google-Ansicht des Punktes auch inline, `maps_query`/`lat`/`lng` sitzen dafür pro Eintrag in der Datenbank.
+erscheint die Google-Ansicht des Punktes auch inline. In der Oberfläche gibt es dafür nur noch „Punkt in Google Maps auswählen“ – die Zahlen dahinter (`maps_query`, `lat`, `lng`) bleiben in der Datenbank stehen, werden aber nirgends mehr eingegeben.
 
 ## Lokal starten
 
@@ -53,6 +55,8 @@ npm run dev          # http://localhost:3000  (Demo-Modus, ohne Datenbank)
 npm run build        # Produktions-Build (Next.js)
 npm run test:store   # Daten-Logik in jsdom: Seed, CRUD, Duplizieren, Persistenz
 npm run test:render  # alle Seiten + Formulare werden wirklich gerendert
+npm run test:dayplan # Rechenprobe: Liste, Reihenfolge, Duplikate
+npm run test:all     # Typecheck + alle Proben
 npm run seed:sql     # data/seed.json → supabase/seed.sql
 ```
 
@@ -124,7 +128,8 @@ src/lib/planner.ts        Automatisch verteilen, Stadt→Tage-Ableitung inkl. Al
 src/lib/store.tsx         React-Context: lädt Supabase ODER localStorage, alle CRUD-Aufrufe
 src/lib/geocode.ts        Nominatim-Suche + Google-Maps-URL-Parser
 src/lib/stats.ts          Kosten, Nächte-Check, Tagesplanung, leere Tage
-src/lib/overview.ts       Tagesraster auf der 07–23-Achse, Hotel-Bänder, Baustellen-Liste, freie Kapazität
+src/lib/dayplan.ts        der Tag als nummerierte Liste: anhängen, einfügen, ▲▼, Duplikatschutz
+src/lib/overview.ts       Tagesraster, Hotel-Bänder, Baustellen-Liste, freie Kapazität (Punkte pro Tag)
 src/components/overview.tsx  TripRibbon · DayBoard · GapPanel · CapacityPanel (die Grafik der Übersichtsseite)
 src/app/page.tsx          Reisen-Übersicht (anlegen, duplizieren, öffnen)
 src/app/t/[tripId]/*      Reise-Workspace mit Tabs
@@ -140,7 +145,8 @@ supabase/refresh-notes.sql  optionales UPDATE-Script: Notizen von Altlasten befr
 ## Kurz-Tastatur
 
 - `Esc` schließt ein Formular, `⌘/Ctrl + Enter` speichert
-- Ziehen & Ablegen: Karte auf einen Tagesrahmen ziehen = neuer Tag; auf „Wünscheliste“ = Tag entfernen
+- Ziehen & Ablegen: Punkt auf einen Tag ziehen = ans Ende der Liste, auf eine Zeile ziehen = dort einfügen
+- `Esc` schließt ein Menü, ein Klick auf das Ticket-Symbol schaltet es weiter
 
 ## Anmerkungen zur Vorlage
 

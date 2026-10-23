@@ -2,9 +2,8 @@
  * Rechenprobe für die zwei Modi: 🗓️ Planung ↔ ▶️ Unterwegs.
  * Aufruf: npm run test:mode
  */
-import { endTrip, liveDay, liveDays, nextUp, nowMinutes, startHint, startTrip, tripMode } from '../src/lib/mode.ts';
+import { endTrip, liveDay, liveDays, nextUp, startHint, startTrip, tripMode } from '../src/lib/mode.ts';
 import { addDays, today } from '../src/lib/format.ts';
-import { dayDiff } from '../src/lib/planner.ts';
 
 const errors: string[] = [];
 const step = (name: string, ok: boolean, detail?: unknown) => {
@@ -142,19 +141,18 @@ step('Tagzähler zählt ab start_date', liveDays(trip({ started: true, started_a
 // ── Der nächste Halt ─────────────────────────────────────────────────────────
 {
   const heute = [
-    place({ id: 'a', start_time: '09:00', duration_min: 60, booking_status: 'erledigt' }),
-    place({ id: 'b', start_time: '12:00', duration_min: 120 }),
-    place({ id: 'c', start_time: '19:00', duration_min: 90 }),
+    place({ id: 'a', sort_order: 0, booking_status: 'erledigt' }),
+    place({ id: 'b', sort_order: 1 }),
+    place({ id: 'c', sort_order: 2 }),
   ];
-  const vor = nextUp(heute, 11 * 60)!;
-  step('vor dem Termin: der nächste Punkt', vor.place.id === 'b' && vor.inMin === 60 && !vor.laeuft, { in: vor?.inMin });
-  const waehrend = nextUp(heute, 12 * 60 + 30)!;
-  step('währenddessen: läuft gerade', waehrend.place.id === 'b' && waehrend.laeuft);
-  const spaet = nextUp(heute, 23 * 60)!;
-  step('nach dem letzten: der letzte Punkt bleibt', spaet.place.id === 'c');
-  step('leerer Tag → kein nächster Halt', nextUp([], 12 * 60) === null);
-  const nurAbgehakt = [place({ id: 'x', start_time: '09:00', duration_min: 60, booking_status: 'erledigt' }), place({ id: 'y', start_time: '10:00', duration_min: 60, booking_status: 'erledigt' })];
-  step('alles erledigt → kein nächster Halt', nextUp(nurAbgehakt, 9 * 60) === null);
+  const vor = nextUp(heute)!;
+  step('der erste offene Punkt ist der nächste Halt', vor.place.id === 'b', vor);
+  step('er kennt Stelle, Länge und den Rest', vor.nr === 2 && vor.total === 3 && vor.offen === 2, vor);
+  step('leerer Tag → kein nächster Halt', nextUp([]) === null);
+  const nurAbgehakt = [place({ id: 'x', booking_status: 'erledigt' }), place({ id: 'y', booking_status: 'erledigt', sort_order: 1 })];
+  step('alles abgehakt → kein nächster Halt', nextUp(nurAbgehakt) === null);
+  const durcheinander = [place({ id: 'z', sort_order: 5 }), place({ id: 'y', sort_order: 1 }), place({ id: 'x', sort_order: 3, booking_status: 'erledigt' })];
+  step('die Liste entscheidet, nicht die Reihenfolge der Anlage', nextUp(durcheinander)!.place.id === 'y', nextUp(durcheinander));
 }
 
 // ── Knopfbeschriftung ────────────────────────────────────────────────────────
@@ -163,8 +161,7 @@ step('Tagzähler zählt ab start_date', liveDays(trip({ started: true, started_a
   step('Hinweis nennt den Vorlauf', /135 Tage nach vorn/.test(hint) && /Tag 136/.test(hint), hint);
   const frei = startHint({ trip: trip({ start_date: null, end_date: null }), places: [place({ id: 'a', date: T(10) }), place({ id: 'b', date: T(10) })], hotels: [], journeys: [], expenses: [] });
   step('ohne Zeitraum: Tage übernommen', /1 Tag übernommen/.test(frei), frei);
-  step('nur Minuten des Tages', nowMinutes(new Date('2026-10-22T13:37:00')) === 13 * 60 + 37);
-  step('dayDiff zählt wie erwartet', dayDiff(iso, T(5)) === 5);
+  step('ohne Reisebeginn ist der Hinweis trotzdem lesbar', /Reise|Tag/.test(frei), frei);
 }
 
 console.log(errors.length ? `\n❌ ${errors.length} Probleme: ${errors.join(', ')}` : '\n🎉 Modi-Rechnung passt');

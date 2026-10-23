@@ -3,6 +3,7 @@ import type { Trip, TripBundle } from './types';
 /** alle Helfer kommen auch mit einer noch unbekannten Reise zurecht */
 export type BundleLike = Omit<TripBundle, 'trip'> & { trip?: Trip };
 import { daysBetween, eachDate } from './format';
+import { byOrder } from './dayplan';
 
 export interface CostSummary {
   accommodation: number;
@@ -14,7 +15,7 @@ export interface CostSummary {
   open: number;
   perPerson: number;
   byCategory: { label: string; value: number; count: number }[];
-  byCity: { city: string; places: number; cost: number; hours: number }[];
+  byCity: { city: string; places: number; cost: number }[];
 }
 
 const sum = (nums: (number | null | undefined)[]) => nums.reduce<number>((acc, n) => acc + (typeof n === 'number' && Number.isFinite(n) ? n : 0), 0);
@@ -40,11 +41,11 @@ export function costsOf(bundle: BundleLike): CostSummary {
     .filter((c) => c.value > 0 || c.count > 0)
     .sort((a, b) => b.value - a.value);
 
-  const cityMap = new Map<string, { places: number; cost: number; hours: number }>();
+  const cityMap = new Map<string, { places: number; cost: number }>();
   for (const p of bundle.places) {
     const key = p.city || '—';
-    const cur = cityMap.get(key) ?? { places: 0, cost: 0, hours: 0 };
-    cityMap.set(key, { places: cur.places + 1, cost: cur.cost + (p.price_eur ?? 0), hours: cur.hours + (p.duration_min ?? 0) / 60 });
+    const cur = cityMap.get(key) ?? { places: 0, cost: 0 };
+    cityMap.set(key, { places: cur.places + 1, cost: cur.cost + (p.price_eur ?? 0) });
   }
 
   return {
@@ -106,13 +107,10 @@ export function dayPlan(bundle: BundleLike) {
   for (const h of bundle.hotels) if (h.city && h.name) hotelsByCity.set(h.city.toLowerCase(), h.name);
 
   return all.map((date) => {
-    const places = bundle.places
-      .filter((p) => p.date === date)
-      .sort((a, b) => (a.start_time ?? '99:99').localeCompare(b.start_time ?? '99:99') || a.sort_order - b.sort_order);
-    const hours = places.reduce((acc, p) => acc + (p.duration_min ?? 0), 0) / 60;
+    const places = bundle.places.filter((p) => p.date === date).sort(byOrder);
     const cityList = Array.from(new Set(places.map((p) => p.city).filter(Boolean)));
     const journeys = journeysByDate.get(date) ?? [];
     const hotel = hotelsByCity.get((journeys[0]?.to_city ?? cityList[0] ?? '').toLowerCase()) ?? null;
-    return { date, places, hours, cities: cityList, journeys, hotel };
+    return { date, places, count: places.length, cities: cityList, journeys, hotel };
   });
 }

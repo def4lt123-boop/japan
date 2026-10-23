@@ -13,7 +13,7 @@ import type { StoreValue } from './store';
 import { addDays, daysBetween, fmtDate, plural, today } from './format';
 import { dayDiff } from './planner';
 import { shiftTrip } from './today';
-import { windowsOf } from './dayplan';
+import { byOrder, dayPlaces } from './dayplan';
 
 export type TripMode = 'plan' | 'live';
 export type ModeStore = Pick<StoreValue, 'patchMany' | 'say'>;
@@ -46,10 +46,10 @@ export function startHint(input: ModeInput): string {
     return tage.size ? `Tag 1 ist heute · ${plural(tage.size, 'Tag', 'Tage')} übernommen` : 'Tag 1 ist heute · eine Woche Zeit';
   }
   const vorlauf = dayDiff(today(), trip.start_date);
-  if (vorlauf > 0) return `schiebt den Plan ${plural(vorlauf, 'Tag', 'Tage')} nach vorn – Tag ${vorlauf + 1} wird heute`;
+  if (vorlauf > 0) return `der Plan rückt ${plural(vorlauf, 'Tag', 'Tage')} nach vorn – Tag ${vorlauf + 1} wird heute`;
   const hinten = dayDiff(trip.end_date, today());
   if (hinten > 0) return `die Reisetage liegen vorbei – der Plan rückt ${plural(hinten, 'Tag', 'Tage')} nach vorn`;
-  return 'läuft genau heute – der heutige Tag ist dran';
+  return 'die Reise läuft genau heute – der heutige Tag ist dran';
 }
 
 /** ▶️ Reise starten */
@@ -88,7 +88,7 @@ export function startTrip(store: ModeStore, input: ModeInput): boolean {
   const show = verrutscht ? 1 : Math.max(1, Math.min(tag + 1, total || tag + 1));
   // nach dem Verrutschen ist der alte Anfangstag der neue Tag 1 – den zählt die Meldung
   const tagIso = (verrutscht ? trip.start_date : iso) ?? iso;
-  const heute = input.places.filter((p) => p.date === tagIso);
+  const heute = dayPlaces(input.places, tagIso);
   const ort = heute[0]?.city ?? input.hotels.find((h) => (h.check_in ?? '') <= tagIso && tagIso < (h.check_out ?? '9999-12-31'))?.city ?? null;
   store.say(
     `Unterwegs · Tag ${show}${neu.end ? ` von ${daysBetween(neu.start, neu.end) || '?'}` : ''}${ort ? ` in ${ort}` : ''} – ${heute.length ? `${plural(heute.length, 'Punkt', 'Punkte')} heute` : 'heute noch nichts geplant'}. Abhaken, Route folgen, Ort ansehen: das ist jetzt die Hauptseite.`,
@@ -139,22 +139,16 @@ export function liveDay(trip: Trip | undefined, iso: string = today()): LiveDay 
 
 export interface NextUp {
   place: Place;
-  /** Minuten bis es losgeht (negativ = läuft schon / war schon) */
-  inMin: number;
-  laeuft: boolean;
+  /** Stelle im Tag (1 = erster Punkt) */
+  nr: number;
+  total: number;
+  offen: number;
 }
 
-/** Der nächste Halt – für die Fußzeile der Unterwegs-Seite */
-export function nextUp(places: Place[], nowMin: number): NextUp | null {
-  const offen = places.filter((p) => p.booking_status !== 'erledigt');
+/** Der nächste Halt = der erste Punkt des Tages, der noch nicht abgehakt ist */
+export function nextUp(places: Place[]): NextUp | null {
+  const list = places.slice().sort(byOrder);
+  const offen = list.filter((p) => p.booking_status !== 'erledigt');
   if (!offen.length) return null;
-  const geordnet = windowsOf(offen);
-  for (const { place, win } of geordnet) {
-    if (win.fullDay) continue;
-    if (win.end > nowMin) return { place, inMin: win.start - nowMin, laeuft: win.start <= nowMin };
-  }
-  const letzter = geordnet[geordnet.length - 1];
-  return letzter ? { place: letzter.place, inMin: letzter.win.start - nowMin, laeuft: false } : null;
+  return { place: offen[0], nr: list.indexOf(offen[0]) + 1, total: list.length, offen: offen.length };
 }
-
-export const nowMinutes = (d = new Date()) => d.getHours() * 60 + d.getMinutes();

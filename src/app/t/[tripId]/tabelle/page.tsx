@@ -10,18 +10,17 @@ import { STATUS_META, TICKET_META, TICKET_ORDER, categoryMeta, mapsUrl } from '.
 import { CategoryPicker } from '../../../../components/CategoryPicker';
 import { BOOKING_STATUSES, PRIORITIES, TICKET_STATUSES, type Place } from '../../../../lib/types';
 import { fmtDate, fmtMoney } from '../../../../lib/format';
+import { dayPlaces } from '../../../../lib/dayplan';
 import { download, placeCsv } from '../../../../lib/export';
 
-type SortKey = 'date' | 'city' | 'name' | 'category' | 'duration' | 'travel' | 'price' | 'status' | 'prio' | 'ticket';
+type SortKey = 'date' | 'reihe' | 'city' | 'name' | 'category' | 'price' | 'status' | 'prio' | 'ticket';
 
 const COLS: { key: SortKey | null; label: string; hint?: string; className?: string }[] = [
   { key: 'date', label: 'Tag', hint: 'Wann – leer = noch an keinem Tag' },
-  { key: null, label: 'Zeit' },
-  { key: 'city', label: 'Stadt / Viertel' },
-  { key: 'name', label: 'Standort' },
+  { key: 'reihe', label: 'Reihe', hint: 'Stelle an diesem Tag – auf der Tagesseite ziehen oder ▲▼' },
+  { key: 'city', label: 'Stadt' },
+  { key: 'name', label: 'Aktivität' },
   { key: 'category', label: 'Kategorie' },
-  { key: 'travel', label: 'Fahrzeit ab Hotel' },
-  { key: 'duration', label: 'Dauer' },
   { key: null, label: 'Hinweise' },
   { key: 'price', label: 'Preis' },
   { key: 'status', label: 'Status' },
@@ -54,10 +53,8 @@ export default function TablePage() {
           return `${p.city ?? ''}`.toLowerCase();
         case 'category':
           return (p.category ?? '').toLowerCase();
-        case 'duration':
-          return p.duration_min ?? 0;
-        case 'travel':
-          return (p.travel_time ?? '').toLowerCase();
+        case 'reihe':
+          return reihe.get(p.id) ?? 999;
         case 'price':
           return p.price_eur ?? 0;
         case 'status':
@@ -77,7 +74,13 @@ export default function TablePage() {
   }, [bundle.places, filter, sort]);
 
   const totalCost = rows.reduce((a, p) => a + (p.price_eur ?? 0), 0);
-  const totalMin = rows.reduce((a, p) => a + (p.duration_min ?? 0), 0);
+  /** welche Stelle ein Punkt an seinem Tag hat */
+  const reihe = useMemo(() => {
+    const map = new Map<string, number>();
+    const dates = new Set(bundle.places.map((p) => p.date).filter(Boolean) as string[]);
+    for (const d of dates) dayPlaces(bundle.places, d).forEach((p, i) => map.set(p.id, i + 1));
+    return map;
+  }, [bundle.places]);
 
   if (!bundle.trip) return null;
 
@@ -86,7 +89,7 @@ export default function TablePage() {
       <SectionTitle
         title="Tabelle"
         icon="📊"
-        hint="Alle Felder in einer Zeile – Spalten sortierbar, Tag/Status/Prio direkt änderbar."
+        hint="Alle Punkte in einer Zeile – Tag, Kategorie, Status, Ticket und Prio direkt änderbar."
         right={
           <>
             <Button size="sm" variant="ghost" onClick={() => setWideNotes((v) => !v)}>
@@ -111,9 +114,7 @@ export default function TablePage() {
         places={bundle.places}
         detailed
         right={
-          <span className="chip bg-white/[0.05] text-slate-300 ring-white/10">
-            {fmtMoney(totalCost)} · {Math.round(totalMin / 60)} h
-          </span>
+          <span className="chip bg-white/[0.05] text-slate-300 ring-white/10">{fmtMoney(totalCost)}</span>
         }
       />
 
@@ -121,7 +122,7 @@ export default function TablePage() {
         <Empty title="Keine Zeilen" hint="Filter anpassen oder neue Aktivität anlegen." action={<Button variant="primary" onClick={() => open({ kind: 'place' })}>＋ Aktivität</Button>} />
       ) : (
         <Card className="overflow-x-auto p-0">
-          <table className="w-full min-w-[1320px] border-collapse text-left">
+          <table className="w-full min-w-[1020px] border-collapse text-left">
             <thead className="sticky top-0 z-10 bg-ink-800/95 backdrop-blur">
               <tr>
                 {COLS.map((c) => (
@@ -155,13 +156,9 @@ export default function TablePage() {
                         title={p.date ? fmtDate(p.date, { weekday: 'long' }) : 'noch kein Tag – steht in der Liste unter Aktivitäten'}
                       />
                     </td>
-                    <td className="cell whitespace-nowrap text-slate-300">
-                      <span className="block text-[12px]">{p.start_time ?? ''}</span>
-                      <span className="block text-[11px] text-slate-500">{p.time_slot ?? ''}</span>
-                    </td>
+                    <td className="cell whitespace-nowrap text-center tabular-nums text-slate-400">{p.date ? reihe.get(p.id) ?? '—' : '—'}</td>
                     <td className="cell whitespace-nowrap">
                       <span className="block text-[12.5px] font-medium text-slate-200">{p.city}</span>
-                      <span className="block text-[11px] text-slate-500">{p.district ?? ''}</span>
                     </td>
                     <td className="cell min-w-[190px]">
                       <button onClick={() => open({ kind: 'place', id: p.id })} className="text-left text-[13px] font-medium text-white underline-offset-2 hover:underline">
@@ -180,8 +177,6 @@ export default function TablePage() {
                         />
                       </div>
                     </td>
-                    <td className="cell whitespace-nowrap text-slate-300">{p.travel_time ?? '—'}</td>
-                    <td className="cell whitespace-nowrap tabular-nums text-slate-300">{p.duration_min ? `${Math.floor(p.duration_min / 60)}h${p.duration_min % 60 ? ` ${p.duration_min % 60}m` : ''}` : '—'}</td>
                     <td className={cx('cell text-slate-300/90', wideNotes ? 'min-w-[320px] whitespace-pre-wrap' : 'max-w-[280px] truncate')} title={p.notes ?? undefined}>
                       {p.notes ?? ''}
                     </td>
@@ -215,8 +210,8 @@ export default function TablePage() {
                       />
                     </td>
                     <td className="cell whitespace-nowrap">
-                      <a href={mapsUrl(p)} target="_blank" rel="noreferrer" className="text-[12px] text-sky-200/90 underline-offset-2 hover:underline" title={p.lat ? `${p.lat}, ${p.lng}` : 'Sucht in Google Maps nach dem Namen'}>
-                        {p.lat && p.lng ? `${p.lat.toFixed(3)}, ${p.lng.toFixed(3)}` : '📍 suchen'}
+                      <a href={mapsUrl(p)} target="_blank" rel="noreferrer" className="text-[12px] text-sky-200/90 underline-offset-2 hover:underline" title="Bei Google Maps öffnen">
+                        📍 öffnen
                       </a>
                     </td>
                     <td className="cell whitespace-nowrap text-right">
@@ -242,11 +237,11 @@ export default function TablePage() {
             </tbody>
             <tfoot>
               <tr className="border-t border-white/10 bg-white/[0.03] text-[12px] text-slate-300">
-                <td className="px-2 py-1.5" colSpan={9}>
-                  {rows.length} Zeilen · {rows.filter((p) => p.date).length} mit Tag · Ø {rows.length ? Math.round(totalMin / rows.length) : 0} Min pro Eintrag
+                <td className="px-2 py-1.5" colSpan={6}>
+                  {rows.length} Punkte · {rows.filter((p) => p.date).length} an einem Tag
                 </td>
                 <td className="px-2 py-1.5 tabular-nums font-semibold">{fmtMoney(totalCost)}</td>
-                <td className="px-2 py-1.5" colSpan={4} />
+                <td className="px-2 py-1.5" colSpan={5} />
               </tr>
             </tfoot>
           </table>

@@ -178,11 +178,11 @@ export default function HotelsPage() {
 
                 <div className="mt-3 flex flex-wrap items-center gap-1.5">
                   {h.lat !== null && h.lng !== null ? (
-                    <Pill className="bg-white/[0.04] text-slate-400 ring-white/10" title="Koordinaten aus der Datenbank">
-                      {h.lat!.toFixed(4)}, {h.lng!.toFixed(4)}
+                    <Pill className="bg-white/[0.04] text-slate-400 ring-white/10" title="liegt auf der Karte">
+                      📍 Punkt gesetzt
                     </Pill>
                   ) : (
-                    <Pill className="bg-amber-500/10 text-amber-200/90 ring-amber-400/25">keine Koordinaten</Pill>
+                    <Pill className="bg-amber-500/10 text-amber-200/90 ring-amber-400/25">noch ohne Punkt</Pill>
                   )}
                   {h.lat !== null && h.lng !== null ? <LinkTag href={mapsUrl({ lat: h.lat, lng: h.lng, name: h.name, city: h.city, maps_query: h.address ?? null })}>📍 Maps</LinkTag> : null}
                   {h.booking_url ? <LinkTag href={h.booking_url.startsWith('http') ? h.booking_url : `https://${h.booking_url}`}>🔗 Buchung</LinkTag> : null}
@@ -198,7 +198,7 @@ export default function HotelsPage() {
                       } else store.say(`Nichts gefunden für „${q}“`);
                     }}
                   >
-                    🌍 Koordinaten suchen
+                    🌍 Punkt suchen
                   </button>
                   <button className="btn-quiet ml-auto !text-[12px] text-red-300/80" onClick={() => window.confirm(`„${h.name}“ löschen?`) && store.remove('hotels', h.id)}>
                     🗑

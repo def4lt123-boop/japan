@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Disclosure, Field, Modal, Select, TextArea, TextInput, cx } from './ui';
-import { BOOKING_STATUSES, EXPENSE_CATEGORIES, JOURNEY_MODES, PRIORITIES, TIME_SLOTS, type Expense, type Hotel, type Journey, type Place, type Trip } from '../lib/types';
+import { BOOKING_STATUSES, EXPENSE_CATEGORIES, JOURNEY_MODES, PRIORITIES, type Expense, type Hotel, type Journey, type Place, type Trip } from '../lib/types';
 import { PRIORITY_META, STATUS_META, TICKET_META, TICKET_ORDER, mapsUrl } from '../lib/categories';
 import { eachDate, fmtDate, fmtDuration, num, parseDuration, uid } from '../lib/format';
 import { CategoryPicker } from './CategoryPicker';
@@ -11,7 +11,6 @@ import type { TicketStatus } from '../lib/types';
 import { geocode, mapsUrlName, parseMapsUrl, queryFor, resolveMapsLink } from '../lib/geocode';
 import { MapPreview } from './MapPreview';
 import { useStore } from '../lib/store';
-import { DEFAULT_DURATION, freeWindows, fmtWindow, fmtWindows, minToTime, suggestStart, timeToMin } from '../lib/dayplan';
 
 const statusOptions = BOOKING_STATUSES.map((s) => ({ value: s, label: STATUS_META[s].label }));
 const priorityOptions = PRIORITIES.map((p) => ({ value: p, label: `${PRIORITY_META[p].icon} ${PRIORITY_META[p].label}` }));
@@ -65,22 +64,22 @@ function GeoFields({
       if (found && !same(found, name)) {
         if (onName && !(name ?? '').trim()) {
           onName(found);
-          setMsg(`Punkt ${parsed.lat.toFixed(6)}, ${parsed.lng.toFixed(6)} und Name „${found}“ übernommen ✔`);
+          setMsg(`Punkt und Name „${found}“ übernommen ✔`);
         } else {
           setNamedBy(found);
-          setMsg(`Punkt ${parsed.lat.toFixed(6)}, ${parsed.lng.toFixed(6)} übernommen – der Link nennt „${found}“.`);
+          setMsg(`Punkt übernommen – der Link nennt „${found}“.`);
         }
       } else {
-        setMsg(`Punkt ${parsed.lat.toFixed(6)}, ${parsed.lng.toFixed(6)} übernommen ✔`);
+        setMsg('Punkt übernommen ✔');
       }
       setMapsInput('');
     } else if (found) {
       onChange({ maps_query: found });
       if (onName && !(name ?? '').trim()) onName(found);
-      setMsg(`Der Link nennt „${found}“, aber keine Koordinaten – Suchbegriff übernommen, Punkt sucht 🌍.`);
+      setMsg(`Der Link nennt „${found}“, aber keinen Punkt – Suchbegriff übernommen, 🔍 suchen setzt den Punkt.`);
       setMapsInput('');
     } else {
-      setMsg('Den Link konnte ich nicht lesen. Erwartet wird z. B. …/maps/place/…/@35.6597,139.7007,17z – oder rohe Zahlen „34.6851, 135.8434“.');
+      setMsg('Den Link konnte ich nicht lesen. In Google Maps auf den Ort drücken, dann „Teilen“ bzw. die Adresszeile kopieren und hier einfügen.');
     }
   };
 
@@ -93,39 +92,31 @@ function GeoFields({
       onChange({ lat: round(hit.lat), lng: round(hit.lng), maps_query: query?.trim() || suggest });
       setMsg(`Gefunden: ${hit.label.slice(0, 90)}`);
     } else {
-      setMsg('Nichts gefunden – bitte Google-Maps-Link unten einfügen.');
+      setMsg('Nichts gefunden – bitte den Punkt bei Google Maps aussuchen und den Link einfügen.');
     }
   };
 
   return (
     <Card className="bg-black/20 p-2.5">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Karte & Google Maps</span>
-        <span className="text-[11.5px] tabular-nums text-slate-400">
-          {lat !== null && lng !== null ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : 'noch kein Punkt'}
-        </span>
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Punkt auf der Karte</span>
+        <span className="text-[11.5px] text-slate-400">{lat !== null && lng !== null ? '✓ Punkt gesetzt' : 'noch kein Punkt'}</span>
       </div>
-      <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
-        <Field label="Suchbegriff für Maps" className="min-w-0">
+      <div className="grid gap-2">
+        <Field label="Was soll Google Maps zeigen?" className="min-w-0">
           <TextInput value={query ?? ''} placeholder={suggest} onChange={(e) => onChange({ maps_query: e.target.value })} />
-        </Field>
-        <Field label="Breitengrad">
-          <TextInput type="number" step="0.000001" value={lat ?? ''} onChange={(e) => onChange({ lat: num(e.target.value), lng })} className="w-[132px]" />
-        </Field>
-        <Field label="Längengrad">
-          <TextInput type="number" step="0.000001" value={lng ?? ''} onChange={(e) => onChange({ lng: num(e.target.value), lat })} className="w-[132px]" />
         </Field>
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <Button size="sm" variant="ghost" onClick={runGeocode} disabled={busy}>
-          {busy ? 'Suche…' : '🌍 Koordinaten suchen (OSM)'}
+          {busy ? 'Suche…' : '🔍 Punkt suchen'}
         </Button>
         <Button size="sm" variant="ghost" onClick={() => void applyMapsLink()} disabled={!mapsInput.trim() || busy}>
-          {busy ? 'lese Link…' : '📌 Link übernehmen'}
+          {busy ? 'lese…' : '📌 Ausgewählten Punkt übernehmen'}
         </Button>
         <TextInput
           className={cx('min-w-[220px] flex-1', linkOk && '!border-emerald-400/50')}
-          placeholder="Link hier einfügen (auch maps.app.goo.gl) – oder 34.6851, 135.8434"
+          placeholder="Link aus Google Maps hier einfügen (auch maps.app.goo.gl)"
           value={mapsInput}
           onChange={(e) => {
             setMapsInput(e.target.value);
@@ -151,7 +142,7 @@ function GeoFields({
           href={mapsUrl({ lat, lng, name: suggest, city: '', maps_query: query ?? null })}
           target="_blank"
           rel="noreferrer"
-          title="Bei Google Maps öffnen, dort den Ort anklicken – und den Link hier einfügen"
+          title="Öffnet Google Maps mit diesem Suchbegriff – dort den Ort anklicken und den Link hier einfügen"
         >
           🎯 Punkt bei Google Maps wählen ↗
         </a>
@@ -169,7 +160,7 @@ function GeoFields({
             heading={lat !== null && lng !== null ? 'Kartenpunkt' : 'Suchvorschau'}
           />
           <p className="mt-1 text-[11px] leading-snug text-slate-500">
-            Die Karte folgt dem Suchbegriff – bei jedem Tipp, auch bevor etwas gespeichert ist. Ein Google-Maps-Link oben rein setzt den Marker direkt.
+            Die Vorschau folgt dem Suchbegriff – bei jedem Tipp, auch bevor etwas gespeichert ist.
           </p>
         </div>
       ) : null}
@@ -195,7 +186,7 @@ function GeoFields({
       ) : null}
       {msg ? <p className="mt-1.5 text-[11.5px] leading-snug text-slate-400">{msg}</p> : null}
       <p className="mt-1 text-[11px] leading-snug text-slate-500">
-        So geht’s: bei Google Maps auf den Ort drücken, den Link oben einfügen – Punkt, Name und Kartenausschnitt wandern in die Aktivität.
+        So geht’s: bei Google Maps den Ort anklicken, den Link hier einfügen – Punkt und Name wandern in die Aktivität.
       </p>
     </Card>
   );
@@ -306,8 +297,6 @@ export function PlaceForm({
     sort_order: 0,
     ...value,
   }));
-  const [durationText, setDurationText] = useState(fmtDuration(value?.duration_min ?? null));
-
   useEffect(() => {
     document.getElementById('place-name-input')?.focus();
   }, []);
@@ -316,36 +305,16 @@ export function PlaceForm({
   const store = useStore();
   /** was in dieser Reise an Kategorien schon benutzt wird, bleibt wählbar */
   const knownCategories = useMemo(() => store.places.filter((x) => x.trip_id === tripId).map((x) => x.category), [store.places, tripId]);
-
-  /** Was dieser Eintrag am gewählten Tag blockiert – und was dann noch frei ist */
-  const dayInfo = useMemo(() => {
-    if (!draft.date) return null;
-    const sibs = store.places.filter((p) => p.date === draft.date && p.id !== value?.id);
-    const len = parseDuration(durationText) ?? draft.duration_min ?? DEFAULT_DURATION;
-    const wanted = timeToMin(draft.start_time);
-    const at = wanted !== null ? suggestStart(sibs, len, wanted) : null;
-    return {
-      len,
-      wanted,
-      start: at?.start ?? null,
-      moved: at?.moved ?? false,
-      free: freeWindows(sibs),
-      nextFree: suggestStart(sibs, len, null).start,
-      others: sibs.length,
-    };
-  }, [draft.date, draft.start_time, draft.duration_min, durationText, store.places, value?.id]);
+  const amTag = draft.date ? store.places.filter((p) => p.date === draft.date && p.id !== value?.id).length : 0;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!draft.name.trim()) return;
     const { name, city } = draft;
-    const end = draft.end_date && draft.date && draft.end_date < draft.date ? draft.date : draft.end_date;
     onSubmit({
       ...draft,
       name: name.trim(),
       city: city.trim() || 'Unbekannt',
-      end_date: draft.date ? end : null,
-      duration_min: parseDuration(durationText) ?? draft.duration_min,
       ticket_status: (draft.ticket_status ?? 'unklar') as TicketStatus,
       sort_order: draft.sort_order ?? 0,
     });
@@ -377,7 +346,7 @@ export function PlaceForm({
           <Field label="Was ist es? *">
             <TextInput id="place-name-input" value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="z. B. Nara-Park" />
           </Field>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-2">
             <Field label="Stadt">
               <TextInput list="city-list" value={draft.city} onChange={(e) => set({ city: e.target.value })} placeholder="Nara" />
               <datalist id="city-list">
@@ -385,9 +354,6 @@ export function PlaceForm({
                   <option key={c} value={c} />
                 ))}
               </datalist>
-            </Field>
-            <Field label="Stadtteil / Viertel">
-              <TextInput value={draft.district ?? ''} onChange={(e) => set({ district: e.target.value })} placeholder="Higashiyama" />
             </Field>
             <Field label="Kategorie" hint="bestimmt Symbol, Farbe auf der Karte und die Gruppen">
               <CategoryPicker
@@ -406,92 +372,38 @@ export function PlaceForm({
           <div className="grid gap-2 sm:grid-cols-2">
             <DateField
               name="date"
-              label="Tag der Reise"
+              label="An welchem Tag?"
               value={draft.date}
-              onChange={(v) => set({ date: v, end_date: v && draft.end_date && draft.end_date < v ? null : draft.end_date })}
+              onChange={(v) => set({ date: v })}
               hint={draft.date ? undefined : 'leer = Aktivität kommt in die Liste'}
               quickDates={tripDays}
               tripBounds={bounds}
             />
-            <DateField
-              name="end_date"
-              label="bis (Mehrtages-Ausflug)"
-              value={draft.end_date}
-              onChange={(v) => set({ end_date: v })}
-              hint={draft.date && draft.end_date ? `${Math.max(1, eachDate(draft.date, draft.end_date).length)} Tage` : 'optional'}
-              minDate={draft.date}
-              maxDate={tripEnd ?? null}
-              startHint={draft.date ? 'Endtag wählen' : 'erst Tag wählen'}
-            />
-          </div>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <Field label="Tageszeit">
-              <Select allowEmpty options={TIME_SLOTS} value={draft.time_slot ?? ''} onChange={(e) => set({ time_slot: (e.target.value || null) as Place['time_slot'] })} emptyLabel="—" />
-            </Field>
-            <Field label="Uhrzeit">
-              <TextInput type="time" value={draft.start_time ?? ''} onChange={(e) => set({ start_time: e.target.value || null })} />
-            </Field>
-            <Field label="Dauer" hint='"2h", "1:30", "45 min"'>
-              <TextInput value={durationText} onChange={(e) => setDurationText(e.target.value)} placeholder="2 h" />
-            </Field>
-          </div>
-          {dayInfo ? (
-            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg bg-black/25 px-2 py-1.5 text-[11.5px] ring-1 ring-inset ring-white/[0.07]">
-              {dayInfo.start !== null ? (
-                <>
-                  <span className="tabular-nums text-emerald-100">{fmtWindow(dayInfo.start, dayInfo.start + dayInfo.len)}</span>
-                  <span className="text-slate-400">wäre an diesem Tag verplant</span>
-                  {dayInfo.moved && dayInfo.wanted !== null ? (
-                    <span className="text-amber-200">· {fmtWindow(dayInfo.wanted, dayInfo.wanted + dayInfo.len)} ist schon belegt</span>
-                  ) : null}
-                </>
-              ) : (
-                <span className="text-slate-400">
-                  ohne Uhrzeit zählt nur die Tageszeit · erste Lücke: <span className="tabular-nums text-emerald-100">{fmtWindow(dayInfo.nextFree, dayInfo.nextFree + dayInfo.len)}</span>
-                </span>
-              )}
-              {dayInfo.free.length ? <span className="text-slate-500">· frei bleibt {fmtWindows(dayInfo.free)}</span> : <span className="text-shu-200">· Tag wäre voll</span>}
-              <button
-                type="button"
-                className="btn-quiet ml-auto !px-1.5 !py-0.5 !text-[11px]"
-                onClick={() => set({ start_time: minToTime(dayInfo.start ?? dayInfo.nextFree) })}
-                title="Uhrzeit in das Fenster setzen"
-              >
-                ⏱ {minToTime(dayInfo.start ?? dayInfo.nextFree)} setzen
-              </button>
-            </div>
-          ) : (
-            <p className="text-[11.5px] leading-snug text-slate-500">
-              Ohne Tag bleibt die Aktivität in der Liste – das Zeitfenster ergibt sich, wenn du sie auf den Tag ziehst.
-            </p>
-          )}
-          <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-            <Field label="Fahrzeit vom Hotel">
-              <TextInput value={draft.travel_time ?? ''} onChange={(e) => set({ travel_time: e.target.value })} placeholder="Ca 30 Min" />
-            </Field>
-            <div>
-              <span className="label">Wie wichtig?</span>
-              <div className="flex gap-1">
-                {priorityOptions.map((o) => (
-                  <button
-                    key={o.value}
-                    type="button"
-                    onClick={() => set({ priority: o.value as Place['priority'] })}
-                    aria-pressed={draft.priority === o.value}
-                    className={cx(
-                      'chip flex-1 justify-center',
-                      draft.priority === o.value ? 'bg-shu-500/20 text-white' : 'bg-white/[0.04] text-slate-400 hover:bg-white/[0.08]',
-                    )}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-            </div>
             <Field label="Status">
               <Select className="!w-auto" options={statusOptions} value={draft.booking_status} onChange={(e) => set({ booking_status: e.target.value as Place['booking_status'] })} />
             </Field>
           </div>
+          <div className="mt-2">
+            <span className="label">Wie wichtig?</span>
+            <div className="flex gap-1">
+              {priorityOptions.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() => set({ priority: o.value as Place['priority'] })}
+                  aria-pressed={draft.priority === o.value}
+                  className={cx('chip flex-1 justify-center', draft.priority === o.value ? 'bg-shu-500/20 text-white' : 'bg-white/[0.04] text-slate-400 hover:bg-white/[0.08]')}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="mt-2 text-[11.5px] leading-snug text-slate-500">
+            {draft.date
+              ? `Am ${draft.date.split('-').reverse().slice(0, 2).join('.')} stehen ${amTag ? `${amTag} ${amTag === 1 ? 'Punkt' : 'Punkte'} davor` : 'noch keine Punkte'} – die Liste beginnt mit dem, was du zuerst machen willst.`
+              : 'Ohne Tag bleibt die Aktivität in der Liste „Noch ohne Tag“ und wartet dort auf ihren Platz.'}
+          </p>
         </Group>
 
         <Group title="Ticket & Preis">

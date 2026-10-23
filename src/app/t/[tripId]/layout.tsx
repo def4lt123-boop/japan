@@ -10,7 +10,6 @@ import { Button, Card, Menu, cx } from '../../../components/ui';
 import { daysBetween, fmtMoney, fmtRange, plural } from '../../../lib/format';
 import { costsOf, dayPlan } from '../../../lib/stats';
 import { endTrip, startHint, startTrip, tripMode } from '../../../lib/mode';
-import { sortDays } from '../../../lib/sortday';
 import { locusChanges } from '../../../lib/locus';
 import { today } from '../../../lib/format';
 import { needsCategory } from '../../../lib/categories';
@@ -21,7 +20,6 @@ import { applyCategories } from '../../../lib/categorize';
  * („Anlegen“ und „⋯“) bzw. auf der Reise-Seite.
  */
 const TABS = [
-  { href: '/heute', label: 'Heute', icon: '☀️' },
   { href: '/tage', label: 'Tage', icon: '🗓️' },
   { href: '/aktivitaeten', label: 'Aktivitäten', icon: '🗂️' },
   { href: '/karte', label: 'Karte', icon: '🗺️' },
@@ -47,7 +45,7 @@ export default function TripLayout({ children }: { children: React.ReactNode }) 
   }
 
   const live = tripMode(trip) === 'live';
-  const tabs = live ? TABS.map((t) => (t.href === '/heute' ? { ...t, label: 'Unterwegs', icon: '🚶' } : t)) : TABS;
+  const tabs = live ? [{ href: '/heute', label: 'Unterwegs', icon: '🚶' }, ...TABS] : TABS;
 
   return (
     <EditorProvider tripId={tripId}>
@@ -87,7 +85,6 @@ function TripTopBar({ tripId }: { tripId: string }) {
   const needsCat = bundle.places.filter((p) => needsCategory(p)).length;
   const openPool = bundle.places.filter((p) => !p.date).length;
   const planDays = bundle.trip ? dayPlan(bundle) : [];
-  const sortierbar = planDays.filter((d) => d.places.length > 1).length;
   const changeCount = locusChanges(bundle.places, bundle.hotels, planDays.map((d) => d.date), bundle.journeys).length;
   const days = trip?.start_date && trip?.end_date ? daysBetween(trip.start_date, trip.end_date) : 0;
   const live = tripMode(bundle.trip) === 'live';
@@ -137,7 +134,7 @@ function TripTopBar({ tripId }: { tripId: string }) {
             ]}
           />
         ) : trip?.archived ? null : (
-          <Button variant="primary" onClick={() => startTrip(store, bundle)} title={startHint({ ...bundle })}>
+          <Button variant="primary" onClick={() => startTrip(store, bundle)} title={`Was der Start tut: ${startHint({ ...bundle })}`}>
             ▶️ Reise starten
           </Button>
         )}
@@ -165,12 +162,9 @@ function TripTopBar({ tripId }: { tripId: string }) {
               ? [{ icon: '▶️', label: 'Reise starten', hint: startHint({ ...bundle }) || 'die Unterwegs-Seite öffnet sich', run: () => startTrip(store, bundle) }]
               : []),
             ...(live ? [{ icon: '☀️', label: 'Heutiger Tag', hint: offenHeute ? `${plural(offenHeute, 'Punkt', 'Punkte')} heute noch offen` : 'alles erledigt', href: `/t/${tripId}/heute` }] : []),
-            ...(sortierbar
-              ? [{ icon: '⚡', label: 'Alle Tage sortieren', hint: 'der Reihe nach, ohne Überschneidungen', run: () => sortDays(store, planDays) }]
-              : []),
             { icon: '🔀', label: 'Ortswechsel eintragen', hint: changeCount ? `${plural(changeCount, 'Wechsel', 'Wechsel')} erkannt` : 'Stadt und Bett an einem Tag tauschen', run: () => open({ kind: 'move' }) },
             ...(missingCoords
-              ? [{ icon: '🌍', label: `${missingCoords} Kartenpunkte nachziehen`, hint: 'OpenStreetMap fragt die Koordinaten ab', run: () => void geocodeAll() }]
+              ? [{ icon: '🌍', label: `${missingCoords} Punkte ohne Ort`, hint: 'die Kartensuche setzt den Punkt', run: () => void geocodeAll() }]
               : []),
             ...(needsCat
               ? [{ icon: '🏷️', label: `${needsCat} eine Kategorie geben`, hint: 'aus Name und Notiz abgeleitet', run: () => applyCategories(store, bundle.places) }]

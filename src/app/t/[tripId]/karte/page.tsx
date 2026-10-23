@@ -259,8 +259,8 @@ export default function MapPage() {
             {missing.length ? (
               <div className="mt-3 border-t border-white/10 pt-2">
                 <p className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-amber-200/80">
-                  ohne Koordinaten ({missing.length})
-                  <button className="btn-quiet ml-auto !px-1.5 !py-0.5 !text-[10.5px] normal-case tracking-normal" onClick={() => void geocodeAll()} title="Für alle Punkte ohne Kartenpunkt die Koordinaten suchen lassen">
+                  ohne Punkt ({missing.length})
+                  <button className="btn-quiet ml-auto !px-1.5 !py-0.5 !text-[10.5px] normal-case tracking-normal" onClick={() => void geocodeAll()} title="Die Lage für alle Punkte ohne Ort über die Kartensuche holen">
                     🌍 alle nachziehen
                   </button>
                 </p>
@@ -270,14 +270,14 @@ export default function MapPage() {
                       <span className="min-w-0 flex-1 truncate">{p.name}</span>
                       <button
                         className="btn-quiet !px-1.5 !py-0.5 !text-[11px]"
-                        title="Koordinaten suchen"
+                        title="Punkt in der Kartensuche holen"
                         onClick={async () => {
                           const hit = await geocode(queryFor(p));
                           if (hit) {
                             store.patch('places', p.id, { lat: Math.round(hit.lat * 1e6) / 1e6, lng: Math.round(hit.lng * 1e6) / 1e6 });
                             store.say(`${p.name}: ${hit.label.slice(0, 60)}`);
                           } else {
-                            store.say(`Nichts gefunden für „${queryFor(p)}“ – bitte Google-Maps-Link im Formular einfügen.`);
+                            store.say(`Nichts gefunden für „${queryFor(p)}“ – im Formular den Punkt selbst in Google Maps auswählen.`);
                           }
                         }}
                       >

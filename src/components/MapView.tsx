@@ -60,7 +60,7 @@ export default function MapView({ places, hotels, showHotels, routePlaces, selec
     () =>
       routePlaces
         .filter((p) => p.lat !== null && p.lng !== null)
-        .sort((a, b) => (a.start_time ?? '99').localeCompare(b.start_time ?? '99') || a.sort_order - b.sort_order)
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
         .map((p) => [p.lat as number, p.lng as number]),
     [routePlaces],
   );
@@ -149,13 +149,10 @@ export default function MapView({ places, hotels, showHotels, routePlaces, selec
                   <b>{p.name}</b>
                 </div>
                 <div style={{ marginTop: 4, color: '#94a3b8', fontSize: 11.5 }}>
-                  {p.city}
-                  {p.district ? ` · ${p.district}` : ''} · {p.date ? fmtDate(p.date, { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'noch ohne Tag'}
+                  {p.city} · {p.date ? fmtDate(p.date, { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'noch ohne Tag'}
                 </div>
                 <div style={{ marginTop: 4, fontSize: 12 }}>
-                  {[p.start_time, p.time_slot, p.duration_min ? fmtDuration(p.duration_min) : null, p.travel_time ? `🚈 ${p.travel_time}` : null, p.price_eur ? fmtMoney(p.price_eur) : null]
-                    .filter(Boolean)
-                    .join(' · ') || '—'}
+                  {[meta.label, p.priority === 'muss' ? '★ Muss' : null, p.price_eur ? fmtMoney(p.price_eur) : p.price_note || null].filter(Boolean).join(' · ')}
                 </div>
                 {p.notes ? <p style={{ marginTop: 5, fontSize: 12 }}>{p.notes}</p> : null}
                 {onCategory ? (
@@ -178,9 +175,6 @@ export default function MapView({ places, hotels, showHotels, routePlaces, selec
                   <button onClick={() => onEditPlace(p.id)} style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', color: '#9db6dc' }}>
                     ✎ bearbeiten
                   </button>
-                </div>
-                <div style={{ marginTop: 4, fontSize: 10.5, color: '#64748b' }}>
-                  {p.lat?.toFixed(5)}, {p.lng?.toFixed(5)}
                 </div>
               </div>
             </Popup>

@@ -206,7 +206,7 @@ export function useBatchGeocode(tripId: string) {
     async (onlyMissing = true) => {
       const targets = store.places.filter((p) => p.trip_id === tripId && (!onlyMissing || p.lat === null || p.lng === null));
       if (!targets.length) {
-        store.say('Alle Einträge haben schon Koordinaten 👍');
+        store.say('Alle Einträge haben schon einen Punkt 👍');
         return;
       }
       let done = 0;
@@ -218,10 +218,10 @@ export function useBatchGeocode(tripId: string) {
           found += 1;
         }
         done += 1;
-        store.say(`Suche Koordinaten… ${done}/${targets.length} (${found} gefunden)`);
+        store.say(`Punkte gesucht… ${done}/${targets.length} (${found} gefunden)`);
         await sleep(1100);
       }
-      store.say(`Fertig: ${found} von ${targets.length} Einträgen neue Koordinaten bekommen.`);
+      store.say(`Fertig: ${found} von ${targets.length} Einträgen haben jetzt einen Punkt.`);
     },
     [store, tripId],
   );

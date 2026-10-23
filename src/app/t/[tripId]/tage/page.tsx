@@ -1,5 +1,10 @@
 'use client';
 
+/**
+ * Der Tagesplan: eine Karte pro Reisetag, darin die Punkte der Reihe nach.
+ * Oben die Liste „Noch ohne Tag“. Ziehen legt einen Punkt auf einen Tag,
+ * ▲▼ (oder Ziehen auf eine Zeile) ändert die Reihenfolge. Uhrzeiten gibt es nicht.
+ */
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -9,15 +14,13 @@ import { PendingList } from '../../../../components/PendingList';
 import { PlaceCard } from '../../../../components/PlaceCard';
 import { MapPreview, RoutePreview } from '../../../../components/MapPreview';
 import { dayStops, hotelForDay, routeUrl } from '../../../../lib/maps';
-import { assign, minToTime, setSlot } from '../../../../lib/dayplan';
-import { DayBar } from '../../../../components/daybar';
+import { assign, dayPlaces, moveToIndex, shiftWithin } from '../../../../lib/dayplan';
 import { Button, Card, Empty, Menu, SectionTitle, cx } from '../../../../components/ui';
 import { dayPlan, nightCoverage } from '../../../../lib/stats';
 import { locusChanges } from '../../../../lib/locus';
-import { sortDays } from '../../../../lib/sortday';
 import { ChangeStrip } from '../../../../components/Ortswechsel';
 import { today } from '../../../../lib/format';
-import { fmtDate, fmtDuration, plural } from '../../../../lib/format';
+import { fmtDate, plural } from '../../../../lib/format';
 
 const MODE_ICON: Record<string, string> = {
   Flug: '✈️',
@@ -37,9 +40,10 @@ export default function DaysPage() {
   const bundle = useTrip(tripId);
   const { open } = useEditor();
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const [insertAt, setInsertAt] = useState<string | null>(null);
   const [mapDay, setMapDay] = useState<string | null>(null);
 
-  const days = bundle.trip ? dayPlan(bundle) : [];
+  const days = useMemo(() => (bundle.trip ? dayPlan(bundle) : []), [bundle]);
   const pool = bundle.places.filter((p) => !p.date);
   const coverage = new Map(bundle.trip ? nightCoverage(bundle).map((n) => [n.date, n]) : []);
   const dateIndex = new Map(days.map((d, i) => [d.date, i]));
@@ -64,15 +68,36 @@ export default function DaysPage() {
     e.preventDefault();
     const id = e.dataTransfer.getData('text/plain');
     setDropTarget(null);
+    setInsertAt(null);
     if (!id) return;
     const place = bundle.places.find((p) => p.id === id);
-    if (!place || place.date === date) return;
+    if (!place) return;
     if (!date) {
       store.patch('places', id, { date: null });
       store.say(`„${place.name}“ zurück in die Aktivitätenliste.`);
       return;
     }
+    if (place.date === date) return;
     assign(store, bundle.places, place, { date });
+  };
+
+  /** auf eine Zeile ziehen = dort einfügen, der Rest rückt nach */
+  const dropOnRow = (date: string, index: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const id = e.dataTransfer.getData('text/plain');
+    setInsertAt(null);
+    setDropTarget(null);
+    if (!id) return;
+    const place = bundle.places.find((p) => p.id === id);
+    if (!place) return;
+    if (place.date !== date) {
+      assign(store, bundle.places, place, { date, before: dayPlaces(bundle.places, date)[index]?.id ?? null });
+      return;
+    }
+    const list = dayPlaces(bundle.places, date);
+    const from = list.findIndex((p) => p.id === id);
+    moveToIndex(store, bundle.places, id, date, from < index ? index - 1 : index);
   };
 
   if (!store.ready) return <Card className="p-8 text-center text-sm text-slate-400">lädt …</Card>;
@@ -80,13 +105,9 @@ export default function DaysPage() {
 
   return (
     <div className="space-y-4">
-      <SectionTitle
-        title="Tagesplan"
-        icon="🗓️"
-        hint="Ziehen zum Planen · Lücke im Band = freie Zeit · über 8 h gilt ein Tag als voll"
-      />
+      <SectionTitle title="Tagesplan" icon="🗓️" hint="Punkte untereinander = die Reihenfolge des Tages · ziehen legt auf einen Tag, ▲▼ rückt um" />
 
-      <PendingList tripId={tripId} pool={pool} all={bundle.places} days={days.map((d) => ({ date: d.date, hours: d.hours, cities: d.cities, places: d.places }))} />
+      <PendingList tripId={tripId} pool={pool} all={bundle.places} days={days.map((d) => ({ date: d.date, cities: d.cities, places: d.places }))} />
 
       <div className="no-print sticky top-0 z-20 -mx-1 overflow-x-auto rounded-xl border border-white/[0.07] bg-ink-950/85 px-1 py-1 backdrop-blur">
         <div className="flex gap-1">
@@ -94,18 +115,14 @@ export default function DaysPage() {
             <a
               key={d.date}
               href={`#${d.date}`}
-              className={cx(
-                'flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] transition hover:bg-white/[0.07]',
-                d.places.length ? 'text-slate-200' : 'text-slate-500',
-              )}
-              title={`${plural(d.places.length, 'Aktivität', 'Aktivitäten')} · ${d.hours.toFixed(1)} h`}
+              className={cx('flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] transition hover:bg-white/[0.07]', d.places.length ? 'text-slate-200' : 'text-slate-500')}
+              title={plural(d.places.length, 'Aktivität', 'Aktivitäten')}
             >
               <span className={cx('font-semibold', d.date === now && 'text-amber-200')}>{fmtDate(d.date, { weekday: 'short' })}</span>
               <span className="tabular-nums">{fmtDate(d.date, { day: '2-digit', month: '2-digit' })}</span>
-              <span className={cx('rounded px-1 tabular-nums', d.hours > 8 ? 'bg-shu-500/25 text-shu-100' : d.places.length ? 'bg-white/[0.07] text-slate-300' : 'text-slate-600')}>{d.places.length}</span>
+              <span className={cx('rounded px-1 tabular-nums', d.places.length >= 5 ? 'bg-shu-500/25 text-shu-100' : d.places.length ? 'bg-white/[0.07] text-slate-300' : 'text-slate-600')}>{d.places.length}</span>
             </a>
           ))}
-          <a href={`/t/${tripId}/heute`} title="was heute und an den nächsten Tagen dran ist" className="flex shrink-0 items-center gap-1.5 rounded-lg bg-white/[0.05] px-2 py-1 text-[12px] text-slate-200 hover:bg-white/10">☀️ Heute</a>
           {pool.length ? (
             <a href="#pool" className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[12px] text-amber-100 ring-1 ring-inset ring-amber-400/25 hover:bg-amber-500/20">
               ✨ ohne Tag <span className="tabular-nums">{pool.length}</span>
@@ -129,12 +146,12 @@ export default function DaysPage() {
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
         {days.map((d) => {
           const night = coverage.get(d.date);
-          const over = d.hours > 8;
           const stops = dayStops(d.places);
           const hotel = hotelForDay(bundle.hotels, d.date, d.cities[0] ?? d.places[0]?.city ?? null);
           const origin = hotel ?? stops[0] ?? null;
           const destination = stops.length > 1 ? stops[stops.length - 1] : stops[0] ?? null;
           const via = stops.length > 2 ? stops.slice(1, -1) : [];
+          const geordnet = dayPlaces(bundle.places, d.date);
           return (
             <Card
               key={d.date}
@@ -145,16 +162,14 @@ export default function DaysPage() {
               }}
               onDragLeave={() => setDropTarget((cur) => (cur === d.date ? null : cur))}
               onDrop={drop(d.date)}
-              className={cx('print-block scroll-mt-16 p-0 transition', dropTarget === d.date && 'drop-live', over && 'border-shu-400/30', d.date === now && 'ring-1 ring-white/20')}
+              className={cx('print-block scroll-mt-16 p-0 transition', dropTarget === d.date && 'drop-live', d.date === now && 'ring-1 ring-white/20')}
             >
               <header className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-white/[0.06] px-3 py-2">
                 <span className="text-[13.5px] font-semibold text-white">{fmtDate(d.date, { weekday: 'short', day: 'numeric', month: 'long' })}</span>
-                {d.cities.length || d.journeys[0]?.to_city ? (
-                  <span className="text-[12px] text-slate-400">{d.cities.length ? d.cities.join(' / ') : d.journeys[0]?.to_city}</span>
-                ) : null}
+                {d.cities.length || d.journeys[0]?.to_city ? <span className="text-[12px] text-slate-400">{d.cities.length ? d.cities.join(' / ') : d.journeys[0]?.to_city}</span> : null}
                 <span className="ml-auto flex items-center gap-1 text-[11.5px] text-slate-400">
-                  <span className={cx('chip', over ? 'bg-shu-500/20 text-shu-100' : d.places.length ? 'bg-white/[0.06] text-slate-300' : 'bg-transparent text-slate-500')}>
-                    {d.places.length ? `${plural(d.places.length, 'Aktivität', 'Aktivitäten')} · ${fmtDuration(d.hours * 60)}` : 'noch frei'}
+                  <span className={cx('chip', geordnet.length >= 5 ? 'bg-shu-500/20 text-shu-100' : geordnet.length ? 'bg-white/[0.06] text-slate-300' : 'bg-transparent text-slate-500')}>
+                    {geordnet.length ? plural(geordnet.length, 'Punkt', 'Punkte') : 'noch frei'}
                   </span>
                   <button className="icon-btn" title="Aktivität an diesem Tag anlegen" onClick={() => open({ kind: 'place', defaults: { date: d.date } })}>
                     ＋
@@ -165,28 +180,11 @@ export default function DaysPage() {
                     icon="⋯"
                     title="Mehr für diesen Tag"
                     items={[
-                      ...(stops.length > 1
-                        ? [{ icon: '🧭', label: 'Tag als Route bei Google Maps', hint: `${stops.length} Halte, mit Fahrplan`, href: routeUrl({ origin: origin!, destination: destination!, stops: via, mode: 'transit' }) }]
-                        : []),
+                      ...(stops.length > 1 ? [{ icon: '🧭', label: 'Tag als Route bei Google Maps', hint: `${stops.length} Halte, in der Reihenfolge der Liste`, href: routeUrl({ origin: origin!, destination: destination!, stops: via, mode: 'transit' as const }) }] : []),
                       ...(stops.length ? [{ icon: '🗺️', label: mapDay === d.date ? 'Karte ausblenden' : 'Karte zu diesem Tag zeigen', run: () => setMapDay((cur) => (cur === d.date ? null : d.date)) }] : []),
-                      ...(pool.length
-                        ? [
-                            {
-                              icon: '✨',
-                              label: 'Obersten Wunsch hierher legen',
-                              hint: pool[0].name,
-                              run: () => {
-                                const candidate = pool.find((x) => x.city === d.places[0]?.city) ?? pool[0];
-                                if (candidate) assign(store, bundle.places, candidate, { date: d.date });
-                              },
-                            },
-                          ]
-                        : []),
-                      ...(d.places.length > 1
-                        ? [{ icon: '⚡', label: 'Tag sortieren', hint: 'der Reihe nach, ohne Überschneidungen', run: () => sortDays(store, [d]) }]
-                        : []),
+                      ...(pool.length ? [{ icon: '✨', label: 'Obersten Wunsch hierher legen', hint: pool[0].name, run: () => { const candidate = pool.find((x) => x.city === d.places[0]?.city) ?? pool[0]; if (candidate) assign(store, bundle.places, candidate, { date: d.date }); } }] : []),
                       { icon: '🔀', label: 'Ortswechsel an diesem Tag', hint: 'Stadt, Bett und Fahrt umtragen', run: () => open({ kind: 'move', date: d.date }) },
-                      { icon: '🗓️', label: 'Alle Aktivitäten der Reise', href: `/t/${tripId}/aktivitaeten` },
+                      { icon: '🗂️', label: 'Alle Aktivitäten der Reise', href: `/t/${tripId}/aktivitaeten` },
                     ]}
                   />
                 </span>
@@ -230,52 +228,38 @@ export default function DaysPage() {
               {mapDay === d.date && origin && destination ? (
                 <div className="border-b border-white/[0.07] p-2.5">
                   {stops.length > 1 ? (
-                    <RoutePreview
-                      origin={origin}
-                      destination={destination}
-                      stops={via}
-                      mode="transit"
-                      height={230}
-                      heading={`${fmtDate(d.date, { weekday: 'short', day: '2-digit', month: '2-digit' })} · ${stops.length} Halte`}
-                    />
+                    <RoutePreview origin={origin} destination={destination} stops={via} mode="transit" height={230} heading={`${fmtDate(d.date, { weekday: 'short', day: '2-digit', month: '2-digit' })} · ${stops.length} Halte`} />
                   ) : (
                     <MapPreview place={destination} height={190} heading={destination?.name ?? 'Karte'} />
                   )}
                   <p className="mt-1 text-[11px] leading-snug text-slate-500">
-                    {hotel ? `Start an der Unterkunft „${hotel.name}“ · ` : 'Erster Punkt ist der Start · '}
-                    Reihenfolge wie geplant, „öffnen“ zeigt Fahrpläne und Umstiege.
+                    {hotel ? `Start an der Unterkunft „${hotel.name}“ · ` : 'Erster Punkt ist der Start · '} die Liste unten ist die Reihenfolge der Stationen.
                   </p>
                 </div>
               ) : null}
 
-              {pool.length || d.places.length ? (
-                <div className="border-b border-white/[0.05] px-3 pb-1.5 pt-2">
-                  <DayBar
-                    places={d.places}
-                    height={14}
-                    onPickSlot={
-                      pool.length
-                        ? (m) => {
-                            const candidate = pool.find((x) => x.city === d.places[0]?.city) ?? pool[0];
-                            if (candidate) assign(store, bundle.places, candidate, { date: d.date, start_time: minToTime(m) });
-                          }
-                        : undefined
-                    }
-                    onMove={(id, minute) => {
-                      const moving = bundle.places.find((x) => x.id === id);
-                      if (moving) setSlot(store, bundle.places, moving, { start: minute });
-                    }}
-                    onResize={(id, minutes) => {
-                      const moving = bundle.places.find((x) => x.id === id);
-                      if (moving) setSlot(store, bundle.places, moving, { duration: minutes });
-                    }}
-                  />
-                </div>
-              ) : null}
-
               <div className="space-y-2 p-2.5">
-                {d.places.length ? (
-                  d.places.map((p) => <PlaceCard key={p.id} place={p} onMove={(dir) => moveDay(p.id, d.date, dir)} />)
+                {geordnet.length ? (
+                  geordnet.map((p, i) => (
+                    <div
+                      key={p.id}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setInsertAt(p.id);
+                      }}
+                      onDragLeave={() => setInsertAt((cur) => (cur === p.id ? null : cur))}
+                      onDrop={dropOnRow(d.date, i)}
+                      className={cx('rounded-xl transition', insertAt === p.id && 'ring-1 ring-shu-400/60')}
+                    >
+                      <PlaceCard
+                        place={p}
+                        nr={i + 1}
+                        onMove={(dir) => moveDay(p.id, d.date, dir)}
+                        onUp={i > 0 ? () => shiftWithin(store, bundle.places, p, -1) : undefined}
+                        onDown={i < geordnet.length - 1 ? () => shiftWithin(store, bundle.places, p, 1) : undefined}
+                      />
+                    </div>
+                  ))
                 ) : (
                   <div className="rounded-xl border border-dashed border-white/[0.12] px-3 py-4 text-center text-[12.5px] text-slate-500">
                     Noch frei – Punkt aus der Leiste hierher ziehen oder{' '}

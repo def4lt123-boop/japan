@@ -70,7 +70,7 @@ export default function HomePage() {
           Urlaubsplanung – jeder Tag, jedes Hotel, jeder offene Punkt
         </h1>
         <p className="mt-2 max-w-xl text-[13.5px] leading-relaxed text-slate-300">
-          Jeder Ort mit Tageszeit, Dauer, Fahrzeit vom Hotel, Hinweis, Ticket, Preis und Kartenpunkt – Tag für Tag geplant.
+          Jeder Punkt mit Kategorie, Hinweis, Ticket, Preis und Ort auf der Karte – pro Tag als nummerierte Liste.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           {bundles[0] ? (
@@ -212,7 +212,7 @@ export default function HomePage() {
 function TripCard({ bundle, onEdit, onDuplicate, onDelete, onStart, onEnd }: { bundle: TripBundle; onEdit: () => void; onDuplicate: () => void; onDelete: () => void; onStart: () => void; onEnd: () => void }) {
   const ctx = dayContext(bundle.trip);
   const live = tripMode(bundle.trip) === 'live';
-  const liveDay = dayPlan(bundle).find((d) => d.date === (live ? bundle.trip.started_at ?? ctx?.iso ?? '' : ctx?.state === 'live' ? ctx.iso : '')) ?? null;
+  const heuteTag = dayPlan(bundle).find((d) => d.date === ctx?.iso) ?? null;
   const costs = costsOf(bundle);
   const gaps = nightCoverage(bundle).filter((n) => !n.covered);
   const planned = bundle.places.filter((p) => p.date).length;
@@ -238,40 +238,34 @@ function TripCard({ bundle, onEdit, onDuplicate, onDelete, onStart, onEnd }: { b
         <span className="flex shrink-0 items-center gap-1.5">
           {live ? <span className="chip bg-emerald-500/15 text-emerald-100 ring-emerald-400/30" title="seit 🗓️">🚶 unterwegs</span> : null}
           <Link href={`/t/${bundle.trip.id}/${live ? 'heute' : 'tage'}`} className="btn-primary">
-            {live ? '🚶 Heute' : 'Planen →'}
+            {live ? '🚶 Unterwegs' : '🗓️ Planen →'}
           </Link>
         </span>
       </div>
 
-      {ctx && !bundle.trip.archived && ctx.state !== 'nachher' ? (
-        <Link
-          href={`/t/${bundle.trip.id}/heute`}
-          className={cx(
-            'flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl px-2.5 py-1.5 text-[12px] transition',
-            ctx.state === 'live' ? 'bg-emerald-400/[0.09] text-emerald-100 ring-1 ring-inset ring-emerald-400/25 hover:bg-emerald-400/[0.16]' : 'bg-white/[0.03] text-slate-300 ring-1 ring-inset ring-white/[0.07] hover:bg-white/[0.07]',
-          )}
-        >
-          {live || ctx.state === 'live' ? (
-            <>
-              <span aria-hidden>{live ? '🚶' : '☀️'}</span>
-              <span className="font-medium">{live ? `Läuft · Tag ${bundle.trip.started_at && bundle.trip.start_date ? ctx.dayIndex : 1} von ${ctx.totalDays || '?'}` : `Heute · Tag ${ctx.dayIndex} von ${ctx.totalDays}`}</span>
-              <span className="text-emerald-200/70">
-                {liveDay?.places.length ? `${liveDay.places.filter((x) => x.booking_status !== 'erledigt').length} von ${liveDay.places.length} offen · ${liveDay.hours.toFixed(1)} h` : 'nichts geplant'}
-                {liveDay?.cities.length ? ` · ${liveDay.cities.join(' / ')}` : ''}
-              </span>
-              <span className="ml-auto text-[11px] text-emerald-200/60 underline-offset-2 group-hover:underline">{live ? 'Zum Tag →' : 'Tagesplan →'}</span>
-            </>
-          ) : (
-            <>
-              <span aria-hidden>🗓️</span>
-              <span>
-                {bundle.trip.start_date
-                  ? `startet ${ctx.daysToStart ? `in ${plural(ctx.daysToStart, 'Tag', 'Tagen')}` : 'bald'} · ${fmtDate(bundle.trip.start_date, { day: '2-digit', month: '2-digit', year: 'numeric' })}`
-                  : 'noch ohne Reisezeitraum'}
-              </span>
-              <span className="ml-auto text-[11px] text-slate-500">Tag ansehen →</span>
-            </>
-          )}
+      {live ? (
+        <Link href={`/t/${bundle.trip.id}/heute`} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-emerald-400/[0.09] px-2.5 py-1.5 text-[12px] text-emerald-100 ring-1 ring-inset ring-emerald-400/25 transition hover:bg-emerald-400/[0.16]">
+          <span aria-hidden>🚶</span>
+          <span className="font-medium">
+            Läuft · Tag {heuteTag ? (ctx?.dayIndex ?? 1) : 1} von {ctx?.totalDays || '?'}
+          </span>
+          <span className="text-emerald-200/70">
+            {heuteTag?.places.length
+              ? `${plural(heuteTag.places.filter((x) => x.booking_status !== 'erledigt').length, 'Punkt', 'Punkte')} heute noch offen`
+              : 'heute nichts eingetragen'}
+            {heuteTag?.cities.length ? ` · ${heuteTag.cities.join(' / ')}` : ''}
+          </span>
+          <span className="ml-auto text-[11px] text-emerald-200/60 underline-offset-2">Zum Tag →</span>
+        </Link>
+      ) : !bundle.trip.archived && ctx?.state === 'vorher' ? (
+        <Link href={`/t/${bundle.trip.id}/tage`} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-white/[0.03] px-2.5 py-1.5 text-[12px] text-slate-300 ring-1 ring-inset ring-white/[0.07] transition hover:bg-white/[0.07]">
+          <span aria-hidden>🗓️</span>
+          <span>
+            {bundle.trip.start_date
+              ? `geplant ${ctx.daysToStart ? `in ${plural(ctx.daysToStart, 'Tag', 'Tagen')}` : 'dieses'} · ${fmtDate(bundle.trip.start_date, { day: '2-digit', month: '2-digit', year: 'numeric' })}`
+              : 'noch ohne Reisezeitraum'}
+          </span>
+          <span className="ml-auto text-[11px] text-slate-500">Zum Plan →</span>
         </Link>
       ) : null}
 
@@ -336,7 +330,7 @@ function TipsCard() {
             <b>Aktivitäten</b>: was noch keinen Tag hat, steht oben; ⚡ verteilt sie auf freie Zeit.
           </li>
           <li>
-            <b>Karte</b>: alles, was einen Punkt hat, plus Suche für die fehlenden Koordinaten.
+            <b>Karte</b>: alles, was einen Punkt hat – und eine Suche für die, die noch keinen haben.
           </li>
           <li>
             <b>Reise</b>: Unterkünfte, Fahrten, Kosten und alle Downloads an einem Ort.

@@ -142,7 +142,7 @@ export function OrtswechselDialog({
         <div className="space-y-1.5 rounded-xl border border-white/[0.07] bg-black/20 p-2.5">
           <Check label={`${moved.length} ${moved.length === 1 ? 'Aktivität' : 'Aktivitäten'} auf ${toCity} setzen`} checked={movePlaces} onChange={setMovePlaces} hint={moved.length ? moved.slice(0, 3).map((p) => p.name).join(', ') + (moved.length > 3 ? ' …' : '') : 'alle Punkte hier haben schon die neue Stadt'} />
           <Check label="Unterkünfte neu einteilen (auschecken, einchecken)" checked={withHotels} onChange={setWithHotels} hint={current && target && current.id !== target.id ? `${current.name} → ${target.name}` : 'nur die neue Unterkunft beginnt an diesem Tag'} />
-          <Check label="Fahrt eintragen" checked={withJourney} onChange={setWithJourney} hint="eine Zeile im Fahrten-Log, Uhrzeit und Preis trägst du später ein" />
+          <Check label="Fahrt eintragen" checked={withJourney} onChange={setWithJourney} hint="eine Zeile im Fahrten-Log – Preis trägst du später nach" />
           {withJourney ? (
             <div className={cx('pt-1 transition', !withJourney && 'pointer-events-none opacity-40')}>
               <Select
@@ -158,7 +158,7 @@ export function OrtswechselDialog({
 
         {moved.length && withHotels ? (
           <p className="text-[11.5px] leading-snug text-slate-500">
-            Tipp: Fahrzeit und Preis der Fahrt später im <span className="text-slate-300">🧳 Reise</span>-Reiter nachtragen – dort liegen die Fahrten.{' '}
+            Tipp: den Preis der Fahrt später im <span className="text-slate-300">🧳 Reise</span>-Reiter nachtragen – dort liegen die Fahrten.{' '}
             {moved.length} Aktivität{moved.length === 1 ? '' : 'en'} verschieben dabei keinen Tag, nur den Ort.
           </p>
         ) : null}

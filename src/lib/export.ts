@@ -25,23 +25,18 @@ export function download(filename: string, content: string, mime = 'text/csv;cha
 const PLACE_HEADERS = [
   'Datum',
   'Wochentag',
-  'Uhrzeit',
-  'Tageszeit',
-  'Standort',
+  'Reihe am Tag',
+  'Aktivität',
   'Kategorie',
   'Stadt',
-  'Stadtteil',
-  'Fahrzeit vom Hotel',
-  'Dauer (min)',
   'Hinweise',
   'Preis EUR',
   'Preis-Hinweis',
   'Status',
   'Prio',
   'Ticket',
+  'Ticket-Notiz',
   'Google Maps',
-  'Breitengrad',
-  'Längengrad',
 ];
 
 export function placeCsv(places: Place[], hotels: Hotel[]): string {
@@ -49,36 +44,29 @@ export function placeCsv(places: Place[], hotels: Hotel[]): string {
   void hotelById;
   const rows = places
     .slice()
-    .sort((a, b) => `${a.date ?? '9999'}${a.start_time ?? ''}${a.sort_order}`.localeCompare(`${b.date ?? '9999'}${b.start_time ?? ''}${b.sort_order}`))
-    .map((p) => [
+    .sort((a, b) => `${a.date ?? '9999'}`.localeCompare(`${b.date ?? '9999'}`) || (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((p, i, arr) => [
       p.date,
       p.date ? new Date(`${p.date}T00:00:00`).toLocaleDateString('de-DE', { weekday: 'long' }) : '',
-      p.start_time,
-      p.time_slot,
+      p.date ? arr.slice(0, i + 1).filter((x) => x.date === p.date).length : '',
       p.name,
-      p.category,
+      categoryMeta(p.category).label,
       p.city,
-      p.district,
-      p.travel_time,
-      p.duration_min,
       (p.notes ?? '').replace(/\s+/g, ' '),
       p.price_eur,
       p.price_note,
       p.booking_status,
       p.priority,
       p.ticket_status ?? 'unklar',
+      p.ticket_note,
       mapsLink(p),
-      p.lat,
-      p.lng,
     ]);
   return toCsv(PLACE_HEADERS, rows);
 }
 
+/** GoogleMaps-Suche nach dem Begriff des Eintrags – ein Punkt, keine Zahlenkolonne */
 function mapsLink(p: Place): string {
-  if (typeof p.lat === 'number' && typeof p.lng === 'number') {
-    return `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
-  }
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${p.name} ${p.city}`)}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.maps_query?.trim() || `${p.name} ${p.city}`)}`;
 }
 
 export function hotelCsv(hotels: Hotel[]): string {
