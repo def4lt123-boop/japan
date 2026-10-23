@@ -22,7 +22,7 @@ const hasCoords = (p: MapsPoint) => isPoint(p);
 export function mapQuery(p: MapsPoint & { name?: string | null }): string {
   const own = p.maps_query?.trim();
   if (own) return own;
-  return [p.name, p.district, p.city].filter(Boolean).join(' ').trim();
+  return [p.name, p.city].filter(Boolean).join(' ').trim();
 }
 
 /** Koordinaten wenn vorhanden, sonst der Suchtext – Google kommt mit beidem klar */

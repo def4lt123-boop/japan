@@ -13,7 +13,6 @@ import { useBatchGeocode, useEditor } from '../../../../components/EditorProvide
 import { ActivityRow, DayRowHeader } from '../../../../components/ActivityRow';
 import { FilterBar, EMPTY_FILTER, applyFilter, type PlaceFilter } from '../../../../components/filters';
 import { Button, Card, Empty, SectionTitle, cx } from '../../../../components/ui';
-import { distributePool } from '../../../../lib/planner';
 import { eachDate, fmtDate, plural } from '../../../../lib/format';
 import { assign, byOrder, dayPlaces, shiftWithin } from '../../../../lib/dayplan';
 
@@ -46,19 +45,6 @@ export default function ActivitiesPage() {
   }, [placed]);
 
 
-  const runAutoPlan = () => {
-    if (!bundle.trip) return;
-    const updated = distributePool(bundle.places, bundle.trip.start_date, bundle.trip.end_date);
-    const changed = updated.filter((p, i) => p.date !== bundle.places[i]?.date && p.date);
-    if (!changed.length) {
-      store.say('Nichts zu verteilen – alle Aktivitäten haben schon einen Tag (oder die Reise hat kein Datum).');
-      return;
-    }
-    if (!window.confirm(`${plural(changed.length, 'Aktivität', 'Aktivitäten')} ohne Tag auf die Reisetage verteilen?`)) return;
-    for (const p of changed) store.patch('places', p.id, { date: p.date });
-    store.say(`${plural(changed.length, 'Aktivität', 'Aktivitäten')} verteilt.`);
-  };
-
   if (!bundle.trip) return null;
 
   const tabs: { key: View; label: string }[] = [
@@ -72,7 +58,7 @@ export default function ActivitiesPage() {
       <SectionTitle
         title="Aktivitäten"
         icon="🗂️"
-        hint="Was noch keinen Tag hat, steht oben – ziehen, ⚡ verteilen oder in der Zeile auf einen Tag legen. Punkte am Tag sind die Reihenfolge."
+        hint="Was noch keinen Tag hat, steht oben – in der Zeile den Tag wählen oder nach unten auf einen Tag ziehen. Punkte am Tag sind die Reihenfolge."
         right={
           <>
             {tabs.map((t) => (
@@ -84,11 +70,6 @@ export default function ActivitiesPage() {
                 {t.label}
               </button>
             ))}
-            {open_.length ? (
-              <Button size="sm" variant="ghost" onClick={runAutoPlan}>
-                ⚡ {open_.length} verteilen
-              </Button>
-            ) : null}
           </>
         }
       />
@@ -116,7 +97,7 @@ export default function ActivitiesPage() {
             <Card className="p-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-t-lg border-b border-white/[0.07] bg-amber-500/[0.07] px-2.5 py-1.5">
                 <h3 className="text-[12.5px] font-semibold text-amber-100">✨ Noch ohne Tag</h3>
-                <span className="text-[11.5px] text-amber-100/70">{plural(open_.length, 'Punkt', 'Punkte')} · ziehen oder oben rechts verteilen</span>
+                <span className="text-[11.5px] text-amber-100/70">{plural(open_.length, 'Punkt', 'Punkte')} · Tag in der Zeile wählen oder ziehen</span>
                 {open_.length ? (
                   <button className="ml-auto text-[11.5px] text-amber-200/90 underline-offset-2 hover:text-white hover:underline" onClick={() => setFolded((f) => ({ ...f, offen: !f.offen }))}>
                     {folded.offen ? 'alle zeigen' : 'einklappen'}

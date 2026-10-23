@@ -7,10 +7,6 @@ export function fmtDate(iso?: string | null, opts: Intl.DateTimeFormatOptions = 
   return d.toLocaleDateString(DE, opts);
 }
 
-export function fmtDateLong(iso?: string | null): string {
-  return fmtDate(iso, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-}
-
 export function weekdayShort(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(DE, { weekday: 'short' });

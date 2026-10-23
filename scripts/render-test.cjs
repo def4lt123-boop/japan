@@ -300,9 +300,20 @@ async function render(name, Page, tripId) {
   const firstRow = poolCard ? [...poolCard.querySelectorAll('li')][0] : null;
   const rowName = firstRow ? (firstRow.querySelector('.font-medium') || {}).textContent || '' : '';
   const daySel = firstRow ? [...firstRow.querySelectorAll('select')][0] : null;
-  const dayValue = daySel ? daySel.value : '';
+  let dayValue = daySel ? daySel.value : '';
   const layBtn = firstRow ? [...firstRow.querySelectorAll('button')].find((b) => (b.textContent || '').includes('hinlegen')) : null;
   const beforeCount = openCount();
+  // der Tag kommt aus dem Dropdown – nichts wird mehr vorgeschlagen oder verteilt
+  if (daySel && !dayValue) {
+    const opt = [...daySel.querySelectorAll('option')].find((o) => o.value && !o.disabled);
+    dayValue = opt ? opt.value : '';
+    if (dayValue) {
+      await act(async () => {
+        daySel.value = dayValue;
+        daySel.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+      });
+    }
+  }
   if (layBtn) {
     await act(async () => { layBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
     await act(async () => { await new Promise((r) => setTimeout(r, 40)); });

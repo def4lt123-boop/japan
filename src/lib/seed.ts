@@ -1,5 +1,5 @@
 import seedJson from '../../data/seed.json';
-import { cityDates, cloneHotels, cloneJourneys, clonePlaces, dayDiff } from './planner';
+import { cloneHotels, cloneJourneys, clonePlaces, dayDiff, distributePool } from './planner';
 import type { Snapshot, Trip } from './types';
 
 /**
@@ -40,29 +40,36 @@ export function seedSnapshot(): Snapshot {
   const source = snapshot.trips.find((t) => t.id === 'trip-2025');
   const target = snapshot.trips.find((t) => t.id === 'trip-2027');
   if (!source || !target) return snapshot;
-  return cloneInto(snapshot, source.id, target.id);
+  return cloneInto(snapshot, source.id, target.id, { fillDays: true });
 }
 
-/** Alles aus einer Reise in eine neue kopieren (Tage verschoben, Status zurückgesetzt) */
-export function cloneInto(snapshot: Snapshot, sourceTripId: string, targetTripId: string): Snapshot {
+/**
+ * Alles aus einer Reise in eine neue kopieren: Tage wandern mit, Buchungen zurück.
+ * `fillDays` setzt nur die Beispiel-Reise in die Welt – eine Kopie, die du selbst
+ * anlegst, bleibt so ungeplant, wie sie in der Quelle dasteht.
+ */
+export function cloneInto(snapshot: Snapshot, sourceTripId: string, targetTripId: string, opts: { fillDays?: boolean } = {}): Snapshot {
   const src: Trip | undefined = snapshot.trips.find((t) => t.id === sourceTripId);
   const dst: Trip | undefined = snapshot.trips.find((t) => t.id === targetTripId);
   const shift = dayDiff(src?.start_date, dst?.start_date);
   const sourceJourneys = snapshot.journeys.filter((j) => j.trip_id === sourceTripId);
-  const shiftedDates = new Map<string, string[]>();
-  for (const [city, dates] of cityDates(sourceJourneys)) shiftedDates.set(city, dates.map((d) => shiftDate(d, shift)));
+
+  const cloned = clonePlaces(snapshot.places.filter((p) => p.trip_id === sourceTripId), {
+    targetTripId,
+    shiftDays: shift,
+    resetForNewTrip: true,
+  });
+  const plan = opts.fillDays
+    ? distributePool(
+        cloned.filter((x) => x.priority !== 'kann'),
+        dst?.start_date ?? null,
+        dst?.end_date ?? null,
+      ).concat(cloned.filter((x) => x.priority === 'kann'))
+    : cloned;
 
   return {
     trips: snapshot.trips,
-    places: [
-      ...snapshot.places,
-      ...clonePlaces(snapshot.places.filter((p) => p.trip_id === sourceTripId), {
-        targetTripId,
-        shiftDays: shift,
-        resetForNewTrip: true,
-        cityDates: shiftedDates,
-      }),
-    ],
+    places: [...snapshot.places, ...plan],
     hotels: [...snapshot.hotels, ...cloneHotels(snapshot.hotels.filter((h) => h.trip_id === sourceTripId), { targetTripId, shiftDays: shift, resetForNewTrip: true })],
     journeys: [...snapshot.journeys, ...cloneJourneys(sourceJourneys, { targetTripId, shiftDays: shift, resetForNewTrip: true })],
     expenses: snapshot.expenses,
