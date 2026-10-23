@@ -6,8 +6,9 @@ import { useStore, useTrip } from '../../../../lib/store';
 import { useEditor } from '../../../../components/EditorProvider';
 import { Button, Card, Empty, LinkTag, Money, Pill, ProgressBar, SectionTitle, Stat, cx } from '../../../../components/ui';
 import { STATUS_META, mapsUrl } from '../../../../lib/categories';
-import { eachDate, fmtDate, fmtMoney, plural } from '../../../../lib/format';
+import { addDays, eachDate, fmtDate, fmtMoney, fmtRange, plural } from '../../../../lib/format';
 import { dayPlan, nightCoverage } from '../../../../lib/stats';
+import { tintFor } from '../../../../lib/palette';
 import { locusChanges } from '../../../../lib/locus';
 
 export default function HotelsPage() {
@@ -29,9 +30,17 @@ export default function HotelsPage() {
   const perNight = nights ? total / nights : 0;
   const coverage = useMemo(() => (trip ? nightCoverage({ ...bundle, trip }) : []), [bundle, trip]);
   const gaps = coverage.filter((c) => !c.covered);
-  const palette = new Map<string, string>();
-  const hue = (i: number) => `hsl(${(i * 47 + 18) % 360} 62% 46%)`;
-  hotels.forEach((h, i) => palette.set(h.name, hue(i)));
+  /** erste Nacht ohne Bett – dort setzt „Loch schließen“ an */
+  const firstGap = gaps[0] ?? null;
+  /** Stadt fürs neue Bett: die der Nachbar-Nacht, falls es die schon gibt */
+  const cityOf = (date: string): string | null => {
+    const i = coverage.findIndex((c) => c.date === date);
+    for (const step of [-1, 1, -2, 2]) {
+      const c = coverage[i + step];
+      if (c?.covered && c.hotelId) return bundle.hotels.find((h) => h.id === c.hotelId)?.city ?? null;
+    }
+    return null;
+  };
 
   if (!trip) return null;
 
@@ -91,7 +100,7 @@ export default function HotelsPage() {
       })()}
 
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <Stat label="Nächte" value={nights} hint={`${plural(coverage.length, 'Nacht der Reise', 'Nächte der Reise')}`} tone={gaps.length ? 'bad' : 'good'} />
+        <Stat label="Nächte" value={nights} hint={`${coverage.length} in der Reise gezählt`} tone={gaps.length ? 'bad' : 'good'} />
         <Stat label="Gesamt" value={fmtMoney(total)} hint={trip.travelers ? `${fmtMoney(total / Math.max(1, trip.travelers))} pro Person` : undefined} />
         <Stat label="Ø pro Nacht" value={fmtMoney(perNight)} hint={`${hotels.length} Unterkünfte`} />
         <Stat label="Offen" value={hotels.filter((h) => h.booking_status === 'offen').length} hint={gaps.length ? `${plural(gaps.length, 'Loch', 'Löcher')} im Plan` : 'alles gebucht'} tone={gaps.length ? 'bad' : undefined} />
@@ -99,27 +108,80 @@ export default function HotelsPage() {
 
       {coverage.length ? (
         <Card className="p-4">
-          <SectionTitle title="Nächte-Check" icon="🛏️" hint={gaps.length ? 'Diese Nächte haben noch kein Hotel.' : 'Jede Nacht ist einem Hotel zugeordnet.'} />
-          <div className="flex flex-wrap gap-1">
-            {coverage.map((c) => (
-              <div
-                key={c.date}
-                title={`${fmtDate(c.date, { weekday: 'long', day: '2-digit', month: 'long' })} · ${c.covered ? c.hotel : 'kein Hotel'}`}
-                className={cx('w-[46px] rounded-md border px-1 py-1 text-center', c.covered ? 'border-white/10' : 'border-dashed border-shu-400/60 bg-shu-500/10')}
-                style={c.covered ? { background: `${palette.get(c.hotel ?? '')}33` } : undefined}
-              >
-                <div className="text-[10px] uppercase text-slate-400">{fmtDate(c.date, { weekday: 'narrow' })}</div>
-                <div className={cx('text-[12px] font-semibold tabular-nums', c.covered ? 'text-slate-100' : 'text-shu-200')}>{fmtDate(c.date, { day: '2-digit', month: '2-digit' })}</div>
-              </div>
-            ))}
+          <SectionTitle
+            title="Nächte-Check"
+            icon="🛏️"
+            hint={gaps.length ? `${plural(gaps.length, 'Nacht', 'Nächten')} ohne Bett – antippen und zuordnen.` : 'Jede Nacht hat ein Bett – Nacht antippen zum Bearbeiten.'}
+            right={
+              firstGap ? (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => open({ kind: 'hotel', defaults: { check_in: firstGap.date, check_out: addDays(firstGap.date, 1), city: cityOf(firstGap.date) ?? undefined } })}
+                  title={`${fmtDate(firstGap.date, { weekday: 'long', day: '2-digit', month: 'long' })} ein Bett geben`}
+                >
+                  ＋ Loch schließen
+                </Button>
+              ) : null
+            }
+          />
+          <p className="-mt-1 mb-2 text-[11.5px] text-slate-500">
+            Reise {fmtRange(trip.start_date, trip.end_date)} · {coverage.length} {plural(coverage.length, 'Nacht', 'Nächten')} – die Nacht am Abreisetag {trip.end_date ? fmtDate(trip.end_date, { day: '2-digit', month: '2-digit' }) : ''} wird nicht mehr gezählt.
+          </p>
+          <div className="flex flex-wrap gap-1" data-nights={coverage.length}>
+            {coverage.map((c, i) => {
+              const t = tintFor(c.hotelId ?? c.hotel, i);
+              const neu = i === 0 || coverage[i - 1]?.hotelId !== c.hotelId;
+              return (
+                <button
+                  key={c.date}
+                  type="button"
+                  data-night={c.date}
+                  data-covered={c.covered ? 'ja' : 'nein'}
+                  onClick={() => (c.covered && c.hotelId ? open({ kind: 'hotel', id: c.hotelId }) : open({ kind: 'hotel', defaults: { check_in: c.date, check_out: addDays(c.date, 1) } }))}
+                  title={`${fmtDate(c.date, { weekday: 'long', day: '2-digit', month: 'long' })} · ${c.covered ? `🏨 ${c.hotel}${c.stays ? ` · ${plural(c.stays, 'Nacht', 'Nächten')} gebucht` : ''}` : 'kein Bett – hier eines eintragen'}`}
+                  className={cx(
+                    'w-[46px] rounded-lg border px-1 py-1 text-center transition hover:-translate-y-px',
+                    neu && i ? 'ml-2' : '',
+                    c.covered ? 'border-white/10 hover:border-white/30' : 'border-dashed border-shu-400/70 bg-shu-500/10 hover:bg-shu-500/20',
+                  )}
+                  style={c.covered ? { background: t.soft, boxShadow: `inset 0 2px 0 ${t.edge}` } : undefined}
+                >
+                  <div className="text-[9.5px] uppercase tracking-wide text-slate-400">{fmtDate(c.date, { weekday: 'narrow' })}</div>
+                  <div className={cx('text-[12.5px] font-semibold tabular-nums', c.covered ? 'text-white' : 'text-shu-200')}>{fmtDate(c.date, { day: '2-digit', month: '2-digit' })}</div>
+                  <div className="mt-0.5 truncate text-[8.5px] leading-tight text-slate-400">{c.covered ? (c.hotel ?? '').split(' ')[0] : 'frei'}</div>
+                </button>
+              );
+            })}
           </div>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {hotels.map((h) => (
-              <span key={h.id} className="chip bg-white/[0.04] text-slate-300 ring-white/10" title={h.name}>
-                <span className="h-2 w-2 rounded-full" style={{ background: palette.get(h.name) }} />
-                {h.name}
+          <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-white/[0.07] pt-2">
+            {hotels.map((h, i) => {
+              const t = tintFor(h.id, i);
+              const n = coverage.filter((c) => c.hotelId === h.id).length;
+              return (
+                <button
+                  key={h.id}
+                  type="button"
+                  onClick={() => open({ kind: 'hotel', id: h.id })}
+                  title={`${h.name} – bearbeiten`}
+                  className="chip ring-1 ring-white/10 transition hover:brightness-125"
+                  style={{ background: t.soft }}
+                >
+                  <span className="h-2 w-2 rounded-full" style={{ background: t.edge }} />
+                  <span className="text-slate-100">{h.name}</span>
+                  <span className="text-slate-400">
+                    {h.check_in && h.check_out ? `${fmtDate(h.check_in, { day: '2-digit', month: '2-digit' })}–${fmtDate(h.check_out, { day: '2-digit', month: '2-digit' })}` : 'ohne Daten'} · {n} {n === 1 ? 'Nacht' : 'Nächte'}
+                  </span>
+                </button>
+              );
+            })}
+            {gaps.length ? (
+              <span className="chip bg-shu-500/15 text-shu-100 ring-1 ring-shu-400/40">
+                🕳️ {plural(gaps.length, 'Nacht', 'Nächten')} ohne Bett
               </span>
-            ))}
+            ) : (
+              <span className="chip bg-emerald-500/10 text-emerald-200/90 ring-1 ring-emerald-400/25">✓ durchgehend ein Bett</span>
+            )}
           </div>
         </Card>
       ) : null}
@@ -137,13 +199,17 @@ export default function HotelsPage() {
       ) : (
         <div className="grid gap-3 xl:grid-cols-2">
           {hotels.map((h) => {
-            const coveredNights = coverage.filter((c) => c.hotel === h.name).length;
+            const coveredNights = coverage.filter((c) => c.hotelId === h.id).length;
+            const tint = tintFor(h.id);
             const perPersonNight = h.price_per_night_eur && trip.travelers ? h.price_per_night_eur / trip.travelers : null;
             return (
-              <Card key={h.id} className="print-block p-4">
+              <Card key={h.id} className="print-block p-4" style={{ boxShadow: `inset 3px 0 0 ${tint.edge}` }}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="truncate text-[15px] font-semibold text-white">{h.name}</h3>
+                    <h3 className="truncate text-[15px] font-semibold text-white">
+                      <span className="mr-1.5 inline-block h-2.5 w-2.5 translate-y-[-1px] rounded-full" style={{ background: tint.edge }} />
+                      {h.name}
+                    </h3>
                     <p className="mt-0.5 text-[12.5px] text-slate-400">
                       {h.city}
                       {h.check_in ? ` · ${fmtDate(h.check_in)} → ${fmtDate(h.check_out)}` : ''} · {h.nights ?? '?'} Nächte

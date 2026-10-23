@@ -27,6 +27,8 @@ Jedes `⋯`-Menü sitzt am **Viewport** verankert – auf dem Handy als Blech vo
 
 Zwei Zustände, ein Reiseplan: **🗓️ planen** und **🚶 unterwegs**. **▶️ Reise starten** (oben rechts, auf der Reisekarte oder im `⋯`-Menü) setzt Tag 1 auf heute – liegt der geplante Zeitraum in der Zukunft oder schon vorbei, rutschen Punkte, Nächte, Fahrten und Ausgaben komplett mit, Reihenfolge und Abstände bleiben gleich; der alte Zeitraum wird gemerkt. Die Unterwegs-Seite wird damit zur Tages-App für die Hosentasche: Ort, Hinweise, Ticket-Status, 🗺️ Route, ✓ – und darunter der Reiseplan der nächsten Tage. **✕ Reise beenden** dreht das um: alles bleibt, was abgehakt ist, die Daten bleiben stehen. **↩ Start zurücknehmen** (nur im `⋯`, wenn ein alter Zeitraum gemerkt ist) schiebt den Plan zusätzlich auf die ursprünglichen Daten zurück, als wäre nie gestartet worden. Archivierte Reisen lassen sich nicht starten.
 
+Der **Nächte-Check** auf der Unterkünfte-Seite zeigt jede Nacht der Reise als Kachel – eingefärbt in der Farbe der Unterkunft, mit einer neuen Gruppe dort, wo das Bett wechselt. Eine Nacht antippen öffnet das Bett (oder trägt für eine Lücke sofort eines ein, Stadt aus der Nachbar-Nacht vorbelegt). Auf 🗓️ Tage steht dieselbe Information als farbige Zeile unter den Fahrten des Tages. Gezählt wird bis einen Tag vor Abreise – die Nacht am Abreisetag ist keine Nacht mehr.
+
 Der **🔀 Ortswechsel** (Unterkünfte, Karte des Tages, ⋯-Menü) trägt einen Stadtwechsel in einem Schritt ein: der Dialog zeigt, in welcher Stadt du an dem Tag schläfst, und schreibt dann die Aktivitäten (nur diesen Tag oder alles Danach), die Unterkünfte (alter Check-out, neuer Check-in, Nächte) und – wenn gewünscht – die passende Fahrt ins Fahrten-Log. Erkannte Wechsel stehen chronologisch auf der Unterkünfte-Seite und als Streifen auf 🗓️ Tage und 🚶 Unterwegs.
 
 Immer nur zwei Knöpfe oben rechts: **＋ Anlegen** (Aktivität, Unterkunft, Fahrt, Ausgabe – mit kurzer Erklärung, was die Kachel tut) und
@@ -56,6 +58,7 @@ npm run build        # Produktions-Build (Next.js)
 npm run test:store   # Daten-Logik in jsdom: Seed, CRUD, Duplizieren, Persistenz
 npm run test:render  # alle Seiten + Formulare werden wirklich gerendert
 npm run test:dayplan # Rechenprobe: Liste, Reihenfolge, Duplikate
+npm run test:dates   # Tage & Nächte – absichtlich in Europe/Vienna, ohne UTC-Sprung
 npm run test:all     # Typecheck + alle Proben
 npm run seed:sql     # data/seed.json → supabase/seed.sql
 ```
@@ -127,7 +130,8 @@ src/lib/seed.ts           Seed + „Reise duplizieren“ (Tage verschieben, Stat
 src/lib/planner.ts        eine Reise in eine neue übernehmen (Tage mitnehmen, Status zurücksetzen) – es wird nichts verteilt
 src/lib/store.tsx         React-Context: lädt Supabase ODER localStorage, alle CRUD-Aufrufe
 src/lib/geocode.ts        Nominatim-Suche + Google-Maps-URL-Parser
-src/lib/stats.ts          Kosten, Nächte-Check, Tagesplanung, leere Tage
+src/lib/stats.ts          Kosten, Nächte-Check (ganze Reise, Lücken inklusive), Tagesplanung, leere Tage
+src/lib/palette.ts        eine Farbe pro Unterkunft – Nächte-Check, Tageskarte und Betten-Band nutzen dieselbe
 src/lib/dayplan.ts        der Tag als nummerierte Liste: anhängen, einfügen, ▲▼, Duplikatschutz
 src/lib/overview.ts       Tagesraster, Hotel-Bänder, Baustellen-Liste, freie Kapazität (Punkte pro Tag)
 src/components/overview.tsx  TripRibbon · DayBoard · GapPanel · CapacityPanel (die Grafik der Übersichtsseite)

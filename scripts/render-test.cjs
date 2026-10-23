@@ -493,6 +493,44 @@ async function render(name, Page, tripId) {
   await act(async () => {
     await new Promise((r) => setTimeout(r, 60));
   });
+  // Nächte-Check: eine Kachel pro Nacht der Reise, gedeckte Nächte in Hotel-Farbe
+  const hotSrc = fs.readFileSync(__dirname + '/../src/app/t/[tripId]/unterkuenfte/page.tsx', 'utf8');
+  const hotelSrc = fs.readFileSync(__dirname + '/../src/lib/palette.ts', 'utf8');
+  const nightTiles = [...cHot.querySelectorAll('[data-night]')];
+  const coveredTiles = nightTiles.filter((b) => b.getAttribute('data-covered') === 'ja');
+  const paintedTiles = coveredTiles.filter((b) => /hsl\(/.test(b.getAttribute('style') || ''));
+  const tripDays = 40; // trip-2027: 06.03. → 14.04.2027
+  const expectedNights = tripDays - 1; // die Nacht am Abreisetag ist keine Nacht
+  const badAlpha = /hsl\([^)]*\)[0-9a-fA-F]{2}(?![\d%)])/.test(hotSrc) || /hsl\([^)]*\)\$\{/.test(hotSrc);
+  const nightsOk =
+    nightTiles.length === expectedNights &&
+    nightTiles.length - coveredTiles.length === 6 && // in der Vorlage liegen 6 Nächte ohne Bett
+    coveredTiles.length > 0 &&
+    paintedTiles.length === coveredTiles.length &&
+    !badAlpha &&
+    /tintFor\(/.test(hotSrc) &&
+    /hsl\(\$\{hue\} 58% 48% \/ 0\.16\)/.test(hotelSrc);
+  console.log(
+    (nightsOk ? '✅' : '❌') +
+      ` Nächte-Check: ${nightTiles.length} Nächte (Soll ${expectedNights}), ${coveredTiles.length} mit Bett, ${paintedTiles.length} davon in Hotel-Farbe, kein kaputtes Alpha`,
+  );
+  if (!nightsOk) {
+    failures.push('Nächte-Check');
+    console.log('   Kacheln:', nightTiles.length, '· mit Bett:', coveredTiles.length, '· farbig:', paintedTiles.length, '· erste:', nightTiles[0]?.getAttribute('data-night') ?? '–', '· letzte:', nightTiles[nightTiles.length - 1]?.getAttribute('data-night') ?? '–');
+  }
+  // Kachel antippen → die Unterkunft öffnet sich
+  let nightEditor = false;
+  if (nightTiles[0]) {
+    await act(async () => { nightTiles[0].dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 60)); });
+    nightEditor = /Unterkunft (anlegen|bearbeiten)/.test(document.body.textContent || '');
+    const closer = [...document.body.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') || '') === 'Schließen');
+    if (closer) await act(async () => { closer.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+  }
+  console.log((nightEditor ? '✅' : '❌') + ' Nacht antippen öffnet die passende Unterkunft');
+  if (!nightEditor) failures.push('Nacht antippen');
+
   const openMove = [...cHot.querySelectorAll('button')].find((b) => /eintragen ändern|🔀 Ortswechsel/.test(b.textContent || ''));
   if (openMove) {
     await act(async () => {

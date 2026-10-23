@@ -77,7 +77,9 @@ export function cloneInto(snapshot: Snapshot, sourceTripId: string, targetTripId
 }
 
 function shiftDate(iso: string, days: number): string {
-  const d = new Date(`${iso}T00:00:00`);
+  const [y, m, dd] = iso.slice(0, 10).split('-').map(Number);
+  const d = new Date(y, (m || 1) - 1, dd || 1);
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
