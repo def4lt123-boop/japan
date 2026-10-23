@@ -19,8 +19,9 @@ import { Button, Card, Empty, Menu, SectionTitle, cx } from '../../../../compone
 import { dayPlan, nightCoverage } from '../../../../lib/stats';
 import { locusChanges } from '../../../../lib/locus';
 import { ChangeStrip } from '../../../../components/Ortswechsel';
-import { today } from '../../../../lib/format';
+import { addDays, today } from '../../../../lib/format';
 import { fmtDate, plural } from '../../../../lib/format';
+import { tintFor } from '../../../../lib/palette';
 
 const MODE_ICON: Record<string, string> = {
   Flug: '✈️',
@@ -216,11 +217,24 @@ export default function DaysPage() {
                     </button>
                   ))}
                   {night && !night.covered ? (
-                    <p className="text-[12px] text-shu-200" title="Diese Nacht ist noch keinem Hotel zugeordnet">
-                      🏨 Nacht ohne Unterkunft – <Link href={`/t/${tripId}/unterkuenfte`} className="underline-offset-2 hover:underline">Hotel anlegen</Link>
+                    <p className="flex flex-wrap items-center gap-x-1.5 text-[12px] text-shu-200" title="Diese Nacht ist noch keinem Hotel zugeordnet">
+                      <span className="h-2 w-2 rounded-full bg-shu-400" aria-hidden />
+                      Nacht ohne Bett
+                      <button
+                        className="ml-auto rounded-md bg-shu-500/20 px-1.5 py-0.5 text-[11px] text-shu-50 ring-1 ring-inset ring-shu-400/40 transition hover:bg-shu-500/30"
+                        onClick={() => open({ kind: 'hotel', defaults: { check_in: d.date, check_out: addDays(d.date, 1), city: d.cities[0] ?? undefined } })}
+                      >
+                        ＋ Bett eintragen
+                      </button>
                     </p>
                   ) : night?.covered ? (
-                    <p className="text-[12px] text-slate-500">🛏 {night.hotel}</p>
+                    <p className="flex items-center gap-1.5 text-[12px] text-slate-400" title={`Nacht in ${night.hotel}`}>
+                      <span className="h-2 w-2 rounded-full" style={{ background: tintFor(night.hotelId).edge }} aria-hidden />
+                      <span className="truncate">{night.hotel}</span>
+                      <button className="ml-auto text-[11px] text-slate-500 underline-offset-2 hover:text-white hover:underline" onClick={() => night.hotelId && open({ kind: 'hotel', id: night.hotelId })}>
+                        ✎ Bett
+                      </button>
+                    </p>
                   ) : null}
                 </div>
               )}

@@ -1,5 +1,5 @@
 import type { Hotel, Journey, Place } from './types';
-import { uid } from './format';
+import { dayStart, isoOf, uid } from './format';
 
 /**
  * Planungs-Helfer: eine Reise in eine neue übernehmen.
@@ -16,10 +16,10 @@ export function dayDiff(from?: string | null, to?: string | null): number {
 
 export function shiftDate(iso: string | null | undefined, days: number): string | null {
   if (!iso) return null;
-  const d = new Date(`${iso}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return iso;
+  const d = dayStart(iso);
+  if (!d) return iso;
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return isoOf(d);
 }
 
 export interface CloneOptions {
@@ -112,10 +112,11 @@ const norm = (v: string | null | undefined) => (v ?? '').trim().toLowerCase();
 export function distributePool(places: Place[], startDate: string | null, endDate: string | null): Place[] {
   if (!startDate || !endDate) return places;
   const dates: string[] = [];
-  const start = new Date(`${startDate}T00:00:00`);
-  const end = new Date(`${endDate}T00:00:00`);
+  const start = dayStart(startDate);
+  const end = dayStart(endDate);
+  if (!start || !end) return places;
   for (let d = new Date(start), i = 0; d <= end && i < 400; d.setDate(d.getDate() + 1), i++) {
-    dates.push(d.toISOString().slice(0, 10));
+    dates.push(isoOf(d));
   }
   if (!dates.length) return places;
   const load = new Map<string, number>();

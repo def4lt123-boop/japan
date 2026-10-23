@@ -69,6 +69,8 @@ const PAGES = [
   { name: 'Tabelle', path: '/t/trip-2027/tabelle', file: '../src/app/t/[tripId]/tabelle/page.tsx', expect: [/Reihe/, /Aktivität/] },
   { name: 'Karte', path: '/t/trip-2027/karte', file: '../src/app/t/[tripId]/karte/page.tsx', expect: [/Karte/, /Legende/, /Alle Kategorien/, /Kategorie/] },
   { name: 'Unterkünfte', path: '/t/trip-2027/unterkuenfte', file: '../src/app/t/[tripId]/unterkuenfte/page.tsx', expect: [/Nächte-Check/, /Hotel Tokio/] },
+  { name: 'Tages-Ausdruck', path: '/t/trip-2027/druck', file: '../src/app/t/[tripId]/druck/page.tsx', expect: [/Tages-Ausdruck/, /Tag 1 ·/, /Notizen/, /ganze Reise/] },
+  { name: 'Reise prüfen', path: '/t/trip-2027/pruefen', file: '../src/app/t/[tripId]/pruefen/page.tsx', expect: [/Reise prüfen/, /ohne Bett/, /Betten ansehen/] },
   { name: 'Kosten', path: '/t/trip-2027/kosten', file: '../src/app/t/[tripId]/kosten/page.tsx', expect: [/Budgetauslastung/, /Alle Posten/] },
   { name: 'Reiseverlauf', path: '/t/trip-2027/verlauf', file: '../src/app/t/[tripId]/verlauf/page.tsx', expect: [/Reiseverlauf/, /Ankunft/] },
   { name: 'Referenz 2025', path: '/t/trip-2025/uebersicht', file: '../src/app/t/[tripId]/uebersicht/page.tsx', expect: [/Japan 2025|Reisedauer/] },
@@ -493,6 +495,44 @@ async function render(name, Page, tripId) {
   await act(async () => {
     await new Promise((r) => setTimeout(r, 60));
   });
+  // Nächte-Check: eine Kachel pro Nacht der Reise, gedeckte Nächte in Hotel-Farbe
+  const hotSrc = fs.readFileSync(__dirname + '/../src/app/t/[tripId]/unterkuenfte/page.tsx', 'utf8');
+  const hotelSrc = fs.readFileSync(__dirname + '/../src/lib/palette.ts', 'utf8');
+  const nightTiles = [...cHot.querySelectorAll('[data-night]')];
+  const coveredTiles = nightTiles.filter((b) => b.getAttribute('data-covered') === 'ja');
+  const paintedTiles = coveredTiles.filter((b) => /hsl\(/.test(b.getAttribute('style') || ''));
+  const tripDays = 40; // trip-2027: 06.03. → 14.04.2027
+  const expectedNights = tripDays - 1; // die Nacht am Abreisetag ist keine Nacht
+  const badAlpha = /hsl\([^)]*\)[0-9a-fA-F]{2}(?![\d%)])/.test(hotSrc) || /hsl\([^)]*\)\$\{/.test(hotSrc);
+  const nightsOk =
+    nightTiles.length === expectedNights &&
+    nightTiles.length - coveredTiles.length === 6 && // in der Vorlage liegen 6 Nächte ohne Bett
+    coveredTiles.length > 0 &&
+    paintedTiles.length === coveredTiles.length &&
+    !badAlpha &&
+    /tintFor\(/.test(hotSrc) &&
+    /hsl\(\$\{hue\} 58% 48% \/ 0\.16\)/.test(hotelSrc);
+  console.log(
+    (nightsOk ? '✅' : '❌') +
+      ` Nächte-Check: ${nightTiles.length} Nächte (Soll ${expectedNights}), ${coveredTiles.length} mit Bett, ${paintedTiles.length} davon in Hotel-Farbe, kein kaputtes Alpha`,
+  );
+  if (!nightsOk) {
+    failures.push('Nächte-Check');
+    console.log('   Kacheln:', nightTiles.length, '· mit Bett:', coveredTiles.length, '· farbig:', paintedTiles.length, '· erste:', nightTiles[0]?.getAttribute('data-night') ?? '–', '· letzte:', nightTiles[nightTiles.length - 1]?.getAttribute('data-night') ?? '–');
+  }
+  // Kachel antippen → die Unterkunft öffnet sich
+  let nightEditor = false;
+  if (nightTiles[0]) {
+    await act(async () => { nightTiles[0].dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 60)); });
+    nightEditor = /Unterkunft (anlegen|bearbeiten)/.test(document.body.textContent || '');
+    const closer = [...document.body.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') || '') === 'Schließen');
+    if (closer) await act(async () => { closer.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+  }
+  console.log((nightEditor ? '✅' : '❌') + ' Nacht antippen öffnet die passende Unterkunft');
+  if (!nightEditor) failures.push('Nacht antippen');
+
   const openMove = [...cHot.querySelectorAll('button')].find((b) => /eintragen ändern|🔀 Ortswechsel/.test(b.textContent || ''));
   if (openMove) {
     await act(async () => {
@@ -508,6 +548,75 @@ async function render(name, Page, tripId) {
   if (!dialogOk) {
     failures.push('Ortswechsel-Dialog');
     console.log('   text:', bodyText.slice(-400));
+  }
+  // Tages-Ausdruck: ein Blatt pro Reisetag, Bett und Nummerierung auf Papier
+  {
+    nav.setPath('/t/trip-2027/druck');
+    const PrintPage = require('../src/app/t/[tripId]/druck/page.tsx').default;
+    const cPrint = document.createElement('div');
+    document.body.appendChild(cPrint);
+    const rPrint = createRoot(cPrint);
+    await act(async () => {
+      rPrint.render(React.createElement(StoreProvider, null, React.createElement(PrintPage)));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 80));
+    });
+    const sheets = [...cPrint.querySelectorAll('[data-print-day]')];
+    const paper = cPrint.querySelectorAll('.paper').length;
+    const empty = sheets.filter((s) => /kein Bett/.test(s.textContent || '')).length;
+    const numbered = sheets.filter((s) => /\b1\b/.test(s.querySelector('ol')?.textContent || '')).length;
+    const printOk = sheets.length === tripDays && paper >= sheets.length && empty > 0 && numbered > 0;
+    console.log(
+      (printOk ? '✅' : '❌') +
+        ` Tages-Ausdruck: ${sheets.length} Blätter (Soll ${tripDays}), ${numbered} mit Nummerierung, ${empty} ohne Bett, ${paper} Blatt-Flächen`,
+    );
+    if (!printOk) {
+      failures.push('Tages-Ausdruck');
+      console.log('   text:', (cPrint.textContent || '').slice(0, 260));
+    }
+    // ein Tag allein: der Rahmen knöpft die Liste auf ein Blatt herunter
+    const seg = [...cPrint.querySelectorAll('button')].find((b) => /nur ein Tag/.test(b.textContent || ''));
+    let oneSheet = false;
+    if (seg) {
+      await act(async () => {
+        seg.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+      });
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 40));
+      });
+      oneSheet = cPrint.querySelectorAll('[data-print-day]').length === 1;
+    }
+    console.log((oneSheet ? '✅' : '❌') + ' Ausdruck auf einen Tag begrenzen');
+    if (!oneSheet) failures.push('Ausdruck-Rahmen');
+    await act(async () => rPrint.unmount());
+    cPrint.remove();
+  }
+  // Reise prüfen: Findings aus den echten Daten, jeder Befund mit Knopf
+  {
+    nav.setPath('/t/trip-2027/pruefen');
+    const CheckPage = require('../src/app/t/[tripId]/pruefen/page.tsx').default;
+    const cCheck = document.createElement('div');
+    document.body.appendChild(cCheck);
+    const rCheck = createRoot(cCheck);
+    await act(async () => {
+      rCheck.render(React.createElement(StoreProvider, null, React.createElement(CheckPage)));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 80));
+    });
+    const found = [...cCheck.querySelectorAll('[data-finding]')];
+    const withAction = found.filter((f) => f.querySelectorAll('button, a').length > 0);
+    const checkOk = found.length >= 3 && withAction.length === found.length && found.some((f) => f.getAttribute('data-finding') === 'nächte-fehlen');
+    console.log(
+      (checkOk ? '✅' : '❌') + ` Reise prüfen: ${found.length} Befunde (${withAction.length} mit Knopf) – ${found.map((f) => f.getAttribute('data-finding')).join(', ')}`,
+    );
+    if (!checkOk) {
+      failures.push('Reise prüfen');
+      console.log('   text:', (cCheck.textContent || '').slice(0, 300));
+    }
+    await act(async () => rCheck.unmount());
+    cCheck.remove();
   }
   await act(async () => rHot.unmount());
   cHot.remove();

@@ -69,14 +69,34 @@ export function nightsBooked(bundle: BundleLike): number {
 }
 
 /** Welche Nacht ist durch keine Unterkunft abgedeckt? (Loch im Plan) */
-export function nightCoverage(bundle: BundleLike): { date: string; covered: boolean; hotel: string | null }[] {
-  const start = bundle.trip?.start_date;
-  const end = bundle.trip?.end_date;
-  if (!start || !end) return [];
-  const nights = eachDate(start, end).slice(0, -1); // die letzte Nacht ist Abreisetag
+/**
+ * Jede Nacht der Reise – mit Bett oder ohne. Der Zeitraum ist die Reise, reichen
+ * die Betten darüber hinaus auch die Nächte danach: kein Loch bleibt unsichtbar.
+ * Die Nacht am Abreisetag ist keine Nacht mehr, die wird nicht gezählt.
+ */
+export function nightCoverage(bundle: BundleLike): { date: string; covered: boolean; hotel: string | null; hotelId: string | null; stays: number }[] {
+  const inDates = bundle.hotels.map((h) => h.check_in).filter(Boolean) as string[];
+  const outDates = bundle.hotels.map((h) => h.check_out).filter(Boolean) as string[];
+  const start = [bundle.trip?.start_date, ...inDates].filter(Boolean).sort()[0] ?? null;
+  const end = [bundle.trip?.end_date, ...outDates].filter(Boolean).sort().slice(-1)[0] ?? null;
+  if (!start || !end || end <= start) return [];
+  const nights = eachDate(start, end).slice(0, -1);
+  const stayCount = new Map<string, number>();
+  for (const h of bundle.hotels) {
+    if (!h.check_in || !h.check_out) continue;
+    const n = Math.max(1, eachDate(h.check_in, h.check_out).length - 1);
+    stayCount.set(h.id, n);
+  }
   return nights.map((date) => {
-    const hit = bundle.hotels.find((h) => h.check_in && h.check_out && date >= h.check_in && date < h.check_out);
-    return { date, covered: Boolean(hit), hotel: hit?.name ?? null };
+    const hits = bundle.hotels.filter((h) => h.check_in && h.check_out && date >= h.check_in && date < h.check_out);
+    // mehrere Betten für eine Nacht → das engere gewinnt: wer eine Durchgangs-Unterkunft
+    // mit einer Nacht außer Haus kombiniert, hat die kurze ja wirklich gebucht
+    const hit = hits.sort(
+      (a, b) =>
+        (stayCount.get(a.id) ?? 0) - (stayCount.get(b.id) ?? 0) ||
+        (a.check_in! === b.check_in! ? 0 : a.check_in! < b.check_in! ? 1 : -1),
+    )[0];
+    return { date, covered: Boolean(hit), hotel: hit?.name ?? null, hotelId: hit?.id ?? null, stays: hit ? (stayCount.get(hit.id) ?? 0) : 0 };
   });
 }
 

@@ -1,5 +1,24 @@
 const DE = 'de-DE';
 
+/**
+ * Ein Tag, geschrieben wie er gemeint ist – ohne Zeitzonen-Sprung.
+ * `toISOString()` schiebt Mitternacht in UTC und verliert damit in Europa jeden Tag
+ * einen Tag; alle Rechenwege hier arbeiten deshalb lokal.
+ */
+export function isoOf(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** JJJJ-MM-TT (oder ein Datumsstempel davor) als lokaler Mitternachtsmoment */
+export function dayStart(iso?: string | null): Date | null {
+  if (!iso) return null;
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return null;
+  const date = new Date(y, m - 1, d);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export function fmtDate(iso?: string | null, opts: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric' }): string {
   if (!iso) return '—';
   const d = new Date(`${iso.length === 10 ? iso + 'T00:00:00' : iso}`);
@@ -26,25 +45,25 @@ export function daysBetween(from?: string | null, to?: string | null): number {
 }
 
 export function eachDate(from?: string | null, to?: string | null): string[] {
-  if (!from || !to) return [];
+  const start = dayStart(from);
+  const end = dayStart(to);
+  if (!start || !end || !from || !to || end < start) return [];
   const out: string[] = [];
-  const start = new Date(`${from}T00:00:00`);
-  const end = new Date(`${to}T00:00:00`);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return out;
   for (let d = new Date(start), i = 0; d <= end && i < 400; d.setDate(d.getDate() + 1), i++) {
-    out.push(d.toISOString().slice(0, 10));
+    out.push(isoOf(d));
   }
   return out;
 }
 
 export function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return isoOf(new Date());
 }
 
 export function addDays(iso: string, n: number): string {
-  const d = new Date(`${iso}T00:00:00`);
+  const d = dayStart(iso);
+  if (!d) return iso;
   d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
+  return isoOf(d);
 }
 
 export function fmtMoney(value?: number | null, currency: 'EUR' | 'JPY' = 'EUR'): string {

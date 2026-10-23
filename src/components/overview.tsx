@@ -12,6 +12,7 @@ import { useStore } from '../lib/store';
 import { useEditor } from './EditorProvider';
 import { Button, Card, Empty, LinkTag, Money, ProgressBar, SectionTitle, cx } from './ui';
 import { DAY_CAPACITY, type CityLoad, type DayCell, type GapItem, type Sample, type Stay, cityLoad, loadLabel, loadTone } from '../lib/overview';
+import { tintFor } from '../lib/palette';
 import { STATUS_META, TICKET_META, categoryMeta } from '../lib/categories';
 import { assign } from '../lib/dayplan';
 import { fmtDate, fmtDuration, fmtMoney, plural } from '../lib/format';
@@ -110,6 +111,7 @@ export function TripRibbon({ tripId, cells, stays }: { tripId: string; cells: Da
                   className={cx('flex h-[22px] items-center gap-1 overflow-hidden rounded-md border px-1.5 text-[11px] font-medium transition hover:brightness-125', STAY_TONE[s.booking_status] ?? STAY_TONE.offen)}
                 >
                   <span aria-hidden>🏨</span>
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: tintFor(s.hotelId ?? s.city).edge }} aria-hidden />
                   <span className="truncate">{s.hotel ?? 'noch offen'}</span>
                   <span className="ml-auto shrink-0 tabular-nums text-[10px] opacity-80">{s.nights}N</span>
                 </a>
@@ -492,6 +494,10 @@ export function GapPanel({ tripId, items }: { tripId: string; items: GapItem[] }
           );
         })}
       </ul>
+      <p className="mt-2.5 border-t border-white/[0.06] pt-2 text-[11.5px] text-slate-500">
+        Lücken, Doppelbuchungen und verrutschte Zeiträume listet{' '}
+        <LinkTag href={`/t/${tripId}/pruefen`}>🧯 Reise prüfen</LinkTag> – dort sitzt auch der Knopf zum Nachziehen.
+      </p>
     </Card>
   );
 }
