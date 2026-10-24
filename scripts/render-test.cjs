@@ -356,6 +356,56 @@ async function render(name, Page, tripId) {
   console.log((swapOk ? '✅' : '❌') + ' Nummerierte Liste: ▼ räumt um – ' + swapLog);
   if (!swapOk) failures.push('Reihenfolge');
 
+  // 🖐️ Ziehen mit dem Finger: aus der Pool-Liste auf einen Tag (Pointer, nicht HTML5-DnD)
+  {
+    const mk = (type, x, y) => {
+      const ev = new dom.window.MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y });
+      Object.defineProperty(ev, 'pointerType', { value: 'touch' });
+      Object.defineProperty(ev, 'pointerId', { value: 7 });
+      Object.defineProperty(ev, 'button', { value: 0 });
+      return ev;
+    };
+    const rows = (el) => el.querySelectorAll('[data-dropindex]').length;
+    const grip = c2.querySelector('#pool [data-grip]');
+    const pool = c2.querySelector('#pool');
+    const offen = () => Number((pool.textContent || '').match(/Noch ohne Tag\D*(\d+)/)?.[1] ?? -1);
+    const ziel = [...c2.querySelectorAll('[data-dropzone]')].find((el) => /^\d{4}-\d{2}-\d{2}$/.test(el.getAttribute('data-dropzone') || ''));
+    let ghost = false;
+    let over = false;
+    let moved = false;
+    let abgelegt = false;
+    const vorher = offen();
+    const imTag = ziel ? rows(ziel) : 0;
+    if (grip && ziel) {
+      ziel.getBoundingClientRect = () => ({ left: 0, top: 40, right: 300, bottom: 240, width: 300, height: 200, x: 0, y: 40, toJSON() {} });
+      await act(async () => {
+        grip.dispatchEvent(mk('pointerdown', 12, 60));
+      });
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 10));
+      });
+      ghost = Boolean(c2.querySelector('.drag-ghost'));
+      await act(async () => {
+        dom.window.dispatchEvent(mk('pointermove', 50, 150));
+      });
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 10));
+      });
+      over = ziel.getAttribute('data-drag-over') === 'true';
+      await act(async () => {
+        dom.window.dispatchEvent(mk('pointerup', 50, 150));
+      });
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 60));
+      });
+      abgelegt = !c2.querySelector('.drag-ghost') && !ziel.hasAttribute('data-drag-over');
+      moved = offen() === vorher - 1 && rows(ziel) === imTag + 1;
+    }
+    const fingerOk = Boolean(grip) && Boolean(ziel) && ghost && over && moved && abgelegt;
+    console.log((fingerOk ? '✅' : '❌') + ` 🖐️ Ziehen mit dem Finger: Geist ${ghost ? 'am Daumen' : 'fehlt'}, Ziel ${over ? 'leuchtet' : 'nicht'}, ${vorher} → ${offen()} offen, ${imTag} → ${rows(ziel)} am Tag`);
+    if (!fingerOk) failures.push('Ziehen mit dem Finger');
+  }
+
   // Karte: offene Kacheln ohne Key, Punkte bleiben sichtbar
   const fs = require('fs');
   const mapSrc = fs.readFileSync(__dirname + '/../src/components/MapView.tsx', 'utf8');

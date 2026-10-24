@@ -9,6 +9,7 @@ import { categoryMeta } from '../lib/categories';
 import { CategoryDot } from './CategoryDot';
 import { fmtDate, plural } from '../lib/format';
 import { Card, Select, TextInput, cx } from './ui';
+import { Grip, useDrag } from './TouchDrag';
 
 type DayLite = { date: string; places: Place[] };
 
@@ -29,6 +30,7 @@ export function PendingList({
   days: DayLite[];
 }) {
   const store = useStore();
+  const drag = useDrag();
   const [q, setQ] = useState('');
   const [showAll, setShowAll] = useState(false);
   const [draft, setDraft] = useState<Record<string, string | null>>({});
@@ -56,12 +58,12 @@ export function PendingList({
   if (!pool.length) return null;
 
   return (
-    <Card id="pool" className="overflow-visible p-0">
+    <Card id="pool" data-dropzone="pool" className="overflow-visible p-0">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-amber-400/[0.14] bg-amber-400/[0.06] px-3 py-2">
         <h3 className="text-[13px] font-semibold text-amber-50">
           Noch ohne Tag <span className="tabular-nums text-amber-100/70">{pool.length}</span>
         </h3>
-        <p className="text-[11.5px] text-amber-100/70">Tag wählen und ✓ hinlegen – oder nach unten auf einen Tag ziehen</p>
+        <p className="text-[11.5px] text-amber-100/70">Tag wählen und ✓ hinlegen – oder am Griff ⠿ ziehen, auf dem Handy: halten und loslassen</p>
         <Link href={`/t/${tripId}/aktivitaeten`} className="ml-auto text-[11.5px] text-amber-100/80 underline-offset-2 hover:text-white hover:underline">
           alle Aktivitäten →
         </Link>
@@ -90,9 +92,11 @@ export function PendingList({
                     e.dataTransfer.setData('text/plain', p.id);
                     e.dataTransfer.effectAllowed = 'move';
                   }}
-                  className="flex min-w-0 flex-1 cursor-grab items-center gap-2 active:cursor-grabbing"
-                  title="Oder direkt auf einen Tag ziehen"
+                  {...(drag ? drag.hold(p.id, p.name) : {})}
+                  className="flex min-w-0 flex-1 cursor-grab touch-pan-y items-center gap-2 active:cursor-grabbing"
+                  title="Ziehen – auf dem Handy kurz halten, dann folgt der Punkt dem Finger"
                 >
+                  {drag ? <Grip grab={drag.grab} id={p.id} label={p.name} className="-ml-1" /> : null}
                   <CategoryDot category={p.category} size={19} />
                   <span className="min-w-0">
                     <span className="block truncate text-[13px] font-medium text-slate-100">{p.name}</span>

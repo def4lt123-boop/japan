@@ -22,6 +22,7 @@ import { ChangeStrip } from '../../../../components/ChangeStrip';
 import { addDays, today } from '../../../../lib/format';
 import { fmtDate, plural } from '../../../../lib/format';
 import { tintFor } from '../../../../lib/palette';
+import { TouchDragProvider, type DropZone } from '../../../../components/TouchDrag';
 
 const MODE_ICON: Record<string, string> = {
   Flug: '✈️',
@@ -65,21 +66,40 @@ export default function DaysPage() {
     if (moving) assign(store, bundle.places, moving, { date: next.date });
   };
 
+  /**
+   * wohin mit dem Punkt – dieselbe Rechnung für Maus (dataTransfer) und Finger (Pointer):
+   * Zone = Tag oder „pool“ (vom Tag lösen), Zeile = Stelle, sonst ans Ende des Tages.
+   */
+  const applyDrop = (id: string, zone: DropZone) => {
+    const place = bundle.places.find((p) => p.id === id);
+    if (!place) return;
+    const date = zone.date;
+    if (!date) {
+      if (!place.date) return; // nur kurz aufs Griff getippt – nichts zu lösen
+      store.patch('places', id, { date: null });
+      store.say(`„${place.name}“ zurück in die Aktivitätenliste.`);
+      return;
+    }
+    if (zone.index === null) {
+      if (place.date === date) return;
+      assign(store, bundle.places, place, { date });
+      return;
+    }
+    if (place.date !== date) {
+      assign(store, bundle.places, place, { date, before: dayPlaces(bundle.places, date)[zone.index]?.id ?? null });
+      return;
+    }
+    const list = dayPlaces(bundle.places, date);
+    const from = list.findIndex((p) => p.id === id);
+    moveToIndex(store, bundle.places, id, date, from < zone.index ? zone.index - 1 : zone.index);
+  };
+
   const drop = (date: string | null) => (e: React.DragEvent) => {
     e.preventDefault();
     const id = e.dataTransfer.getData('text/plain');
     setDropTarget(null);
     setInsertAt(null);
-    if (!id) return;
-    const place = bundle.places.find((p) => p.id === id);
-    if (!place) return;
-    if (!date) {
-      store.patch('places', id, { date: null });
-      store.say(`„${place.name}“ zurück in die Aktivitätenliste.`);
-      return;
-    }
-    if (place.date === date) return;
-    assign(store, bundle.places, place, { date });
+    if (id) applyDrop(id, { date, index: null });
   };
 
   /** auf eine Zeile ziehen = dort einfügen, der Rest rückt nach */
@@ -89,24 +109,16 @@ export default function DaysPage() {
     const id = e.dataTransfer.getData('text/plain');
     setInsertAt(null);
     setDropTarget(null);
-    if (!id) return;
-    const place = bundle.places.find((p) => p.id === id);
-    if (!place) return;
-    if (place.date !== date) {
-      assign(store, bundle.places, place, { date, before: dayPlaces(bundle.places, date)[index]?.id ?? null });
-      return;
-    }
-    const list = dayPlaces(bundle.places, date);
-    const from = list.findIndex((p) => p.id === id);
-    moveToIndex(store, bundle.places, id, date, from < index ? index - 1 : index);
+    if (id) applyDrop(id, { date, index });
   };
 
   if (!store.ready) return <Card className="p-8 text-center text-sm text-slate-400">lädt …</Card>;
   if (!bundle.trip) return null;
 
   return (
+    <TouchDragProvider onDrop={applyDrop}>
     <div className="space-y-4">
-      <SectionTitle title="Tagesplan" icon="🗓️" hint="Punkte untereinander = die Reihenfolge des Tages · ziehen legt auf einen Tag, ▲▼ rückt um" />
+      <SectionTitle title="Tagesplan" icon="🗓️" hint="Punkte untereinander = die Reihenfolge des Tages · ziehen legt auf einen Tag, auf dem Handy am ⠿ halten und loslassen, ▲▼ rückt um" />
 
       <PendingList tripId={tripId} pool={pool} all={bundle.places} days={days.map((d) => ({ date: d.date, cities: d.cities, places: d.places }))} />
 
@@ -157,6 +169,7 @@ export default function DaysPage() {
             <Card
               key={d.date}
               id={d.date}
+              data-dropzone={d.date}
               onDragOver={(e) => {
                 e.preventDefault();
                 setDropTarget(d.date);
@@ -256,6 +269,7 @@ export default function DaysPage() {
                   geordnet.map((p, i) => (
                     <div
                       key={p.id}
+                      data-dropindex={i}
                       onDragOver={(e) => {
                         e.preventDefault();
                         setInsertAt(p.id);
@@ -287,5 +301,6 @@ export default function DaysPage() {
         })}
       </div>
     </div>
+    </TouchDragProvider>
   );
 }
