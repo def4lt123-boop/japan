@@ -7,7 +7,7 @@ import { useStore, useTrip } from '../../../../lib/store';
 import { useEditor } from '../../../../components/EditorProvider';
 import { Button, Card, Empty, LinkTag, Money, Pill, ProgressBar, SectionTitle, Stat, cx } from '../../../../components/ui';
 import { STATUS_META, mapsUrl } from '../../../../lib/categories';
-import { addDays, eachDate, fmtDate, fmtMoney, fmtRange, plural } from '../../../../lib/format';
+import { addDays, eachDate, fmtDate, fmtMoney, fmtRange, plural, fmtDay } from '../../../../lib/format';
 import { dayPlan, nightCoverage } from '../../../../lib/stats';
 import { tintFor } from '../../../../lib/palette';
 import { locusChanges } from '../../../../lib/locus';
@@ -71,21 +71,21 @@ export default function HotelsPage() {
           <Card className="p-3">
             <div className="mb-2 flex items-center gap-2">
               <h3 className="text-[13px] font-semibold text-white">🔀 Ortswechsel</h3>
-              <span className="text-[11.5px] text-slate-500">{plural(changes.length, 'Umzug', 'Umzüge')} – aus den Betten gelesen</span>
-              <Link href={`/t/${tripId}/karte`} className="ml-auto text-[11.5px] text-slate-400 underline-offset-2 hover:text-white hover:underline">
+              <span className="text-[13px] text-slate-400">{plural(changes.length, 'Umzug', 'Umzüge')} – aus den Betten gelesen</span>
+              <Link href={`/t/${tripId}/karte`} className="ml-auto text-[13px] text-slate-400 underline-offset-2 hover:text-white hover:underline">
                 auf der Karte
               </Link>
             </div>
             <ol className="space-y-1.5">
               {changes.map((c) => (
-                <li key={c.date} data-change={c.date} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-black/20 px-2.5 py-1.5 text-[12.5px]">
-                  <span className="font-medium tabular-nums text-white">{fmtDate(c.date, { weekday: 'short', day: '2-digit', month: '2-digit' })}</span>
+                <li key={c.date} data-change={c.date} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-black/20 px-2.5 py-1.5 text-[13px]">
+                  <span className="font-medium tabular-nums text-white">{fmtDay(c.date)}</span>
                   <span className="text-slate-300">
                     {c.from} → {c.to}
                   </span>
-                  <span className="text-slate-500">🏨 {c.toHotel}</span>
-                  {c.nightsInOld ? <span className="text-slate-600">· {plural(c.nightsInOld, 'Nacht', 'Nächten')} in {c.from}</span> : null}
-                  {c.journey ? <span className="text-slate-600">· 🚄 {c.journey.title}</span> : <span className="text-amber-200/70">· 🚄 Fahrt fehlt</span>}
+                  <span className="text-slate-400">🏨 {c.toHotel}</span>
+                  {c.nightsInOld ? <span className="text-slate-400">· {plural(c.nightsInOld, 'Nacht', 'Nächten')} in {c.from}</span> : null}
+                  {c.journey ? <span className="text-slate-400">· 🚄 {c.journey.title}</span> : <span className="text-amber-200/70">· 🚄 Fahrt fehlt</span>}
                 </li>
               ))}
             </ol>
@@ -119,8 +119,8 @@ export default function HotelsPage() {
               ) : null
             }
           />
-          <p className="-mt-1 mb-2 text-[11.5px] text-slate-500">
-            Reise {fmtRange(trip.start_date, trip.end_date)} · {coverage.length} {plural(coverage.length, 'Nacht', 'Nächten')} – die Nacht am Abreisetag {trip.end_date ? fmtDate(trip.end_date, { day: '2-digit', month: '2-digit' }) : ''} wird nicht mehr gezählt.
+          <p className="-mt-1 mb-2 text-[13px] text-slate-400">
+            Reise {fmtRange(trip.start_date, trip.end_date)} · {plural(coverage.length, 'Nacht', 'Nächten')} – die Nacht am Abreisetag {trip.end_date ? fmtDate(trip.end_date, { day: '2-digit', month: '2-digit' }) : ''} wird nicht mehr gezählt.
           </p>
           <div className="flex flex-wrap gap-1" data-nights={coverage.length}>
             {coverage.map((c, i) => {
@@ -141,9 +141,9 @@ export default function HotelsPage() {
                   )}
                   style={c.covered ? { background: t.soft, boxShadow: `inset 0 2px 0 ${t.edge}` } : undefined}
                 >
-                  <div className="text-[9.5px] uppercase tracking-wide text-slate-400">{fmtDate(c.date, { weekday: 'narrow' })}</div>
-                  <div className={cx('text-[12.5px] font-semibold tabular-nums', c.covered ? 'text-white' : 'text-shu-200')}>{fmtDate(c.date, { day: '2-digit', month: '2-digit' })}</div>
-                  <div className="mt-0.5 truncate text-[8.5px] leading-tight text-slate-400">{c.covered ? (c.hotel ?? '').split(' ')[0] : 'frei'}</div>
+                  <div className="mikro text-[9.5px] uppercase tracking-wide text-slate-400">{fmtDate(c.date, { weekday: 'narrow' })}</div>
+                  <div className={cx('text-[13px] font-semibold tabular-nums', c.covered ? 'text-white' : 'text-shu-200')}>{fmtDate(c.date, { day: '2-digit', month: '2-digit' })}</div>
+                  <div className="mikro mt-0.5 min-w-0 truncate text-[8.5px] leading-tight text-slate-400">{c.covered ? (c.hotel ?? '').split(' ')[0] : 'frei'}</div>
                 </button>
               );
             })}
@@ -191,7 +191,7 @@ export default function HotelsPage() {
           }
         />
       ) : (
-        <div className="grid gap-3 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {hotels.map((h) => {
             const coveredNights = coverage.filter((c) => c.hotelId === h.id).length;
             const tint = tintFor(h.id);
@@ -204,7 +204,7 @@ export default function HotelsPage() {
                       <span className="mr-1.5 inline-block h-2.5 w-2.5 translate-y-[-1px] rounded-full" style={{ background: tint.edge }} />
                       {h.name}
                     </h3>
-                    <p className="mt-0.5 text-[12.5px] text-slate-400">
+                    <p className="mt-0.5 text-[13px] text-slate-400">
                       {h.city}
                       {h.check_in ? ` · ${fmtDate(h.check_in)} → ${fmtDate(h.check_out)}` : ''} · {h.nights ?? '?'} Nächte
                     </p>
@@ -220,7 +220,7 @@ export default function HotelsPage() {
                   </div>
                 </div>
 
-                <div className="mt-3 grid grid-cols-2 gap-2 text-[12.5px] sm:grid-cols-4">
+                <div className="mt-3 grid grid-cols-2 gap-2 text-[13px] sm:grid-cols-4">
                   <Price label="Gesamt" value={fmtMoney(h.price_total_eur)} strong />
                   <Price label="pro Nacht" value={h.price_per_night_eur ? fmtMoney(h.price_per_night_eur) : h.nights && h.price_total_eur ? fmtMoney(h.price_total_eur / h.nights) : '—'} />
                   <Price label="pro Person/Nacht" value={perPersonNight ? fmtMoney(perPersonNight) : '—'} />
@@ -233,8 +233,8 @@ export default function HotelsPage() {
                   </div>
                 ) : null}
 
-                {h.address ? <p className="mt-2.5 text-[12px] text-slate-400">{h.address}</p> : null}
-                {h.notes ? <p className="mt-2 whitespace-pre-line text-[12.5px] leading-snug text-slate-300/90">{h.notes}</p> : null}
+                {h.address ? <p className="mt-2.5 text-[13px] text-slate-400">{h.address}</p> : null}
+                {h.notes ? <p className="mt-2 whitespace-pre-line text-[13px] leading-snug text-slate-300/90">{h.notes}</p> : null}
 
                 <div className="mt-3 flex flex-wrap items-center gap-1.5">
                   {h.lat !== null && h.lng !== null ? (
@@ -247,7 +247,7 @@ export default function HotelsPage() {
                   {h.lat !== null && h.lng !== null ? <LinkTag href={mapsUrl({ lat: h.lat, lng: h.lng, name: h.name, city: h.city, maps_query: h.address ?? null })}>📍 Maps</LinkTag> : null}
                   {h.booking_url ? <LinkTag href={h.booking_url.startsWith('http') ? h.booking_url : `https://${h.booking_url}`}>🔗 Buchung</LinkTag> : null}
                   <button
-                    className="btn-quiet !text-[12px]"
+                    className="btn-quiet !text-[13px]"
                     onClick={async () => {
                       const q = [h.name, h.city].filter(Boolean).join(' ');
                       const { geocode } = await import('../../../../lib/geocode');
@@ -260,7 +260,7 @@ export default function HotelsPage() {
                   >
                     🌍 Punkt suchen
                   </button>
-                  <button className="btn-quiet ml-auto !text-[12px] text-red-300/80" onClick={() => window.confirm(`„${h.name}“ löschen?`) && store.remove('hotels', h.id)}>
+                  <button className="btn-quiet ml-auto !text-[13px] text-red-300/80" onClick={() => window.confirm(`„${h.name}“ löschen?`) && store.remove('hotels', h.id)}>
                     🗑
                   </button>
                 </div>
@@ -284,14 +284,14 @@ export default function HotelsPage() {
               const perNight = h.price_per_night_eur ?? (h.price_total_eur ?? 0) / (h.nights || 1);
               const max = Math.max(...hotels.map((x) => x.price_per_night_eur ?? (x.price_total_eur ?? 0) / (x.nights || 1)), 1);
               return (
-                <li key={h.id} className="grid grid-cols-[minmax(0,1fr)_120px_70px] items-center gap-2 text-[12.5px]">
+                <li key={h.id} className="grid grid-cols-[minmax(0,1fr)_120px_70px] items-center gap-2 text-[13px]">
                   <span className="truncate text-slate-200">
-                    {h.name} <span className="text-slate-500">· {h.city}</span>
+                    {h.name} <span className="text-slate-400">· {h.city}</span>
                   </span>
                   <span className="h-2 rounded-full bg-white/[0.06]">
                     <span className="block h-full rounded-full bg-ai-500" style={{ width: `${Math.max(3, (perNight / max) * 100)}%` }} />
                   </span>
-                  <Money value={perNight} className="text-right text-[12px]" />
+                  <Money value={perNight} className="text-right text-[13px]" />
                 </li>
               );
             })}
@@ -304,7 +304,7 @@ export default function HotelsPage() {
 function Price({ label, value, strong, tone }: { label: string; value: string; strong?: boolean; tone?: 'warn' }) {
   return (
     <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-2 py-1.5">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{label}</div>
+      <div className="text-[13px] font-semibold uppercase tracking-wider text-slate-400">{label}</div>
       <div className={cx('mt-0.5 tabular-nums', strong ? 'text-[15px] font-semibold text-white' : 'text-[13px]', tone === 'warn' && 'text-amber-200')}>{value}</div>
     </div>
   );

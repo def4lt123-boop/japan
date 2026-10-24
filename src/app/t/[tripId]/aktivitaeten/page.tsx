@@ -5,18 +5,21 @@
  * darunter die Tage mit dem, was schon platziert ist – der Reihe nach, ohne
  * Uhrzeiten. Ein Punkt kann genau an einem Tag stehen; derselbe Name zweimal am
  * selben Tag ist ein Duplikat und wird abgewiesen.
+ *
+ * Vorn steht bewusst wenig: ein Titel mit der Zahl, eine Filterreihe, eine Zeile
+ * Suche. Der Erklärtext liegt hinter ⓘ, der leere „Noch ohne Tag"-Kasten gar nicht.
  */
 import React, { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useStore, useTrip } from '../../../../lib/store';
-import { useBatchGeocode, useEditor } from '../../../../components/EditorProvider';
+import { useEditor } from '../../../../components/EditorProvider';
 import { ActivityRow, DayRowHeader } from '../../../../components/ActivityRow';
-import { FilterBar, EMPTY_FILTER, applyFilter, type PlaceFilter } from '../../../../components/filters';
-import { Button, Card, Empty, SectionTitle, cx } from '../../../../components/ui';
-import { eachDate, fmtDate, plural } from '../../../../lib/format';
-import { assign, byOrder, dayPlaces, shiftWithin } from '../../../../lib/dayplan';
+import { FilterBar, EMPTY_FILTER, applyFilter, filterActive, type PlaceFilter } from '../../../../components/filters';
+import { Button, Card, Empty, SectionTitle } from '../../../../components/ui';
+import { eachDate, plural, fmtDay } from '../../../../lib/format';
+import { assign, dayPlaces } from '../../../../lib/dayplan';
 
-type View = 'alle' | 'offen' | 'platziert';
+const HINWEIS = 'Was noch keinen Tag hat, steht oben – in der Zeile den Tag wählen oder auf einen Tag ziehen. Punkte am Tag sind die Reihenfolge des Tages.';
 
 export default function ActivitiesPage() {
   const params = useParams<{ tripId: string }>();
@@ -24,15 +27,14 @@ export default function ActivitiesPage() {
   const store = useStore();
   const bundle = useTrip(tripId);
   const { open } = useEditor();
-  const geocodeAll = useBatchGeocode(tripId);
   const [filter, setFilter] = useState<PlaceFilter>({ ...EMPTY_FILTER });
-  const [view, setView] = useState<View>('alle');
+  const [info, setInfo] = useState(false);
   const [folded, setFolded] = useState<Record<string, boolean>>({});
 
   const dayOptions = useMemo(() => {
     const dates = eachDate(bundle.trip?.start_date, bundle.trip?.end_date);
     const extra = Array.from(new Set(bundle.places.map((p) => p.date).filter((d): d is string => Boolean(d)))).filter((d) => !dates.includes(d));
-    return [...dates, ...extra.sort()].map((d) => ({ value: d, label: fmtDate(d, { weekday: 'short', day: '2-digit', month: '2-digit' }) }));
+    return [...dates, ...extra.sort()].map((d) => ({ value: d, label: fmtDay(d) }));
   }, [bundle.trip?.start_date, bundle.trip?.end_date, bundle.places]);
 
   const shown = useMemo(() => applyFilter(bundle.places, filter), [bundle.places, filter]);
@@ -44,116 +46,110 @@ export default function ActivitiesPage() {
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [placed]);
 
-
   if (!bundle.trip) return null;
 
-  const tabs: { key: View; label: string }[] = [
-    { key: 'alle', label: `Alle ${shown.length}` },
-    { key: 'offen', label: `Ohne Tag ${open_.length}` },
-    { key: 'platziert', label: `Am Tag ${placed.length}` },
-  ];
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <SectionTitle
         title="Aktivitäten"
         icon="🗂️"
-        hint="Was noch keinen Tag hat, steht oben – in der Zeile den Tag wählen oder nach unten auf einen Tag ziehen. Punkte am Tag sind die Reihenfolge."
+        hint={info ? HINWEIS : undefined}
         right={
           <>
-            {tabs.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setView(t.key)}
-                className={cx('rounded-lg px-2 py-1 text-[12px] ring-1 transition', view === t.key ? 'bg-shu-500/20 text-white ring-shu-400/40' : 'text-slate-300 ring-white/10 hover:bg-white/[0.06]')}
-              >
-                {t.label}
-              </button>
-            ))}
+            <span className="text-[13px] text-slate-400">
+              {shown.length} {shown.length === 1 ? 'Punkt' : 'Punkte'} · {placed.length} verteilt
+            </span>
+            <button
+              className="icon-btn"
+              aria-expanded={info}
+              title={info ? 'Erklärung wieder wegklappen' : 'Wie das hier gemeint ist'}
+              onClick={() => setInfo((v) => !v)}
+            >
+              ⓘ
+            </button>
           </>
         }
       />
 
       <FilterBar value={filter} onChange={setFilter} places={bundle.places} />
 
-      <p className="-mt-1 text-[11.5px] text-slate-500">
-        {open_.length ? <>{open_.length} ohne Tag · warten oben auf ihren Platz · </> : 'jeder Punkt hat einen Tag · '}
-        {placed.length} platziert auf {byDay.length} {plural(byDay.length, 'Tag', 'Tagen')}
-      </p>
-
       {!shown.length ? (
         <Empty
-          title={filter.q || filter.city || filter.ticket ? 'Keine Treffer im Filter' : 'Noch keine Aktivität'}
-          hint={filter.q || filter.city || filter.ticket ? 'Filter oben zurücksetzen.' : 'Lege den ersten Punkt an – ohne Tag, der Tag kommt später.'}
+          title={filterActive(filter) ? 'Keine Treffer im Filter' : 'Noch keine Aktivität'}
+          hint={filterActive(filter) ? 'Filter oben zurücksetzen – „Alle" zeigt wieder alles.' : 'Lege den ersten Punkt an – ohne Tag, der Tag kommt später.'}
           action={
             <Button variant="primary" onClick={() => open({ kind: 'place' })}>
-              ＋ Aktivität anlegen
+              ＋ Idee
             </Button>
           }
         />
       ) : (
         <div className="space-y-3">
-          {view !== 'platziert' ? (
-            <Card className="p-0">
+          {open_.length ? (
+            <Card className="p-0" data-offen={open_.length}>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-t-lg border-b border-white/[0.07] bg-amber-500/[0.07] px-2.5 py-1.5">
-                <h3 className="text-[12.5px] font-semibold text-amber-100">✨ Noch ohne Tag</h3>
-                <span className="text-[11.5px] text-amber-100/70">{plural(open_.length, 'Punkt', 'Punkte')} · Tag in der Zeile wählen oder ziehen</span>
-                {open_.length ? (
-                  <button className="ml-auto text-[11.5px] text-amber-200/90 underline-offset-2 hover:text-white hover:underline" onClick={() => setFolded((f) => ({ ...f, offen: !f.offen }))}>
+                <h3 className="text-[13px] font-semibold text-amber-100">✨ Noch ohne Tag</h3>
+                <span className="text-[13px] text-amber-100/70">{plural(open_.length, 'Punkt', 'Punkte')}</span>
+                {open_.length > 6 ? (
+                  <button className="ml-auto text-[13px] text-amber-200/90 underline-offset-2 hover:text-white hover:underline" onClick={() => setFolded((f) => ({ ...f, offen: !f.offen }))}>
                     {folded.offen ? 'alle zeigen' : 'einklappen'}
                   </button>
                 ) : null}
               </div>
-              {open_.length ? (
-                <div className="space-y-1.5 p-2">
-                  {(folded.offen ? open_.slice(0, 6) : open_).map((p) => (
-                    <ActivityRow key={p.id} place={p} all={bundle.places} dayOptions={dayOptions} tripStart={bundle.trip?.start_date} tripEnd={bundle.trip?.end_date} />
-                  ))}
-                  {folded.offen && open_.length > 6 ? (
-                    <p className="px-1 text-[11px] text-slate-500">… {open_.length - 6} weitere – „alle zeigen“.</p>
-                  ) : null}
-                </div>
-              ) : (
-                <p className="px-2.5 py-3 text-[12.5px] text-slate-400">🎉 Nichts mehr offen – jeder Punkt hat einen Tag. Neue Aktivität rechts oben anlegen.</p>
-              )}
+              <div className="space-y-1.5 p-2">
+                {(folded.offen ? open_.slice(0, 6) : open_).map((p) => (
+                  <ActivityRow key={p.id} place={p} all={bundle.places} dayOptions={dayOptions} tripStart={bundle.trip?.start_date} tripEnd={bundle.trip?.end_date} />
+                ))}
+                {folded.offen && open_.length > 6 ? (
+                  <p className="px-1 text-[13px] text-slate-400">… {open_.length - 6} weitere – „alle zeigen".</p>
+                ) : null}
+              </div>
             </Card>
           ) : null}
 
-          {view !== 'offen' ? (
-            byDay.length ? (
-              byDay.map(([date, list]) => (
-                <Card key={date} className="p-0">
-                  <DayRowHeader
-                    date={date}
-                    places={list}
-                    right={
-                      open_.length ? (
-                        <button
-                          className="btn-quiet !px-1.5 !py-0.5 !text-[11px]"
-                          title="Obersten Punkt aus der Liste ans Ende dieses Tages legen"
-                          onClick={() => {
-                            const candidate = open_.find((c) => c.city === list[0]?.city) ?? open_[0];
-                            if (candidate) assign(store, bundle.places, candidate, { date });
-                          }}
-                        >
-                          ✨ Wunsch hierher
-                        </button>
-                      ) : null
-                    }
-                  />
-                  <div className="space-y-1.5 p-2">
-                    {dayPlaces(bundle.places, date).map((p, i, arr) => (
-                      <ActivityRow key={p.id} place={p} all={bundle.places} dayOptions={dayOptions} dense tripStart={bundle.trip?.start_date} tripEnd={bundle.trip?.end_date} nr={i + 1} total={arr.length} />
-                    ))}
-                  </div>
-                </Card>
-              ))
-            ) : (
-              <Card className="p-3">
-                <p className="text-[12.5px] text-slate-400">Noch ist nichts platziert – zieh in der Liste oben einen Punkt auf einen Tag oder wähle rechts den Tag.</p>
+          {byDay.length ? (
+            byDay.map(([date, list]) => (
+              <Card key={date} className="p-0" data-tag={date}>
+                <DayRowHeader
+                  date={date}
+                  places={list}
+                  right={
+                    open_.length ? (
+                      <button
+                        className="btn-quiet !px-1.5 !py-0.5 !text-[13px]"
+                        title="Obersten Punkt aus der Liste oben ans Ende dieses Tages legen"
+                        onClick={() => {
+                          const candidate = open_.find((c) => c.city === list[0]?.city) ?? open_[0];
+                          if (candidate) assign(store, bundle.places, candidate, { date });
+                        }}
+                      >
+                        ✨ Wunsch hierher
+                      </button>
+                    ) : null
+                  }
+                />
+                <div className="space-y-1.5 p-2">
+                  {dayPlaces(bundle.places, date).map((p, i, arr) => (
+                    <ActivityRow
+                      key={p.id}
+                      place={p}
+                      all={bundle.places}
+                      dayOptions={dayOptions}
+                      dense
+                      tripStart={bundle.trip?.start_date}
+                      tripEnd={bundle.trip?.end_date}
+                      nr={i + 1}
+                      total={arr.length}
+                    />
+                  ))}
+                </div>
               </Card>
-            )
-          ) : null}
+            ))
+          ) : (
+            <Card className="p-3">
+              <p className="text-[13px] text-slate-400">Noch ist nichts an einem Tag – in der Zeile den Tag wählen oder den Punkt auf einen Tag ziehen.</p>
+            </Card>
+          )}
         </div>
       )}
     </div>

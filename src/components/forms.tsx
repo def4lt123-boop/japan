@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Disclosure, Field, Modal, Select, TextArea, TextInput, cx } from './ui';
 import { BOOKING_STATUSES, EXPENSE_CATEGORIES, JOURNEY_MODES, PRIORITIES, type Expense, type Hotel, type Journey, type Place, type Trip } from '../lib/types';
-import { PRIORITY_META, STATUS_META, TICKET_META, TICKET_ORDER, mapsUrl } from '../lib/categories';
+import { STATUS_META, TICKET_META, TICKET_ORDER, mapsUrl, priorityLabel } from '../lib/categories';
 import { eachDate, fmtDate, fmtDuration, num, parseDuration, uid } from '../lib/format';
 import { CategoryPicker } from './CategoryPicker';
 import { DateField, DateRangeField } from './dates';
@@ -13,7 +13,7 @@ import { MapPreview } from './MapPreview';
 import { useStore } from '../lib/store';
 
 const statusOptions = BOOKING_STATUSES.map((s) => ({ value: s, label: STATUS_META[s].label }));
-const priorityOptions = PRIORITIES.map((p) => ({ value: p, label: `${PRIORITY_META[p].icon} ${PRIORITY_META[p].label}` }));
+const priorityOptions = PRIORITIES.map((p) => ({ value: p, label: priorityLabel(p) }));
 
 /** Gemeinsame Geo-Komponente: OSM-Suche + Google-Maps-URL einfügen */
 function GeoFields({
@@ -99,8 +99,8 @@ function GeoFields({
   return (
     <Card className="bg-black/20 p-2.5">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Punkt auf der Karte</span>
-        <span className="text-[11.5px] text-slate-400">{lat !== null && lng !== null ? '✓ Punkt gesetzt' : 'noch kein Punkt'}</span>
+        <span className="text-[13px] font-semibold uppercase tracking-wider text-slate-400">Punkt auf der Karte</span>
+        <span className="text-[13px] text-slate-400">{lat !== null && lng !== null ? '✓ Punkt gesetzt' : 'noch kein Punkt'}</span>
       </div>
       <div className="grid gap-2">
         <Field label="Was soll Google Maps zeigen?" className="min-w-0">
@@ -159,18 +159,18 @@ function GeoFields({
             zoom={zoom ?? (lat !== null && lng !== null ? 16 : 13)}
             heading={lat !== null && lng !== null ? 'Kartenpunkt' : 'Suchvorschau'}
           />
-          <p className="mt-1 text-[11px] leading-snug text-slate-500">
+          <p className="mt-1 text-[13px] leading-snug text-slate-400">
             Die Vorschau folgt dem Suchbegriff – bei jedem Tipp, auch bevor etwas gespeichert ist.
           </p>
         </div>
       ) : null}
       {namedBy && onName ? (
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-lg bg-shu-500/10 px-2 py-1 text-[11.5px] text-slate-200 ring-1 ring-inset ring-shu-400/25">
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-lg bg-shu-500/10 px-2 py-1 text-[13px] text-slate-200 ring-1 ring-inset ring-shu-400/25">
           <span>Name aus Google Maps:</span>
           <b className="text-white">{namedBy}</b>
           <button
             type="button"
-            className="btn-quiet !px-1.5 !py-0.5 !text-[11px]"
+            className="btn-quiet !px-1.5 !py-0.5 !text-[13px]"
             onClick={() => {
               onName(namedBy);
               setMsg(`Namen „${namedBy}“ übernommen ✔`);
@@ -179,13 +179,13 @@ function GeoFields({
           >
             übernehmen
           </button>
-          <button type="button" className="text-[11px] text-slate-400 hover:text-white" onClick={() => setNamedBy(null)}>
+          <button type="button" className="text-[13px] text-slate-400 hover:text-white" onClick={() => setNamedBy(null)}>
             egal
           </button>
         </div>
       ) : null}
-      {msg ? <p className="mt-1.5 text-[11.5px] leading-snug text-slate-400">{msg}</p> : null}
-      <p className="mt-1 text-[11px] leading-snug text-slate-500">
+      {msg ? <p className="mt-1.5 text-[13px] leading-snug text-slate-400">{msg}</p> : null}
+      <p className="mt-1 text-[13px] leading-snug text-slate-400">
         So geht’s: bei Google Maps den Ort anklicken, den Link hier einfügen – Punkt und Name wandern in die Aktivität.
       </p>
     </Card>
@@ -235,7 +235,7 @@ function TicketPicker({
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-2">
-      <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{title}</h3>
+      <h3 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-slate-400">{title}</h3>
       {children}
     </section>
   );
@@ -358,7 +358,7 @@ export function PlaceForm({
           <Field label="Was ist es? *">
             <TextInput id="place-name-input" value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="z. B. Nara-Park" />
           </Field>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Field label="Stadt">
               <TextInput list="city-list" value={draft.city} onChange={(e) => set({ city: e.target.value })} placeholder="Nara" />
               <datalist id="city-list">
@@ -381,7 +381,7 @@ export function PlaceForm({
         </Group>
 
         <Group title="Wann">
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <DateField
               name="date"
               label="An welchem Tag?"
@@ -411,7 +411,7 @@ export function PlaceForm({
               ))}
             </div>
           </div>
-          <p className="mt-2 text-[11.5px] leading-snug text-slate-500">
+          <p className="mt-2 text-[13px] leading-snug text-slate-400">
             {draft.date
               ? `Am ${draft.date.split('-').reverse().slice(0, 2).join('.')} stehen ${amTag ? `${amTag} ${amTag === 1 ? 'Punkt' : 'Punkte'} davor` : 'noch keine Punkte'} – die Liste beginnt mit dem, was du zuerst machen willst.`
               : 'Ohne Tag bleibt die Aktivität in der Liste „Noch ohne Tag“ und wartet dort auf ihren Platz.'}
@@ -419,12 +419,12 @@ export function PlaceForm({
         </Group>
 
         <Group title="Ticket & Preis">
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div>
               <span className="label">Ticket</span>
               <TicketPicker value={draft.ticket_status} note={draft.ticket_note} onChange={(patch) => set(patch)} />
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Field label="Preis in € (gesamt)">
                 <TextInput type="number" step="0.01" min="0" value={draft.price_eur ?? ''} onChange={(e) => set({ price_eur: num(e.target.value) })} placeholder="16,00" />
               </Field>
@@ -441,7 +441,7 @@ export function PlaceForm({
               </Field>
             </div>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Field label="Preis-Hinweis">
               <TextInput value={draft.price_note ?? ''} onChange={(e) => set({ price_note: e.target.value })} placeholder="online günstiger / 2 Personen" />
             </Field>
@@ -458,7 +458,7 @@ export function PlaceForm({
         </Group>
 
         <Disclosure title="Noch optional" hint="Links für Buchung und Bild">
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Field label="Link (Buchung / Website)">
               <TextInput value={draft.booking_url ?? ''} onChange={(e) => set({ booking_url: e.target.value })} placeholder="https://…" />
             </Field>
@@ -593,7 +593,7 @@ export function HotelForm({
           tripBounds={bounds}
           hint="Nächte zählt sich automatisch"
         />
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Field label="Nächte" hint={draft.check_in && draft.check_out ? 'aus den Daten berechnet' : undefined}>
             <TextInput type="number" min="0" value={draft.nights ?? ''} onChange={(e) => set({ nights: num(e.target.value) })} />
           </Field>
@@ -604,7 +604,7 @@ export function HotelForm({
             <TextInput value={draft.city} onChange={(e) => set({ city: e.target.value })} placeholder="Tokio" />
           </Field>
         </div>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Field label="Preis gesamt (€)" hint="Zimmer, alle Personen, alle Nächte">
             <TextInput type="number" step="0.01" min="0" value={draft.price_total_eur ?? ''} onChange={(e) => set({ price_total_eur: num(e.target.value) })} />
           </Field>
@@ -723,7 +723,7 @@ export function JourneyForm({
           tripBounds={bounds}
           hint="ein Klick = Abflug, zweiter Klick = Ankunft oder Rückflug"
         />
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Field label="Von">
             <TextInput value={draft.from_city ?? ''} onChange={(e) => set({ from_city: e.target.value })} placeholder="Tokio" />
           </Field>
@@ -734,7 +734,7 @@ export function JourneyForm({
             <Select allowEmpty options={JOURNEY_MODES} value={draft.mode ?? ''} onChange={(e) => set({ mode: e.target.value || null })} emptyLabel="—" />
           </Field>
         </div>
-        <div className="grid gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
           <Field label="Abflug">
             <TextInput type="time" value={draft.departure_time ?? ''} onChange={(e) => set({ departure_time: e.target.value || null })} />
           </Field>
@@ -836,7 +836,7 @@ export function ExpenseForm({
             <TextInput type="number" step="0.01" value={draft.amount_eur ?? ''} onChange={(e) => set({ amount_eur: num(e.target.value) ?? 0 })} />
           </Field>
         </div>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Field label="Kategorie">
             <Select options={EXPENSE_CATEGORIES} value={draft.category} onChange={(e) => set({ category: e.target.value })} />
           </Field>
@@ -925,7 +925,7 @@ export function TripForm({ value, onSubmit, onCancel, onDelete }: { value?: Part
           unit="Nacht"
           hint="erster Klick = Anreise, zweiter Klick = Abreise"
         />
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Field label="Personen">
             <TextInput type="number" min="1" value={draft.travelers} onChange={(e) => set({ travelers: num(e.target.value) ?? 1 })} />
           </Field>

@@ -64,8 +64,8 @@ const { StoreProvider } = require('../src/lib/store.tsx');
 const PAGES = [
   { name: 'Reisen', path: '/', file: '../src/app/page.tsx', expect: [/Urlaubsplanung/, /Japan 2027/, /Japan 2025/] },
   { name: 'Übersicht', path: '/t/trip-2027/uebersicht', file: '../src/app/t/[tripId]/uebersicht/page.tsx', expect: [/Reisedauer/, /Reise auf einem Blick/, /Jeder Tag im Bild/, /Was noch fehlen würde/, /Was noch verfügbar ist/, /Bett pro Nacht/] },
-  { name: 'Tage', path: '/t/trip-2027/tage', file: '../src/app/t/[tripId]/tage/page.tsx', expect: [/Tagesplan/, /Sa06\.03\./, /noch frei|Aktivitäten/] },
-  { name: 'Aktivitäten', path: '/t/trip-2027/aktivitaeten', file: '../src/app/t/[tripId]/aktivitaeten/page.tsx', expect: [/Noch ohne Tag/, /Aktivität/] },
+  { name: 'Tage', path: '/t/trip-2027/tage', file: '../src/app/t/[tripId]/tage/page.tsx', expect: [/Tagesplan/, /Sa ?06\.03\./, /noch frei|Aktivitäten/] },
+  { name: 'Aktivitäten', path: '/t/trip-2027/aktivitaeten', file: '../src/app/t/[tripId]/aktivitaeten/page.tsx', expect: [/Noch ohne Tag/, /Aktivität/, /Ticket offen/, /Ohne Karte/] },
   { name: 'Tabelle', path: '/t/trip-2027/tabelle', file: '../src/app/t/[tripId]/tabelle/page.tsx', expect: [/Reihe/, /Aktivität/] },
   { name: 'Karte', path: '/t/trip-2027/karte', file: '../src/app/t/[tripId]/karte/page.tsx', expect: [/Karte/, /Legende/, /Alle Kategorien/, /Kategorie/] },
   { name: 'Unterkünfte', path: '/t/trip-2027/unterkuenfte', file: '../src/app/t/[tripId]/unterkuenfte/page.tsx', expect: [/Nächte-Check/, /Hotel Tokio/] },
@@ -138,6 +138,13 @@ async function render(name, Page, tripId) {
       console.log(`✅ ${page.name}  (${text.length} Zeichen Text)`);
     }
     errors.filter((e) => /Each child in a list|unique "key"/.test(e)).forEach((e) => warnings.push(`${page.name}: ${e.slice(0, 160)}`));
+    // dieselbe Zahl zweimal im Satz („platziert auf 2 2 Tagen“) – Lesefehler, kein Schmuck
+    const zweimal = /(\d+) \1 (Tag|Tage|Tagen|Nacht|N\u00e4chte|N\u00e4chten|Anteil|Anteile|Punkt|Punkte|Eintrag|Eintr\u00e4ge)\b/.exec(text);
+    if (zweimal) {
+      failures.push(`${page.name}: Zahl doppelt`);
+      console.log(`❌ ${page.name}: „${zweimal[0].trim()}“ – dieselbe Zahl zweimal hintereinander`);
+    }
+
     const tech = /NEXT_PUBLIC[A-Z_]*|https?:\/\/[a-z0-9]+\.supabase\.co|schema\.sql|seed\.sql|anon[- ]?key|google[- ]tabelle|google sheets|excel|spreadsheet|reiseplan/i.exec(text);
     if (tech) techLeaks.push(`${page.name}: „${tech[0]}“`);
 
@@ -193,7 +200,34 @@ async function render(name, Page, tripId) {
     await new Promise((r) => setTimeout(r, 60));
   });
   const layoutText = container.textContent || '';
-  const tabsOk = /Übersicht/.test(layoutText) && /Aktivitäten/.test(layoutText) && /Reise/.test(layoutText) && /06\.03\./.test(layoutText) && /Anlegen/.test(layoutText) && /⋯/.test(layoutText);
+  const tabsOk = /Übersicht/.test(layoutText) && /Aktivitäten/.test(layoutText) && /Reise/.test(layoutText) && /06\.03\./.test(layoutText) && /Idee/.test(layoutText) && /⋯/.test(layoutText);
+  // die untere Leiste: ein Fach pro Bereich, kurzes Label fürs Handy, volles fürs Desktop-Menü
+  const dockEl = container.querySelector('nav.tabbar');
+  const dockLinks = dockEl ? [...dockEl.querySelectorAll('a')] : [];
+  const kurz = dockLinks.map((a) => (a.querySelector('.tab-label-full') && (a.querySelector('.tab-label-short').textContent || '')).trim() || (a.textContent || '').trim());
+  const dockOk =
+    Boolean(dockEl) &&
+    dockLinks.length >= 5 &&
+    dockLinks.length <= 6 &&
+    Number(dockEl.getAttribute('data-tabbar')) === dockLinks.length &&
+    dockLinks.every((a) => a.querySelector('.tab-label-short') && a.querySelector('.tab-label-full')) &&
+    kurz.every((v) => v && v.length <= 9) &&
+    Boolean(container.querySelector('.pb-tabbar'));
+  console.log((dockOk ? '✅' : '❌') + ` Reiter als Leiste unten: ${kurz.join(' · ')}`);
+  if (!dockOk) {
+    failures.push('Reiterleiste');
+    console.log('   links=', dockLinks.length, 'labels=', JSON.stringify(kurz), 'pb-tabbar=', Boolean(container.querySelector('.pb-tabbar')));
+  }
+  // der orange Hauptknopf legt an, der Start steht nur noch im ⋯ (Reise ist 4 Monate weg)
+  const knöpfe = [...container.querySelectorAll('button')].map((b) => (b.textContent || '').replace(/\s+/g, ' ').trim());
+  const idee = knöpfe.find((s) => /＋\s*Idee/.test(s));
+  const startWeg = !knöpfe.some((s) => /Reise starten|▶️\s*starten/.test(s));
+  const kopfOk = Boolean(idee) && startWeg;
+  console.log((kopfOk ? '✅' : '❌') + ' Kopf: ＋ Idee vorn, ▶️ Reise starten nur im ⋯-Menü (Start ist weit weg)');
+  if (!kopfOk) {
+    failures.push('Kopfknöpfe');
+    console.log('   knöpfe:', JSON.stringify(knöpfe.slice(0, 8)), 'idee=', Boolean(idee), 'startWeg=', startWeg);
+  }
   console.log((tabsOk ? '✅' : '❌') + ' Reise-Layout: Tabs + Tagesplan mit Daten');
   if (!tabsOk) {
     failures.push('Layout');
@@ -203,6 +237,84 @@ async function render(name, Page, tripId) {
   console.error = origError;
   await act(async () => root2.unmount());
 
+  // 🗂️ Aktivitäten vorn: eine Filterreihe, Suche und Stadt in einer Zeile, der Text hinter ⓘ
+  nav.setPath('/t/trip-2027/aktivitaeten');
+  const ActPage = require('../src/app/t/[tripId]/aktivitaeten/page.tsx').default;
+  const cAct = document.createElement('div');
+  document.body.appendChild(cAct);
+  const rAct = createRoot(cAct);
+  const actText = () => cAct.textContent || '';
+  const tipp = async (el) => {
+    if (!el) return false;
+    await act(async () => {
+      el.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 40));
+    });
+    return true;
+  };
+  await act(async () => {
+    rAct.render(React.createElement(StoreProvider, null, React.createElement(EditorProvider, { tripId: 'trip-2027' }, React.createElement(ActPage))));
+  });
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 80));
+  });
+  const reihe = [...cAct.querySelectorAll('.filter-row button')].map((b) => (b.textContent || '').replace(/\s+/g, ' ').trim().replace(/(\d+)$/, ' $1'));
+  const solo = ['Alle', 'Ohne Tag', 'Ticket offen', '★ Muss', '☆ Soll', '· Kann', 'Ohne Karte'];
+  const eineReihe = reihe.length === 7 && solo.every((label, i) => reihe[i].replace(/\s+/g, ' ').trim().indexOf(label) === 0);
+  const zu = !/Was noch keinen Tag hat/.test(actText());
+  await tipp([...cAct.querySelectorAll('button')].find((b) => (b.textContent || '').trim() === 'ⓘ'));
+  const auf = /Was noch keinen Tag hat/.test(actText());
+  await tipp([...cAct.querySelectorAll('button')].find((b) => (b.textContent || '').trim() === 'ⓘ'));
+  const feld = cAct.querySelector('input[placeholder^=\"Suchen\"]');
+  const zeile = feld ? feld.closest('div.flex') : null;
+  const stadtMit = Boolean(zeile && zeile.querySelector('select'));
+  const chromeOk = eineReihe && zu && auf && Boolean(feld) && stadtMit && !/zur\u00fccksetzen/.test(actText());
+  console.log((chromeOk ? '\u2705' : '\u274c') + ' \ud83d\udcc2 vorn wenig: eine Filterreihe (' + reihe.join(' \u00b7 ') + '), Suche + Stadt in einer Zeile, Erkl\u00e4rung hinter \u24d8');
+  if (!chromeOk) {
+    failures.push('Aktivit\u00e4ten-Chrome');
+    console.log('   reihe=', JSON.stringify(reihe), 'zu=', zu, 'auf=', auf, 'suche=', Boolean(feld), 'stadt=', stadtMit);
+  }
+  // 🏷️ drei Stufen, ein Wort: was in der Reihe steht, steht auch am Punkt
+  const { PRIORITY_META } = require('../src/lib/categories.ts');
+  const stufen = Object.keys(PRIORITY_META).map((k) => PRIORITY_META[k].word.replace(/\s+/g, ' '));
+  // das Symbol steckt in einer eigenen (aria-hidden) Fläche, dazwischen liegt der Abstand –
+  // verglichen wird deshalb ohne Leerzeichen
+  const ohne = (v) => v.replace(/\s+/g, '');
+  const amPunkt = [...cAct.querySelectorAll('.prio')].map((e) => (e.textContent || '').trim());
+  const stufenOk =
+    stufen.length === 3 && amPunkt.length >= 5 && amPunkt.every((w) => stufen.map(ohne).includes(ohne(w))) && stufen.every((w) => amPunkt.some((p) => ohne(p) === ohne(w))) && stufen.every((w) => reihe.some((r) => r.indexOf(w) === 0));
+  console.log((stufenOk ? '\u2705' : '\u274c') + ' 🏷️ Priorität: ' + stufen.join(' · ') + ' – dieselben Worte in Filterreihe, Liste und Formular (' + amPunkt.length + ' Punkte beschriftet)');
+  if (!stufenOk) {
+    failures.push('Prioritäts-Wording');
+    console.log('   reihe=', JSON.stringify(reihe), 'punkte=', JSON.stringify([...new Set(amPunkt)].slice(0, 6)));
+  }
+  // und: was leer ist, wird nicht gezeigt – ein Kasten f\u00fcr null offene Punkte bleibt weg
+  const nameDer = (el) => {
+    const b = el.querySelector('button[title="Bearbeiten"]');
+    return b ? (b.textContent || '').trim() : '';
+  };
+  const offenNamen = new Set([...cAct.querySelectorAll('[data-offen]')].map(nameDer).filter(Boolean));
+  const ziel = [...cAct.querySelectorAll('[data-tag]')].map(nameDer).find((n) => n && !offenNamen.has(n));
+  let kastenWeg = false;
+  if (ziel && feld) {
+    const setter = Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set;
+    await act(async () => {
+      setter.call(feld, ziel);
+      feld.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 60));
+    });
+    kastenWeg = !/Noch ohne Tag/.test(actText()) && actText().indexOf(ziel.slice(0, 10)) >= 0;
+  }
+  console.log((kastenWeg ? '\u2705' : '\u274c') + ' \ud83d\udced „Noch ohne Tag" bei null offenen Punkten: Kasten ist gar nicht erst im Baum (gefiltert auf \u201e' + (ziel || '?') + '\u201c)');
+  if (!kastenWeg) {
+    failures.push('Leerkasten');
+    console.log('   ziel=', JSON.stringify(ziel), 'text=', actText().slice(0, 160));
+  }
+  await act(async () => rAct.unmount());
 
   // Alle Formulare rendern (Modal-Formulare direkt)
   const forms = require('../src/components/forms.tsx');
@@ -249,7 +361,7 @@ async function render(name, Page, tripId) {
     await act(async () => r.unmount());
   }
 
-  // Klick-Test: auf der Tagesseite einen Ort am Tag anlegen -> Modal mit Datum
+  // ＋ am Tag: erst die Ideen als Blech von unten – ein Tipp legt nach unten, die Zeile wird zur Karte
   nav.setPath('/t/trip-2027/tage');
   const TagePage = require('../src/app/t/[tripId]/tage/page.tsx').default;
   const c2 = document.getElementById('root');
@@ -261,19 +373,46 @@ async function render(name, Page, tripId) {
     r2.render(React.createElement(StoreProvider, null, React.createElement(EditorProvider, { tripId: 'trip-2027' }, React.createElement(TagePage))));
   });
   await act(async () => { await new Promise((r) => setTimeout(r, 40)); });
-  const btns = [...c2.querySelectorAll('button')];
-  const addBtn = btns.find((b) => (b.title || '').includes('an diesem Tag anlegen'));
-  let clicked = false;
-  if (addBtn) {
-    await act(async () => { addBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
-    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
-    clicked = /Was ist es\?/.test(c2.textContent || '');
+  const leereZeilen = () => c2.querySelectorAll('[data-leer]').length;
+  const blech = () => dom.window.document.body.querySelector('[data-ideen-sheet]');
+  const ideenImBlech = () => (blech() ? blech().querySelectorAll('[data-idee]').length : -1);
+  const bklick = async (el) => {
+    if (!el) return false;
+    await act(async () => { el.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 40)); });
+    return true;
+  };
+  const kzeile = c2.querySelector('[data-leer]');
+  const ktag = kzeile ? kzeile.id : '';
+  const kzeileText = kzeile ? (kzeile.textContent || '').replace(/\s+/g, ' ').trim() : '';
+  const einzeilig = Boolean(kzeile) && kzeile.tagName === 'DIV' && !kzeile.querySelector('[data-dropindex]') && /frei/.test(kzeileText) && /＋/.test(kzeileText);
+  const bvorher = leereZeilen();
+  await bklick(kzeile && kzeile.querySelector('button.icon-btn'));
+  const bsheet = blech();
+  const bideenVorher = ideenImBlech();
+  const bmitSuche = Boolean(bsheet && bsheet.querySelector('input'));
+  const bmitStadt = Boolean(bsheet && bsheet.querySelector('select'));
+  const bhinlegen = bsheet ? bsheet.querySelector('[data-idee]') : null;
+  const bname = bhinlegen ? (bhinlegen.textContent || '').replace(/\s+/g, ' ').trim() : '';
+  await bklick(bhinlegen);
+  const bkarte = ktag ? c2.querySelector(`[id="${ktag}"]`) : null;
+  const bamTag = bkarte ? bkarte.querySelectorAll('[data-dropindex]').length : 0;
+  const bdanach = leereZeilen();
+  const bideenNachher = ideenImBlech();
+  const legenOk = einzeilig && ktag && bideenVorher > 4 && bamTag === 1 && bdanach === bvorher - 1 && bideenNachher === bideenVorher - 1 && bmitSuche;
+  console.log((legenOk ? '✅' : '❌') + ` ＋ am leeren Tag: Blech mit ${bideenVorher} Ideen (Suche ${bmitSuche ? 'ja' : 'nein'}, Stadt ${bmitStadt ? 'ja' : 'nein'}), ein Tipp → ${bamTag} Punkt und ${bvorher} → ${bdanach} leere Zeilen`);
+  if (!legenOk) {
+    failures.push('Ideen-Blech');
+    console.log('   zeile:', JSON.stringify(kzeileText.slice(0, 70)), 'tag=', ktag, 'einzeilig=', einzeilig, 'amTag=', bamTag, 'ideen=', bideenVorher, '→', bideenNachher);
+    console.log('   idee:', JSON.stringify(bname.slice(0, 50)));
+    clickErr.filter((e) => /Error|not a function|Cannot read/.test(e)).slice(0, 2).forEach((e) => console.log('   ' + e.slice(0, 220)));
   }
-  const dateInputs = [...c2.querySelectorAll('input[type=date]')].map((i) => i.name + '=' + i.value).join(',');
-  const det = c2.querySelector('details');
-  const hasDate = clicked && /2027-[0-9]{2}-[0-9]{2}/.test(dateInputs);
-  console.log((clicked && hasDate ? '✅' : '❌') + ' Klick „Aktivität an diesem Tag anlegen“ öffnet Formular mit vorbelegtem Datum');
-  if (!(clicked && hasDate)) { failures.push('Klick Test'); console.log('   clicked=' + clicked + ' hasDate=' + hasDate); clickErr.filter(e=>/Error|not a function|Cannot read/.test(e)).slice(0,3).forEach(e=>console.log('   '+e.slice(0,240))); }
+  // darunter: neue Aktivität anlegen – das Blech weicht dem Formular, der Tag bleibt vorbelegt
+  await bklick(blech() ? [...blech().querySelectorAll('button')].find((b) => /Neue Aktivität anlegen/.test(b.textContent || '')) : null);
+  const bdate = [...c2.querySelectorAll('input[type=date]')].map((i) => i.name + '=' + i.value).join(',');
+  const banlegenOk = /Was ist es\?/.test(c2.textContent || '') && bdate.includes(ktag) && !blech();
+  console.log((banlegenOk ? '✅' : '❌') + ` „Neue Aktivität anlegen“ im Blech: Formular auf, ${ktag} vorbelegt, Blech zu`);
+  if (!banlegenOk) { failures.push('Anlegen aus dem Blech'); console.log('   daten:', bdate.slice(0, 120), 'blech=', !blech()); }
   console.error = oe2;
   // Die Tages-Aktionen stecken im ⋯-Menü, und das Menü lebt im document.body (Portal)
   const body = dom.window.document.body;
@@ -676,11 +815,14 @@ async function render(name, Page, tripId) {
       await new Promise((r) => setTimeout(r, 60));
     });
     const strips = [...cTage2.querySelectorAll('[data-change]')];
+    // auf dem vollen Tag ist es der Streifen, auf dem leeren der kurze Vermerk in der Zeile
+    const vermerk = [...cTage2.querySelectorAll('[data-leer]')].filter((el) => /🔀/.test(el.textContent || ''));
     const stripOk =
-      strips.length === rows.length &&
+      strips.length + vermerk.length === rows.length &&
       strips.every((el) => el.tagName === 'DIV' && !el.closest('button') && el.querySelectorAll('button').length === 0) &&
-      strips.every((el) => /→/.test(el.textContent || '') && /aus den Betten/.test(el.textContent || ''));
-    console.log((stripOk ? '✅' : '❌') + ` 🔀 Tageskarten: ${strips.length} Streifen, reine Info – nichts anzuklicken`);
+      strips.every((el) => /\u2192/.test(el.textContent || '') && /aus den Betten/.test(el.textContent || '')) &&
+      vermerk.every((el) => !el.querySelector('[data-change]'));
+    console.log((stripOk ? '\u2705' : '\u274c') + ` 🔀 Tageskarten: ${strips.length} Streifen auf vollen Tagen, ${vermerk.length} Kurz-Vermerk auf leeren \u2013 reine Info, nichts anzuklicken`);
     if (!stripOk) failures.push('Ortswechsel-Streifen ohne Dialog');
     await act(async () => rTage2.unmount());
     cTage2.remove();
@@ -815,6 +957,32 @@ async function render(name, Page, tripId) {
   await act(async () => rToday.unmount());
   cToday.remove();
 
+  // ✍️ Reinschrift: Städte und Unterkünfte schreiben sich selbst groß – anzeigen tut die App dasselbe
+  const { properName, fmtDay, fmtDate } = require('../src/lib/format.ts');
+  const { reinschrift, cleanForSave } = require('../src/lib/normalize.ts');
+  const rein =
+    properName('  osaka ') === 'Osaka' &&
+    properName('hotel osaka') === 'Hotel Osaka' &&
+    properName('\tFrankfurt\nam\tMain ') === 'Frankfurt am Main' &&
+    properName('JR Pass') === 'JR Pass' &&
+    properName('teamLab') === 'teamLab' &&
+    properName('') === '' &&
+    properName(null) === '';
+  const speicher = reinschrift('hotels', { name: ' hotel osaka ', city: '  osaka ' });
+  const speicherOk = speicher.name === 'Hotel Osaka' && speicher.city === 'Osaka';
+  const stellen = reinschrift('places', { city: 'hakodate', name: 'bergwerk' });
+  const orteOk = stellen.city === 'Hakodate' && stellen.name === 'bergwerk'; // Aktivitätsnamen bleiben, wie man sie schreibt
+  const db = cleanForSave('hotels', { id: 'x', name: ' hotel tokio ', city: 'tokio ' });
+  const dbOk = db.name === 'Hotel Tokio' && db.city === 'Tokio';
+  const reinschriftOk = rein && speicherOk && orteOk && dbOk;
+  console.log((reinschriftOk ? '\u2705' : '\u274c') + ' ✍️ Reinschrift: „ osaka “ \u2192 Osaka, \u201ehotel osaka\u201c \u2192 Hotel Osaka, \u201ehotel tokio\u201c \u2192 Hotel Tokio \u2013 beim Speichern wie beim Anzeigen, Aktivitätsnamen bleiben wie getippt');
+  if (!reinschriftOk) failures.push('Reinschrift');
+
+  // 📅 Kurzdatum: ein Format für alle Listen, ausgeschrieben nur in Überschriften
+  const tagKurz = fmtDay('2027-03-06');
+  const fmtOk = tagKurz === 'Sa 06.03.' && fmtDay('2027-04-01') === 'Do 01.04.' && fmtDay('2027-04-05') === 'Mo 05.04.' && fmtDay('') === '\u2014' && !/[,.] 2027/.test(tagKurz);
+  console.log((fmtOk ? '\u2705' : '\u274c') + ' 📅 Kurzdatum in Listen: ' + tagKurz + ' · ' + fmtDay('2027-04-01') + ' · ' + fmtDay('2027-04-05') + ' \u2013 ausgeschrieben nur, wo eine \u00DCberschrift steht');
+  if (!fmtOk) failures.push('Datumsformat');
   if (warnings.length) {
     console.log('\n⚠️  Hinweise:');
     [...new Set(warnings)].slice(0, 8).forEach((w) => console.log('   ' + w));

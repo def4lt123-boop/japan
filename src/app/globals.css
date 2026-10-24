@@ -5,6 +5,15 @@
 :root {
   --bg: #0b0e14;
   --line: rgba(255, 255, 255, 0.07);
+  /* Höhe des unteren Reiters auf dem Handy – Desktop: kein Dock */
+  --dock: 0px;
+}
+
+@media (max-width: 767.98px) {
+  :root {
+    /* 44px Tippfläche + 3px Atmung oben und unten – die Leiste ist so hoch wie ihr Inhalt */
+    --dock: calc(50px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 html,
@@ -12,6 +21,11 @@ body {
   background: var(--bg);
   color: #e8ecf4;
   -webkit-text-size-adjust: 100%;
+  /* auf dem Handy darf die Seite nicht über den Bildschirm hinausragen:
+     seitliches Wischen gibt es hier höchstens innerhalb einer Karte oder Tabelle */
+  max-width: 100%;
+  overflow-x: hidden; /* ältere Safari-Versionen */
+  overflow-x: clip;
 }
 
 body {
@@ -37,14 +51,14 @@ body {
     @apply rounded-2xl border border-white/[0.07] bg-white/[0.035] shadow-card backdrop-blur-[2px];
   }
   .label {
-    @apply mb-1 block text-[11.5px] font-medium text-slate-400;
+    @apply mb-1 block text-[13px] font-medium text-slate-400;
   }
   .input {
     @apply w-full rounded-xl border border-white/[0.09] bg-black/20 px-3 py-2 text-[13.5px] text-slate-100 outline-none transition
-      placeholder:text-slate-500 focus:border-shu-400/60 focus:ring-2 focus:ring-shu-500/20;
+      placeholder:text-slate-400 focus:border-shu-400/60 focus:ring-2 focus:ring-shu-500/20;
   }
   .chip {
-    @apply inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] font-medium;
+    @apply inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2 py-1 text-[13px] font-medium;
   }
   .btn {
     @apply inline-flex select-none items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-[13px] font-semibold transition
@@ -69,11 +83,96 @@ body {
   .tab-active {
     @apply bg-shu-500/15 text-white ring-1 ring-inset ring-shu-400/30;
   }
+
+  /* Reiter: auf dem Handy eine feste Leiste unten (der Daumen liegt ohnehin dort),
+     auf dem Desktop der Streifen oben. Ein Element, zwei Zustände – damit die
+     Reihenfolge der Bereiche dieselbe bleibt. */
+  .tabbar {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 45;
+    display: grid;
+    /* jede Spalte gleich breit und schrumpfbar – so passen alle Reiter nebeneinander,
+       ohne seitliches Scrollen und ohne dass einer den andern aus dem Bild schiebt */
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 2px;
+    padding: 3px 3px calc(3px + env(safe-area-inset-bottom, 0px));
+    background: rgba(11, 13, 18, 0.97);
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow: 0 -14px 34px -20px rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(10px);
+  }
+  .tabbar > a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 4px 1px 3px;
+    font-size: 9.5px;
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
+  }
+  .tabbar > a > [aria-hidden] {
+    font-size: 17px;
+    line-height: 1.1;
+  }
+  .tab-label-short {
+    overflow-wrap: anywhere;
+  }
+  .tab-label-full {
+    display: none;
+  }
+  /* der Inhalt muss über der Leiste enden, sonst liegt sie auf dem letzten Knopf –
+     die Grundbreite davon hat die Hülle schon (pb-16), hier kommt nur die Sicherheitzone dazu */
+  .pb-tabbar {
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 768px) {
+    .tabbar {
+      position: static;
+      display: flex;
+      inset: auto;
+      z-index: auto;
+      gap: 4px;
+      overflow-x: auto;
+      padding: 4px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      box-shadow: none;
+      backdrop-filter: none;
+    }
+    .tabbar > a {
+      flex-direction: row;
+      gap: 6px;
+      padding: 8px 12px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .tabbar > a > [aria-hidden] {
+      font-size: inherit;
+    }
+    .tab-label-short {
+      display: none;
+    }
+    .tab-label-full {
+      display: inline;
+    }
+    .pb-tabbar {
+      padding-bottom: 0;
+    }
+  }
   .seg {
     @apply inline-flex items-center gap-0.5 rounded-xl bg-white/[0.045] p-0.5;
   }
   .seg > button {
-    @apply rounded-[10px] px-2.5 py-1 text-[12.5px] font-medium text-slate-400 transition hover:text-slate-100;
+    @apply rounded-[10px] px-2.5 py-1 text-[13px] font-medium text-slate-400 transition hover:text-slate-100;
   }
   .seg > .seg-on {
     @apply bg-ink-700 text-white shadow-[0_1px_0_rgba(255,255,255,0.06)_inset];
@@ -81,8 +180,47 @@ body {
   .menu-pop {
     @apply pop-in absolute right-0 z-50 mt-1 w-60 rounded-xl border border-white/10 bg-ink-800/95 p-1 text-left shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] backdrop-blur;
   }
+  /* die Prioritätsstufe – dasselbe Etikett in Liste, Blech, Karte und Formular */
+  .prio {
+    @apply inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[13px] font-medium;
+  }
+  /* winzige Schrift gibt es nur noch in Grafiken (Hitzefeld, Nacht-Streifen, Kalender,
+     Kartenrand) – `mikro` kennzeichnet die Ausnahme, alles andere ist mindestens 13px */
+  .mikro {
+    line-height: 1.15;
+    letter-spacing: 0.02em;
+  }
+  /* ein leerer Tag ist eine Zeile: gleiche Höhe wie die Tages navigation daneben,
+     derselbe Farbrand links wie die Karte, die daraus wird, sobald ein Punkt drinliegt */
+  .day-line {
+    min-height: 38px;
+  }
+  .day-warn {
+    @apply rounded-md bg-shu-500/15 px-2 py-1 text-[13px] font-medium text-shu-50 ring-1 ring-inset ring-shu-400/40 transition hover:bg-shu-500/30;
+  }
+  /* das Ideen-Blech: von unten, mit Sicherheitszone unter dem Fuß */
+  .day-sheet {
+    animation: sheet-up 0.18s ease-out;
+  }
+  .day-sheet .sheet-foot {
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+  @media (min-width: 768px) {
+    .day-sheet .sheet-foot {
+      padding-bottom: 8px;
+    }
+  }
+
+  /* die Filterreihe auf dem Handy: eine Zeile, seitlich durchziehbar, ohne Scrollbalken */
+  .filter-row {
+    scrollbar-width: none;
+  }
+  .filter-row::-webkit-scrollbar {
+    height: 0;
+  }
   .menu-sheet {
-    @apply fixed inset-x-2 bottom-2 z-50 mx-auto max-h-[72vh] w-auto max-w-lg overflow-y-auto rounded-2xl p-2;
+    @apply fixed inset-x-2 z-50 mx-auto max-h-[72vh] w-auto max-w-lg overflow-y-auto rounded-2xl p-2;
+    bottom: calc(6px + var(--dock, 0px));
     animation: sheet-up 0.18s ease-out;
   }
   @keyframes sheet-up {
@@ -110,7 +248,7 @@ body {
 }
 .leaflet-popup-content {
   margin: 10px 12px;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.45;
 }
 .leaflet-bar a,
@@ -171,23 +309,46 @@ body {
   cursor: grabbing;
   transform: scale(0.94);
 }
-/* auf dem Handy sind die kleinen Greifknöpfe zu klein – hier etwas größer */
+/* Touch: jede Fläche, die man antippen kann, ist mindestens 44 × 44 groß –
+   die Knöpfe der Kartenzeile, die Greifpunkte, die Eingabefelder, alles.
+   (Apple und Google rechnen mit dem Daumen, nicht mit dem Cursor.) */
 @media (hover: none) {
+  button,
+  .btn,
+  .tab,
+  summary,
+  .menu-sheet a,
+  .day-nav a,
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
   .icon-btn {
-    min-height: 32px;
-    min-width: 32px;
+    height: 44px;
+    width: 44px;
+    min-height: 44px;
+    min-width: 44px;
   }
   .day-arrow,
   .btn-today {
-    height: 40px;
+    height: 44px;
   }
-}
-
-@media (hover: none) {
   .grip {
-    width: 34px;
-    height: 34px;
-    font-size: 16px;
+    width: 44px;
+    height: 44px;
+    font-size: 17px;
+  }
+  /* eine Zeile pro leerem Tag bleibt auch mit 44px Knopf eine Zeile */
+  .day-line {
+    min-height: 44px;
+  }
+  /* Tabellen- und Chip-Knöpfe in engen Zeilen: Höhe ja, Breite dem Text überlassen */
+  td button,
+  th button,
+  button.chip {
+    min-width: 0;
   }
 }
 
@@ -573,7 +734,9 @@ a {
   margin-inline: auto;
   width: 100%;
   max-width: 36rem;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  bottom: var(--dock, 0px);
+  /* die Sicherheitszone steckt schon im Dock – hier nicht noch einmal */
+  padding: 10px 12px;
   opacity: 0;
   transform: translateY(130%);
   pointer-events: none;
@@ -711,6 +874,10 @@ a {
   .sticky-next,
   .trip-seg {
     display: none !important;
+  }
+  /* der Platz für die untere Reiterleiste gehört nicht aufs Papier */
+  .pb-tabbar {
+    padding-bottom: 0;
   }
 }
 

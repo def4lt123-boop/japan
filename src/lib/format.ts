@@ -26,6 +26,23 @@ export function fmtDate(iso?: string | null, opts: Intl.DateTimeFormatOptions = 
   return d.toLocaleDateString(DE, opts);
 }
 
+/**
+ * Das Datum, wie es in Listen steht: `Sa 24.10.` – kurz, gleiche Breite, kein JJJJ.
+ * Ausgeschrieben (`Samstag, 24. Oktober`) nur wo ein Satz oder eine Überschrift steht.
+ */
+export function fmtDay(iso?: string | null): string {
+  if (!iso) return '—';
+  // Intl hängt an das abgekürzte Wochentagwort Punkt und Komma („Sa., 06.03.“) –
+  // in einer Liste soll `Sa 06.03.` stehen, also wird es aus den Stücken gesetzt.
+  return `${weekdayShort(iso)} ${fmtDate(iso, { day: '2-digit', month: '2-digit' })}`;
+}
+
+/** wie fmtDay, aber ausgeschrieben – für Überschriften und den Satz davor */
+export function fmtDayLong(iso?: string | null): string {
+  if (!iso) return '—';
+  return fmtDate(iso, { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
 export function weekdayShort(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(DE, { weekday: 'short' });
@@ -105,6 +122,37 @@ export function num(v: string): number | null {
   if (!t) return null;
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Eine Stadt, die man nicht kennt, soll nicht als „Unbekannt“ im Weg stehen –
+ * leer heißt hier: noch nicht eingetragen, also nichts anzeigen (oder den Hinweis).
+ */
+export function knownCity(city?: string | null): string | null {
+  const c = properName(city);
+  return !c || c.toLowerCase() === 'unbekannt' ? null : c;
+}
+
+/**
+ * Städte- und Unterkunftsnamen in Reinschrift: außen Leerzeichen weg, innen eines,
+ * jeder Wortanfang groß. Alles, was schon groß oder in Großbuchstaben dasteht
+ * (JR, TDR, Osaka-jo), bleibt wie es ist – normalisieren soll nicht verschlimmern.
+ */
+export function properName(raw?: string | null): string {
+  const t = (raw ?? '').replace(/\s+/g, ' ').trim();
+  if (!t) return '';
+  const klein = new Set(['am', 'an', 'auf', 'aus', 'bei', 'im', 'in', 'mit', 'nach', 'sur', 'und', 'van', 'von', 'der', 'den', 'die', 'de', 'du', 'la', 'le']);
+  return t
+    .split(' ')
+    .map((wort, i) => {
+      const buch = /[A-Za-zÀ-ÖØ-Þß-ÿ]/.test(wort);
+      if (!buch) return wort;
+      if (wort === wort.toUpperCase() && wort.replace(/[^A-Za-z]/g, '').length <= 4) return wort; // Abkürzungen
+      if (wort !== wort.toLowerCase() && /[A-Z]/.test(wort.slice(1))) return wort; // schreibt selbst gemischt
+      if (i > 0 && klein.has(wort.toLowerCase())) return wort.toLowerCase();
+      return wort[0].toUpperCase() + wort.slice(1);
+    })
+    .join(' ');
 }
 
 export function plural(n: number, one: string, many: string): string {

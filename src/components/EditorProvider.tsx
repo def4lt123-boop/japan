@@ -5,7 +5,7 @@ import type { Expense, Hotel, Journey, Place, Trip } from '../lib/types';
 import { useStore } from '../lib/store';
 import { ExpenseForm, HotelForm, JourneyForm, PlaceForm, TripForm } from './forms';
 import { geocode, queryFor, sleep } from '../lib/geocode';
-import { fmtDate } from '../lib/format';
+import { fmtDate, fmtDay } from '../lib/format';
 import { cityOfDay, trimPreviousStay } from '../lib/locus';
 
 type Request =
@@ -107,7 +107,7 @@ export function EditorProvider({ tripId, children }: { tripId: string; children:
               activePlace
                 ? `„${row.name}“ aktualisiert${row.date ? ` – Tag ${row.date.split('-').reverse().join('.')}` : ''}`
                 : row.date
-                  ? `„${row.name}“ fest für ${fmtDate(row.date, { weekday: 'short', day: '2-digit', month: '2-digit' })} eingeplant.`
+                  ? `„${row.name}“ fest für ${fmtDay(row.date)} eingeplant.`
                   : `„${row.name}“ angelegt – ohne Tag, er steht in der Liste unter Aktivitäten. Zieh ihn auf der Tages-Seite auf einen Tag.`,
             );
           }}

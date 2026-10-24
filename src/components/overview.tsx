@@ -10,13 +10,13 @@
 import React, { useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { useEditor } from './EditorProvider';
-import { Button, Card, Empty, LinkTag, Money, ProgressBar, SectionTitle, cx } from './ui';
+import { Button, Card, Empty, LinkTag, Money, PriorityTag, ProgressBar, SectionTitle, cx } from './ui';
 import { DAY_CAPACITY, type CityLoad, type DayCell, type GapItem, type Sample, type Stay, cityLoad, loadLabel, loadTone } from '../lib/overview';
 import { tintFor } from '../lib/palette';
 import { TouchDragProvider, useDrag, Grip } from './TouchDrag';
-import { STATUS_META, TICKET_META, categoryMeta } from '../lib/categories';
+import { STATUS_META, TICKET_META, categoryMeta, priorityLabel } from '../lib/categories';
 import { assign } from '../lib/dayplan';
-import { fmtDate, fmtDuration, fmtMoney, plural } from '../lib/format';
+import { fmtDate, fmtDay, fmtDuration, fmtMoney, plural } from '../lib/format';
 import type { Place } from '../lib/types';
 
 const STAY_TONE: Record<string, string> = {
@@ -57,11 +57,11 @@ export function TripRibbon({ tripId, cells, stays }: { tripId: string; cells: Da
           <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-white">
             <span aria-hidden>🎌</span> Die Reise auf einem Blick
           </h2>
-          <p className="mt-0.5 text-[12.5px] text-slate-400">
+          <p className="mt-0.5 text-[13px] text-slate-400">
             Bett, Routen und Tagesluft über {plural(n, 'Tag', 'Tage')} · {plural(stays.length, 'Unterkunft', 'Unterkünfte')} · Spalten anklicken = zum Tag springen
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
+        <div className="flex flex-wrap items-center gap-1.5 text-[13px] text-slate-400">
           {Object.entries(STAY_TONE).map(([k, v]) => (
             <span key={k} className={cx('chip border ring-0', v.split(' ').slice(0, 2).join(' '))}>
               {STATUS_META[k as keyof typeof STATUS_META]?.label ?? k}
@@ -74,8 +74,8 @@ export function TripRibbon({ tripId, cells, stays }: { tripId: string; cells: Da
       <div className="overflow-x-auto px-2 pb-2 pt-1">
         <div className="grid gap-[3px]" style={{ gridTemplateColumns: `148px repeat(${n}, minmax(27px, 1fr))`, minWidth: 148 + n * 27 }}>
           {/* Kopf: Tage */}
-          <div className="flex items-end gap-1 pb-1 pl-1 text-[10.5px] font-semibold uppercase tracking-wider text-slate-500" style={{ gridRow: 1, gridColumn: 1 }}>
-            <span className="truncate normal-case tracking-normal text-slate-400">
+          <div className="flex items-end gap-1 pb-1 pl-1 text-[13px] font-semibold uppercase tracking-wider text-slate-400" style={{ gridRow: 1, gridColumn: 1 }}>
+            <span className="min-w-0 truncate normal-case tracking-normal text-slate-400">
               {fmtDate(cells[0].date, { day: '2-digit', month: '2-digit' })} – {fmtDate(cells[n - 1].date, { day: '2-digit', month: '2-digit', year: 'numeric' })}
             </span>
           </div>
@@ -90,14 +90,14 @@ export function TripRibbon({ tripId, cells, stays }: { tripId: string; cells: Da
                 c.weekend ? 'bg-shu-500/[0.13]' : 'bg-transparent',
               )}
             >
-              <span className={cx('block text-[9.5px] font-semibold uppercase', c.weekend ? 'text-shu-200' : 'text-slate-500')}>{c.weekday.replace('.', '')}</span>
-              <span className={cx('block text-[12px] font-semibold tabular-nums', c.empty ? 'text-slate-500' : 'text-slate-100')}>{Number(c.date.slice(8, 10))}</span>
-              {Number(c.date.slice(8, 10)) === 1 ? <span className="block text-[8.5px] text-slate-500">{fmtDate(c.date, { month: 'short' })}</span> : null}
+              <span className={cx('mikro block text-[9.5px] font-semibold uppercase', c.weekend ? 'text-shu-200' : 'text-slate-400')}>{c.weekday.replace('.', '')}</span>
+              <span className={cx('block text-[13px] font-semibold tabular-nums', c.empty ? 'text-slate-400' : 'text-slate-100')}>{Number(c.date.slice(8, 10))}</span>
+              {Number(c.date.slice(8, 10)) === 1 ? <span className="mikro block text-[8.5px] text-slate-400">{fmtDate(c.date, { month: 'short' })}</span> : null}
             </a>
           ))}
 
           {/* Unterkünfte als Balken */}
-          <div className="flex items-center pl-1 text-[10.5px] font-semibold uppercase tracking-wider text-slate-500" style={{ gridRow: `${stayRow0} / span ${Math.max(1, stays.length)}`, gridColumn: 1 }}>
+          <div className="flex items-center pl-1 text-[13px] font-semibold uppercase tracking-wider text-slate-400" style={{ gridRow: `${stayRow0} / span ${Math.max(1, stays.length)}`, gridColumn: 1 }}>
             Schlafen
           </div>
           {stays.map((s, i) => {
@@ -109,24 +109,24 @@ export function TripRibbon({ tripId, cells, stays }: { tripId: string; cells: Da
                 <a
                   href={`/t/${tripId}/unterkuenfte`}
                   title={`${s.city} · ${s.hotel ?? 'Quartier offen'} · ${s.nights} Nächte${s.price_eur ? ` · ${fmtMoney(s.price_eur)}` : ''}${s.perNight ? ` (${fmtMoney(s.perNight)}/Nacht)` : ''}`}
-                  className={cx('flex h-[22px] items-center gap-1 overflow-hidden rounded-md border px-1.5 text-[11px] font-medium transition hover:brightness-125', STAY_TONE[s.booking_status] ?? STAY_TONE.offen)}
+                  className={cx('flex h-[22px] items-center gap-1 overflow-hidden rounded-md border px-1.5 text-[13px] font-medium transition hover:brightness-125', STAY_TONE[s.booking_status] ?? STAY_TONE.offen)}
                 >
                   <span aria-hidden>🏨</span>
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: tintFor(s.hotelId ?? s.city).edge }} aria-hidden />
                   <span className="truncate">{s.hotel ?? 'noch offen'}</span>
-                  <span className="ml-auto shrink-0 tabular-nums text-[10px] opacity-80">{s.nights}N</span>
+                  <span className="mikro ml-auto shrink-0 tabular-nums text-[10px] opacity-80">{s.nights}N</span>
                 </a>
               </div>
             );
           })}
           {!stays.length ? (
-            <div className="rounded-md border border-dashed border-shu-400/40 bg-shu-500/[0.07] px-2 text-[11px] text-shu-100" style={colStyle(stayRow0, 2, lastCol)}>
+            <div className="rounded-md border border-dashed border-shu-400/40 bg-shu-500/[0.07] px-2 text-[13px] text-shu-100" style={colStyle(stayRow0, 2, lastCol)}>
               noch keine Unterkunft mit Ein-/Auscheck-Datum angelegt
             </div>
           ) : null}
 
           {/* Nächte: gedeckt oder Lücke */}
-          <div className="flex items-center pl-1 text-[10.5px] font-semibold uppercase tracking-wider text-slate-500" style={{ gridRow: nightRow, gridColumn: 1 }}>
+          <div className="flex items-center pl-1 text-[13px] font-semibold uppercase tracking-wider text-slate-400" style={{ gridRow: nightRow, gridColumn: 1 }}>
             Nächte
           </div>
           {cells.map((c, i) => {
@@ -145,11 +145,11 @@ export function TripRibbon({ tripId, cells, stays }: { tripId: string; cells: Da
           })}
 
           {/* Etappen & Umzüge */}
-          <div className="flex items-center pl-1 text-[10.5px] font-semibold uppercase tracking-wider text-slate-500" style={{ gridRow: travelRow, gridColumn: 1 }}>
+          <div className="flex items-center pl-1 text-[13px] font-semibold uppercase tracking-wider text-slate-400" style={{ gridRow: travelRow, gridColumn: 1 }}>
             Unterwegs
           </div>
           {cells.map((c, i) => (
-            <div key={`j-${c.date}`} style={colStyle(travelRow, i + 2)} className="flex h-[18px] items-center justify-center gap-0.5 text-[11px]">
+            <div key={`j-${c.date}`} style={colStyle(travelRow, i + 2)} className="flex h-[18px] items-center justify-center gap-0.5 text-[13px]">
               {c.journeys.map((j) => (
                 <span key={j.id} title={`${j.title}${j.departure_time ? ` · ${j.departure_time}` : ' · ohne Uhrzeit'}`} className={cx(j.booking_status !== 'gebucht' && 'rounded bg-amber-500/20 px-0.5')}>
                   {MODE_ICON[j.mode ?? ''] ?? '🧳'}
@@ -161,7 +161,7 @@ export function TripRibbon({ tripId, cells, stays }: { tripId: string; cells: Da
           ))}
 
           {/* Auslastung */}
-          <div className="flex items-end pl-1 pb-1 text-[10.5px] font-semibold uppercase tracking-wider text-slate-500" style={{ gridRow: loadRow, gridColumn: 1 }}>
+          <div className="flex items-end pl-1 pb-1 text-[13px] font-semibold uppercase tracking-wider text-slate-400" style={{ gridRow: loadRow, gridColumn: 1 }}>
             Auslastung
           </div>
           {cells.map((c, i) => (
@@ -178,7 +178,7 @@ export function TripRibbon({ tripId, cells, stays }: { tripId: string; cells: Da
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-white/[0.07] px-4 py-2 text-[11px] text-slate-500">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-white/[0.07] px-4 py-2 text-[13px] text-slate-400">
         <span>🔑 Check-in</span>
         <span>🧷 Check-out</span>
         <span className="text-matcha-200/80">▰ Nacht gedeckt</span>
@@ -219,7 +219,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
 
   const placeFromPool = (p: Place, date: string) => {
     store.patch('places', p.id, { date });
-    store.say(`„${p.name}“ → ${fmtDate(date, { weekday: 'short', day: '2-digit', month: '2-digit' })}`);
+    store.say(`„${p.name}“ → ${fmtDay(date)}`);
   };
 
   return (
@@ -234,7 +234,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
             <Button size="sm" variant={onlyGaps ? 'primary' : 'ghost'} onClick={() => setOnlyGaps((v) => !v)} title="Nur Tage zeigen, die leer oder voll sind">
               nur Baustellen
             </Button>
-            <a href={`/t/${tripId}/tage`} className="btn-ghost !py-1 !text-[12px]">
+            <a href={`/t/${tripId}/tage`} className="btn-ghost !py-1 !text-[13px]">
               ausführlich planen →
             </a>
           </>
@@ -254,7 +254,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
       ) : !shown.length ? (
         <Empty title="Kein Tag mit Lücken 🎉" hint="Jeder Tag hat ein Bett und Programm. Nimm die Ansicht raus, um alles zu sehen." action={<Button size="sm" onClick={() => setOnlyGaps(false)}>alle Tage zeigen</Button>} />
       ) : (
-        <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {shown.map((c) => {
             const hasRoom = c.empty || c.load < 0.75;
             const matching = pool.filter((p) => c.city && norm(p.city) === norm(c.city));
@@ -271,19 +271,19 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
                 onDragLeave={() => setDragOver((cur) => (cur === c.date ? null : cur))}
                 onDrop={drop(c.date)}
                 className={cx(
-                  'print-block scroll-mt-24 rounded-xl border bg-black/[0.18] p-2.5 transition',
+                  'print-block min-w-0 scroll-mt-24 rounded-xl border bg-black/[0.18] p-2.5 transition',
                   c.nightGap ? 'border-shu-400/40' : c.empty ? 'border-dashed border-white/[0.14]' : 'border-white/[0.08]',
                   dragOver === c.date && 'drop-live',
                 )}
               >
                 <div className="flex items-start gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-[12.5px] font-semibold text-white">
-                      <span className="tabular-nums text-slate-400">T{c.index + 1}</span> {fmtDate(c.date, { weekday: 'short', day: '2-digit', month: '2-digit' })}
+                    <p className="text-[13px] font-semibold text-white">
+                      <span className="tabular-nums text-slate-400">T{c.index + 1}</span> {fmtDay(c.date)}
                     </p>
-                    <p className="mt-0.5 truncate text-[11.5px] text-slate-400">{c.city ?? '—'}</p>
+                    <p className="mt-0.5 truncate text-[13px] text-slate-400">{c.city ?? '—'}</p>
                   </div>
-                  <span className={cx('chip shrink-0 ring-1', c.load > 1.05 ? 'bg-shu-500/15 text-shu-100 ring-shu-400/30' : c.load > 0.6 ? 'bg-matcha-500/15 text-matcha-100 ring-matcha-400/30' : c.count ? 'bg-white/[0.05] text-slate-300 ring-white/10' : 'bg-white/[0.04] text-slate-500 ring-white/10')}>
+                  <span className={cx('chip shrink-0 ring-1', c.load > 1.05 ? 'bg-shu-500/15 text-shu-100 ring-shu-400/30' : c.load > 0.6 ? 'bg-matcha-500/15 text-matcha-100 ring-matcha-400/30' : c.count ? 'bg-white/[0.05] text-slate-300 ring-white/10' : 'bg-white/[0.04] text-slate-400 ring-white/10')}>
                     {loadLabel(c)}
                   </span>
                 </div>
@@ -298,25 +298,25 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
                         onClick={() => open({ kind: 'place', id: b.id })}
                         title={`${i + 1}. ${b.name} · ${meta.label}${b.price_eur ? ` · ${fmtMoney(b.price_eur)}` : ''} · ${(TICKET_META[(b.ticket_status ?? 'unklar') as keyof typeof TICKET_META] ?? TICKET_META.unklar).label}`}
                         className={cx(
-                          'flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left text-[11.5px] transition hover:bg-white/[0.07]',
+                          'flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left text-[13px] transition hover:bg-white/[0.07]',
                           b.priority === 'muss' && b.booking_status === 'offen' && 'ring-1 ring-inset ring-shu-300/50',
                         )}
                       >
-                        <span className="w-3 shrink-0 text-right tabular-nums text-slate-500">{i + 1}</span>
+                        <span className="w-3 shrink-0 text-right tabular-nums text-slate-400">{i + 1}</span>
                         <span aria-hidden style={{ color: meta.color }}>
                           {meta.icon}
                         </span>
-                        <span className={cx('min-w-0 flex-1 truncate', b.booking_status === 'erledigt' ? 'text-slate-500 line-through' : 'text-slate-200')}>{b.name}</span>
-                        {b.priority === 'muss' ? <span className="shrink-0 text-[10px] text-shu-300">★</span> : null}
+                        <span className={cx('min-w-0 flex-1 truncate', b.booking_status === 'erledigt' ? 'text-slate-400 line-through' : 'text-slate-200')}>{b.name}</span>
+                        {b.priority === 'muss' ? <span className="mikro shrink-0 text-[10.5px] text-shu-300" title={priorityLabel(b.priority)} aria-label={priorityLabel(b.priority)}>★</span> : null}
                       </button>
                     );
                   })}
-                  {!c.places.length ? <p className="px-1 py-1.5 text-[11px] text-slate-600">{c.journeys.length ? 'Reisetag' : 'noch nichts geplant'}</p> : null}
-                  {c.places.length > 4 ? <p className="px-1 text-[10.5px] tabular-nums text-slate-500">+{c.places.length - 4} weitere</p> : null}
+                  {!c.places.length ? <p className="px-1 py-1.5 text-[13px] text-slate-400">{c.journeys.length ? 'Reisetag' : 'noch nichts geplant'}</p> : null}
+                  {c.places.length > 4 ? <p className="mikro px-1 text-[10.5px] tabular-nums text-slate-400">+{c.places.length - 4} weitere</p> : null}
                 </div>
 
                 {/* Bett */}
-                <p className={cx('mt-1.5 flex items-center gap-1 truncate text-[11.5px]', c.nightGap ? 'text-shu-200' : 'text-slate-400')}>
+                <p className={cx('mt-1.5 flex min-w-0 items-center gap-1 truncate text-[13px]', c.nightGap ? 'text-shu-200' : 'text-slate-400')}>
                   {c.nightGap ? (
                     <>
                       <span aria-hidden>⚠️</span> Nacht ohne Unterkunft
@@ -324,32 +324,32 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
                   ) : c.hotel ? (
                     <>
                       <span aria-hidden>🛏</span>
-                      <span className="truncate">{c.hotel.name}</span>
-                      {c.checkOut ? <span className="text-slate-600">· Check-out</span> : null}
+                      <span className="min-w-0 truncate">{c.hotel.name}</span>
+                      {c.checkOut ? <span className="text-slate-400">· Check-out</span> : null}
                     </>
                   ) : (
                     <>
                       <span aria-hidden>🛏</span> Abreise-Tag
                     </>
                   )}
-                  <button className="ml-auto shrink-0 text-[11px] text-shu-200 underline-offset-2 hover:underline" onClick={() => open(c.hotel ? { kind: 'hotel', id: c.hotel.id } : { kind: 'hotel', defaults: { check_in: c.date, city: c.city ?? '' } })}>
+                  <button className="ml-auto shrink-0 text-[13px] text-shu-200 underline-offset-2 hover:underline" onClick={() => open(c.hotel ? { kind: 'hotel', id: c.hotel.id } : { kind: 'hotel', defaults: { check_in: c.date, city: c.city ?? '' } })}>
                     {c.hotel ? 'ändern' : 'anlegen'}
                   </button>
                 </p>
 
                 {/* Etappen */}
                 {c.journeys.map((j) => (
-                  <button key={j.id} onClick={() => open({ kind: 'journey', id: j.id })} className="mt-1 flex w-full items-center gap-1.5 rounded-md bg-white/[0.04] px-1.5 py-1 text-left text-[11.5px] text-slate-200 hover:bg-white/[0.08]">
+                  <button key={j.id} onClick={() => open({ kind: 'journey', id: j.id })} className="mt-1 flex w-full items-center gap-1.5 rounded-md bg-white/[0.04] px-1.5 py-1 text-left text-[13px] text-slate-200 hover:bg-white/[0.08]">
                     <span aria-hidden>{MODE_ICON[j.mode ?? ''] ?? '🧳'}</span>
                     <span className="min-w-0 flex-1 truncate">{j.title}</span>
-                    <span className="shrink-0 tabular-nums text-slate-500">{j.departure_time ?? 'Zeit?'}</span>
+                    <span className="shrink-0 tabular-nums text-slate-400">{j.departure_time ?? 'Zeit?'}</span>
                   </button>
                 ))}
 
                 {/* Punkte ohne Tag – hier ablegen */}
                 {tips.length ? (
                   <div className="mt-1.5 flex flex-wrap gap-1">
-                    <span className="text-[10.5px] text-slate-500">passt hier:</span>
+                    <span className="mikro text-[10.5px] text-slate-400">passt hier:</span>
                     {tips.map((p) => (
                       <button key={p.id} onClick={() => placeFromPool(p, c.date)} title={`${categoryMeta(p.category).label}${p.duration_min ? ` · ${fmtDuration(p.duration_min)}` : ''} – auf diesen Tag legen`} className="chip bg-amber-500/10 text-amber-100/90 ring-amber-400/25 hover:bg-amber-500/20">
                         {categoryMeta(p.category).icon} {p.name.length > 22 ? `${p.name.slice(0, 21)}…` : p.name} ＋
@@ -372,7 +372,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
                   <Button size="sm" variant="quiet" onClick={() => open({ kind: 'place', defaults: { date: c.date, city: c.city ?? '' } })}>
                     ＋ Eintrag
                   </Button>
-                  <span className="ml-auto text-[10.5px] tabular-nums text-slate-500">{loadLabel(c)}</span>
+                  <span className="mikro ml-auto text-[10.5px] tabular-nums text-slate-400">{loadLabel(c)}</span>
                 </div>
               </div>
             );
@@ -390,7 +390,7 @@ function PoolStrip({ tripId, pool }: { tripId: string; pool: Place[] }) {
   if (!pool.length) return null;
   return (
     <div className="no-print mb-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.05] p-2">
-      <p className="mb-1.5 px-1 text-[11.5px] text-amber-100/90">
+      <p className="mb-1.5 px-1 text-[13px] text-amber-100/90">
         <b>Ziehen &amp; fallen lassen:</b> {plural(pool.length, 'Punkt', 'Punkte')} noch ohne Tag – auf eine Tageskarte ablegen (auf dem Handy am ⠿ ziehen). Die komplette Liste ist unter{' '}
         <a href={`/t/${tripId}/aktivitaeten`} className="underline underline-offset-2 hover:text-white">
           Aktivitäten
@@ -406,14 +406,14 @@ function PoolStrip({ tripId, pool }: { tripId: string; pool: Place[] }) {
               data-dropchip={item.id}
               {...(drag?.grab(item.id, item.name) ?? {})}
               title={`${meta.label}${item.city ? ` · ${item.city}` : ''} – auf einen Tag ziehen`}
-              className="flex shrink-0 touch-none cursor-grab items-center gap-1.5 rounded-lg border border-white/10 bg-ink-800/80 px-2 py-1.5 text-[12px] text-slate-200 transition hover:border-amber-400/40 hover:bg-ink-700 active:cursor-grabbing"
+              className="flex shrink-0 touch-none cursor-grab items-center gap-1.5 rounded-lg border border-white/10 bg-ink-800/80 px-2 py-1.5 text-[13px] text-slate-200 transition hover:border-amber-400/40 hover:bg-ink-700 active:cursor-grabbing"
             >
-              <span aria-hidden className="text-slate-500">
+              <span aria-hidden className="text-slate-400">
                 ⠿
               </span>
               <span aria-hidden>{meta.icon}</span>
               <span className="max-w-[190px] truncate">{item.name}</span>
-              {item.priority === 'muss' ? <span className="text-[10px] text-shu-300">★</span> : null}
+              <PriorityTag priority={item.priority} />
             </span>
           );
         })}
@@ -443,8 +443,8 @@ function ReadinessRing({ items }: { items: GapItem[] }) {
         <span className="grid h-[56px] w-[56px] place-items-center rounded-full bg-ink-900 text-[16px] font-semibold tabular-nums text-white">{pct}%</span>
       </div>
       <div className="min-w-0">
-        <p className="text-[12.5px] font-semibold text-white">Planungsgrad</p>
-        <p className="text-[11.5px] leading-snug text-slate-400">
+        <p className="text-[13px] font-semibold text-white">Planungsgrad</p>
+        <p className="text-[13px] leading-snug text-slate-400">
           {items.filter((i) => i.severity === 'bad').length} kritisch · {items.filter((i) => i.severity === 'warn').length} in Arbeit · {items.filter((i) => i.severity === 'ok').length} fein
         </p>
       </div>
@@ -495,14 +495,14 @@ export function GapPanel({ tripId, items }: { tripId: string; items: GapItem[] }
                 <span className={cx('chip ring-1', tone.chip)}>
                   {i.done}/{i.total}
                 </span>
-                <a href={`/t/${tripId}${i.href}`} className="ml-auto text-[11.5px] text-slate-400 underline-offset-2 hover:text-slate-100 hover:underline">
+                <a href={`/t/${tripId}${i.href}`} className="ml-auto text-[13px] text-slate-400 underline-offset-2 hover:text-slate-100 hover:underline">
                   {i.href.replace('/', '')} →
                 </a>
               </div>
               <div className="mt-1.5">
                 <ProgressBar value={i.done} max={Math.max(1, i.total)} tone={i.severity === 'ok' ? 'matcha' : 'shu'} />
               </div>
-              <p className={cx('mt-1 text-[11.5px]', i.severity === 'ok' ? 'text-slate-500' : tone.text)}>{i.hint}</p>
+              <p className={cx('mt-1 text-[13px]', i.severity === 'ok' ? 'text-slate-400' : tone.text)}>{i.hint}</p>
               {i.samples.length ? (
                 <div className="mt-1 flex flex-wrap gap-1">
                   {i.samples.map((s, k) => (
@@ -516,7 +516,7 @@ export function GapPanel({ tripId, items }: { tripId: string; items: GapItem[] }
           );
         })}
       </ul>
-      <p className="mt-2.5 border-t border-white/[0.06] pt-2 text-[11.5px] text-slate-500">
+      <p className="mt-2.5 border-t border-white/[0.06] pt-2 text-[13px] text-slate-400">
         Lücken, Doppelbuchungen und verrutschte Zeiträume listet{' '}
         <LinkTag href={`/t/${tripId}/pruefen`}>🧯 Reise prüfen</LinkTag> – dort sitzt auch der Knopf zum Nachziehen.
       </p>
@@ -565,9 +565,9 @@ export function CapacityPanel({
             { label: 'Ohne Tag', value: pool.length, hint: pool.length ? 'in der Aktivitätsliste' : 'alles platziert' },
           ].map((s) => (
             <div key={s.label} className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-2">
-              <p className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-500">{s.label}</p>
+              <p className="text-[13px] font-semibold uppercase tracking-wider text-slate-400">{s.label}</p>
               <p className="mt-0.5 text-[17px] font-semibold leading-tight text-white">{s.value}</p>
-              <p className="text-[11px] text-slate-500">{s.hint}</p>
+              <p className="text-[13px] text-slate-400">{s.hint}</p>
             </div>
           ))}
         </div>
@@ -576,19 +576,19 @@ export function CapacityPanel({
           <div className="mt-2 flex flex-wrap gap-1">
             {freeDays.slice(0, 14).map((c) => (
               <a key={c.date} href={`#day-${c.date}`} className="chip bg-white/[0.05] text-slate-200 ring-white/10 hover:bg-white/[0.1]">
-                {fmtDate(c.date, { weekday: 'short', day: '2-digit', month: '2-digit' })}
+                {fmtDay(c.date)}
                 {c.city ? ` · ${c.city}` : ''}
               </a>
             ))}
           </div>
         ) : null}
 
-        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
           <div>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Wo noch Platz ist</p>
+            <p className="mb-1 text-[13px] font-semibold uppercase tracking-wider text-slate-400">Wo noch Platz ist</p>
             <ul className="space-y-1">
               {cities.map((c) => (
-                <li key={c.city} className="grid grid-cols-[76px_1fr_auto] items-center gap-2 text-[12px]">
+                <li key={c.city} className="grid grid-cols-[76px_1fr_auto] items-center gap-2 text-[13px]">
                   <span className="truncate text-slate-300" title={`${c.places} Punkte an ${plural(c.days, 'Tag', 'Tagen')} · ${c.nights ? plural(c.nights, 'Nacht', 'Nächte') : 'keine Unterkunft'}`}>
                     {c.city}
                   </span>
@@ -601,19 +601,19 @@ export function CapacityPanel({
                   <span className="whitespace-nowrap tabular-nums text-slate-400">
                     {c.places} ·{' '}
                     <span className={c.fit === 'tight' ? 'text-shu-200' : c.fit === 'loose' ? 'text-matcha-200/90' : 'text-slate-300'}>{c.perDay}/Tag</span>
-                    {c.noHotel ? <span className="text-amber-200/90"> · Bett?</span> : <span className="text-slate-500"> · {c.nights}N</span>}
-                    {c.pool ? <span className="text-slate-500"> · +{c.pool} Pool</span> : null}
+                    {c.noHotel ? <span className="text-amber-200/90"> · Bett?</span> : <span className="text-slate-400"> · {c.nights}N</span>}
+                    {c.pool ? <span className="text-slate-400"> · +{c.pool} Pool</span> : null}
                   </span>
                 </li>
               ))}
             </ul>
-            <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
+            <p className="mt-1.5 text-[13px] leading-relaxed text-slate-400">
               Punkte pro Stadt geteilt durch geplante Tage. <b className="text-matcha-200/90">Unter 1,6 pro Tag</b> ist noch Raum für die Liste, <b className="text-shu-200">über 3,5</b> wird es ein Hetz-Programm. „Bett?“ heißt: Stadt ohne Unterkunft eingetragen.
             </p>
           </div>
 
           <div>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Offene Buchungen · Verfügbarkeit prüfen</p>
+            <p className="mb-1 text-[13px] font-semibold uppercase tracking-wider text-slate-400">Offene Buchungen · Verfügbarkeit prüfen</p>
             {!openBookings.length ? (
               <Empty title="Alles gebucht ✅" hint="Keine Unterkunft und keine Fahrt wartet noch auf eine Buchung." />
             ) : (
@@ -622,10 +622,10 @@ export function CapacityPanel({
                   <li key={`${b.kind}-${b.id}`} className="flex items-center gap-2 rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5">
                     <span aria-hidden>{b.kind === 'hotel' ? '🏨' : b.kind === 'journey' ? '🎫' : categoryMeta('Organisation').icon}</span>
                     <button onClick={() => open(b.kind === 'hotel' ? { kind: 'hotel', id: b.id } : b.kind === 'journey' ? { kind: 'journey', id: b.id } : { kind: 'place', id: b.id })} className="min-w-0 flex-1 text-left">
-                      <span className="block truncate text-[12.5px] font-medium text-slate-100">{b.label}</span>
-                      <span className="block truncate text-[11px] text-slate-500">{b.sub}</span>
+                      <span className="block truncate text-[13px] font-medium text-slate-100">{b.label}</span>
+                      <span className="block truncate text-[13px] text-slate-400">{b.sub}</span>
                     </button>
-                    <Money value={b.price} className="text-[12px]" />
+                    <Money value={b.price} className="text-[13px]" />
                     {b.url ? (
                       <LinkTag href={b.url} title="Buchungsseite öffnen">
                         ↗
@@ -635,7 +635,7 @@ export function CapacityPanel({
                 ))}
               </ul>
             )}
-            {openBookings.length > 7 ? <p className="mt-1 text-[11px] text-slate-500">… und {openBookings.length - 7} weitere offene Punkte.</p> : null}
+            {openBookings.length > 7 ? <p className="mt-1 text-[13px] text-slate-400">… und {openBookings.length - 7} weitere offene Punkte.</p> : null}
           </div>
         </div>
       </Card>

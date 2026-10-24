@@ -27,7 +27,7 @@ export function CategoryPicker({
   const options = categoryOptions([...used, value ?? null]).map((o) => ({ value: o.value, label: `${o.icon}  ${o.label}` }));
   return (
     <Select
-      className={cx(size === 'sm' ? '!w-[9.5rem] max-w-[42vw] !py-1 !text-[12px] truncate' : '', className)}
+      className={cx(size === 'sm' ? '!w-[9.5rem] max-w-[42vw] !py-1 !text-[13px] truncate' : '', className)}
       allowEmpty
       emptyLabel="Kategorie wählen"
       options={options}

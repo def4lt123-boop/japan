@@ -9,22 +9,22 @@ import { EditorProvider, useBatchGeocode, useEditor } from '../../../components/
 import { Button, Card, Menu, cx } from '../../../components/ui';
 import { daysBetween, fmtMoney, fmtRange, plural } from '../../../lib/format';
 import { costsOf, dayPlan } from '../../../lib/stats';
-import { endTrip, startHint, startTrip, tripMode } from '../../../lib/mode';
+import { endTrip, startHint, startIsNear, startTrip, tripMode } from '../../../lib/mode';
 import { today } from '../../../lib/format';
 import { needsCategory } from '../../../lib/categories';
 import { checkTrip } from '../../../lib/checks';
 import { applyCategories } from '../../../lib/categorize';
 
 /**
- * Fünf Reiter, fünf Aufgaben – im Unterwegs-Modus kommt 🚶 dazu. Alles Weitere lebt in
- * den beiden Knöpfen rechts („Anlegen“ und „⋯“) bzw. auf der Reise-Seite.
+ * Fünf Reiter, fünf Aufgaben – im Unterwegs-Modus kommt 🚶 dazu. Vorn liegt nur, was man
+ * wirklich gerade tut: ein Gedanke anlegen (＋ Idee) und der Rest im ⋯.
  */
 const TABS = [
-  { href: '/tage', label: 'Tage', icon: '🗓️' },
-  { href: '/aktivitaeten', label: 'Aktivitäten', icon: '🗂️' },
-  { href: '/karte', label: 'Karte', icon: '🗺️' },
-  { href: '/reise', label: 'Reise', icon: '🧳' },
-  { href: '/uebersicht', label: 'Übersicht', icon: '📊' },
+  { href: '/tage', label: 'Tage', short: 'Tage', icon: '🗓️' },
+  { href: '/aktivitaeten', label: 'Aktivitäten', short: 'Punkte', icon: '🗂️' },
+  { href: '/karte', label: 'Karte', short: 'Karte', icon: '🗺️' },
+  { href: '/reise', label: 'Reise', short: 'Reise', icon: '🧳' },
+  { href: '/uebersicht', label: 'Übersicht', short: 'Übersicht', icon: '📊' },
 ];
 
 export default function TripLayout({ children }: { children: React.ReactNode }) {
@@ -45,19 +45,20 @@ export default function TripLayout({ children }: { children: React.ReactNode }) 
   }
 
   const live = tripMode(trip) === 'live';
-  const tabs = live ? [{ href: '/heute', label: 'Unterwegs', icon: '🚶' }, ...TABS] : TABS;
+  const tabs = live ? [{ href: '/heute', label: 'Unterwegs', short: 'Heute', icon: '🚶' }, ...TABS] : TABS;
 
   return (
     <EditorProvider tripId={tripId}>
       <div className="mb-4">
         <TripTopBar tripId={tripId} />
-        <nav className="no-print mt-3 flex gap-1 overflow-x-auto rounded-2xl border border-white/[0.06] bg-white/[0.03] p-1">
+        {/* oben auf dem Desktop, unten als Leiste auf dem Handy */}
+        <nav className="tabbar no-print md:mt-3" data-tabbar={tabs.length} aria-label="Bereiche dieser Reise">
           {tabs.map((tab) => (
             <TabLink key={tab.href} tab={tab} tripId={tripId} />
           ))}
         </nav>
       </div>
-      {children}
+      <div className="pb-tabbar">{children}</div>
     </EditorProvider>
   );
 }
@@ -98,14 +99,14 @@ function TripTopBar({ tripId }: { tripId: string }) {
           {trip?.name ?? 'Reise'}
           {trip?.archived ? <span className="chip text-slate-300">Referenz · {trip.name.match(/\d{4}/)?.[0] ?? 'Archiv'}</span> : null}
         </h1>
-        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12.5px] text-slate-400">
+        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] text-slate-400">
           {trip?.destination ? <span className="text-slate-300">{trip.destination}</span> : null}
           <span>{fmtRange(trip?.start_date, trip?.end_date)}</span>
-          <span className="text-slate-600">·</span>
+          <span className="text-slate-400">·</span>
           <span className="tabular-nums">{days ? `${plural(days, 'Tag', 'Tage')} · ${plural(bundle.places.length, 'Aktivität', 'Aktivitäten')}` : 'noch kein Zeitraum'}</span>
           {costs.total ? (
             <>
-              <span className="text-slate-600">·</span>
+              <span className="text-slate-400">·</span>
               <span className={cx('tabular-nums', trip?.budget_eur && costs.total > trip.budget_eur ? 'text-shu-300' : 'text-emerald-200/80')}>
                 {fmtMoney(costs.total)}
                 {trip?.budget_eur ? ` / ${fmtMoney(trip.budget_eur)}` : ''}
@@ -134,30 +135,23 @@ function TripTopBar({ tripId }: { tripId: string }) {
               { icon: '✕', label: 'Reise beenden', hint: 'zurück in die Planung – Abgehaktes bleibt', run: () => endTrip(store, bundle, false) },
             ]}
           />
-        ) : trip?.archived ? null : (
-          <Button variant="primary" onClick={() => startTrip(store, bundle)} title={`Was der Start tut: ${startHint({ ...bundle })}`}>
-            ▶️ Reise starten
+        ) : startIsNear(trip) ? (
+          <Button variant="ghost" className="!border-emerald-400/40 !bg-emerald-400/[0.08] !text-emerald-100" onClick={() => startTrip(store, bundle)} title={`Was der Start tut: ${startHint({ ...bundle })}`}>
+            ▶️ starten
           </Button>
-        )}
-        <Menu
-          variant={live ? 'ghost' : 'primary'}
-          label="Anlegen"
-          icon="＋"
-          title="Was brauchst du gerade?"
-          align="right"
-          items={[
-            { icon: '🗺️', label: 'Aktivität', hint: openPool ? `${openPool} warten noch auf einen Tag` : 'Ort, Essen, Ausflug – Tag später', run: () => open({ kind: 'place' }) },
-            { icon: '🏨', label: 'Unterkunft', hint: 'Nächte, Preis, Adresse', run: () => open({ kind: 'hotel' }) },
-            { icon: '🚄', label: 'Flug & Zug', hint: 'Ankunft, Weiterreise, Rückflug', run: () => open({ kind: 'journey' }) },
-            { icon: '💶', label: 'Ausgabe', hint: 'Geld, das sonst geflossen ist', run: () => open({ kind: 'expense' }) },
-          ]}
-        />
+        ) : null}
+        <Button variant={live ? 'ghost' : 'primary'} onClick={() => open({ kind: 'place' })} title={openPool ? `neuer Punkt · ${openPool} warten noch auf einen Tag` : 'neuer Punkt – Tag, Ort und Kategorie kommen später'}>
+          ＋ Idee
+        </Button>
         <Menu
           variant="ghost"
           icon="⋯"
           title="Mehr"
           align="right"
           items={[
+            { icon: '🏨', label: 'Unterkunft anlegen', hint: 'Nächte, Preis, Adresse', run: () => open({ kind: 'hotel' }) },
+            { icon: '🚄', label: 'Flug & Zug anlegen', hint: 'Ankunft, Weiterreise, Rückflug', run: () => open({ kind: 'journey' }) },
+            { icon: '💶', label: 'Ausgabe anlegen', hint: 'Geld, das sonst geflossen ist', run: () => open({ kind: 'expense' }) },
             { icon: '⚙', label: 'Reise bearbeiten', hint: 'Zeitraum, Budget, Personen, ¥-Kurs', run: () => open({ kind: 'trip', id: tripId }) },
             { icon: '↻', label: 'Daten neu laden', hint: 'den Stand aller Geräte hierher holen', run: () => void store.refresh() },
             ...(store.mode !== 'supabase'

@@ -42,13 +42,13 @@ function Frame({
   return (
     <div className="overflow-hidden rounded-xl border border-white/10 bg-black/25">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-white/[0.07] px-2.5 py-1.5">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Google Maps</span>
-        <span className="min-w-0 flex-1 truncate text-[12px] text-slate-300" title={heading}>
+        <span className="text-[13px] font-semibold uppercase tracking-wider text-slate-400">Google Maps</span>
+        <span className="min-w-0 flex-1 truncate text-[13px] text-slate-300" title={heading}>
           {heading}
         </span>
-        {hint ? <span className="shrink-0 text-[11px] text-slate-500">{hint}</span> : null}
+        {hint ? <span className="shrink-0 text-[13px] text-slate-400">{hint}</span> : null}
         {onRefresh ? (
-          <button type="button" onClick={onRefresh} title="Karte neu laden" className="shrink-0 text-[11px] text-slate-400 hover:text-white">
+          <button type="button" onClick={onRefresh} title="Karte neu laden" className="shrink-0 text-[13px] text-slate-400 hover:text-white">
             ↻
           </button>
         ) : null}
@@ -56,14 +56,14 @@ function Frame({
           href={href}
           target="_blank"
           rel="noreferrer"
-          className="shrink-0 rounded-md px-1.5 py-0.5 text-[11.5px] text-sky-200/85 transition hover:bg-white/[0.07] hover:text-white"
+          className="shrink-0 rounded-md px-1.5 py-0.5 text-[13px] text-sky-200/85 transition hover:bg-white/[0.07] hover:text-white"
         >
           öffnen ↗
         </a>
       </div>
       <div className="relative bg-[#0b0e14]" style={{ height }}>
         {!loaded ? (
-          <div className="absolute inset-0 grid place-items-center text-[11.5px] text-slate-500">Karte wird geladen …</div>
+          <div className="absolute inset-0 grid place-items-center text-[13px] text-slate-400">Karte wird geladen …</div>
         ) : null}
         <iframe
           key={src}
@@ -114,7 +114,7 @@ export function MapPreview({
       {ready && src && href ? (
         <Frame src={src} href={href} heading={label} height={height} hint={`×${zoom}`} />
       ) : (
-        <div className="grid place-items-center rounded-xl border border-dashed border-white/[0.12] px-3 py-6 text-center text-[11.5px] text-slate-500" style={{ height }}>
+        <div className="grid place-items-center rounded-xl border border-dashed border-white/[0.12] px-3 py-6 text-center text-[13px] text-slate-400" style={{ height }}>
           Noch kein Kartenpunkt – Name oder Stadt reicht, die Karte erscheint hier von selbst.
         </div>
       )}

@@ -1,4 +1,5 @@
-import type { Expense, Hotel, Journey, Place, Trip } from './types';
+import type { Expense, Hotel, Journey, Place, Snapshot, Trip } from './types';
+import { properName } from './format';
 
 /**
  * PostgREST liefert `numeric`-Spalten je nach Version als String und `time`
@@ -57,9 +58,40 @@ const KEEP_EMPTY = new Set(['id', 'trip_id', 'name', 'city', 'category', 'bookin
 /** Spalten mit NOT NULL + CHECK – leere Eingabe fällt auf den Anfangswert zurück */
 const ENUM_DEFAULT: Record<string, string> = { booking_status: 'offen', priority: 'soll', ticket_status: 'unklar' };
 
+/**
+ * Städte- und Unterkunftsnamen gehören in Reinschrift: getrimmt, ein Leerzeichen innen,
+ * großer Wortanfang. Sonst stehen im Plan „osaka“, „hotel osaka“ und „Hotel Osaka“
+ * nebeneinander, als wären es drei Orte. Gilt fürs Schreiben und fürs Zeigen.
+ */
+const NAMEN: Record<string, string[]> = {
+  places: ['city'],
+  hotels: ['city', 'name'],
+  journeys: ['from_city', 'to_city', 'hotel_name'],
+};
+
+export function reinschrift<T extends Record<string, any>>(table: string, row: T): T {
+  const felder = NAMEN[table];
+  if (!row || !felder) return row;
+  const out: Record<string, unknown> = { ...row };
+  for (const feld of felder) {
+    if (typeof out[feld] === 'string') out[feld] = properName(out[feld] as string);
+  }
+  return out as T;
+}
+
+/** derselbe Schritt für einen ganzen Schnappschuss – die Anzeige liest immer daraus */
+export function reinschriftImSnapshot(s: Snapshot): Snapshot {
+  return {
+    ...s,
+    places: (s.places ?? []).map((r) => reinschrift('places', r)),
+    hotels: (s.hotels ?? []).map((r) => reinschrift('hotels', r)),
+    journeys: (s.journeys ?? []).map((r) => reinschrift('journeys', r)),
+  };
+}
+
 /** Für den Insert/Update-Pfad: leere Texte → null, Zahlen sauber */
 export function cleanForSave<T extends Record<string, any>>(table: keyof typeof NUMERIC_FIELDS, row: T): T {
-  const out: Record<string, unknown> = { ...row };
+  const out: Record<string, unknown> = { ...reinschrift(table, row) };
   for (const key of Object.keys(out)) {
     const v = out[key];
     if (typeof v === 'string' && v.trim() === '') out[key] = ENUM_DEFAULT[key] ?? (KEEP_EMPTY.has(key) ? '' : null);

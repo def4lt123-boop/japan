@@ -70,7 +70,7 @@ export default function CheckPage() {
       {findings.length === 0 ? (
         <Card className="p-6 text-center">
           <p className="text-[15px] font-medium text-emerald-200">✓ nichts gefunden</p>
-          <p className="mx-auto mt-1 max-w-md text-[12.5px] leading-relaxed text-slate-400">
+          <p className="mx-auto mt-1 max-w-md text-[13px] leading-relaxed text-slate-400">
             {nights.length ? `${plural(nights.length, 'Nacht', 'Nächten')} sind gebucht, ` : ''}
             {plural(bundle.places.length, 'Punkt', 'Punkte')} liegen auf einem Tag, kein Bett ist doppelt und nichts liegt neben dem
             Zeitraum.
@@ -78,15 +78,15 @@ export default function CheckPage() {
         </Card>
       ) : (
         <>
-          <Card className="flex flex-wrap items-center gap-x-3 gap-y-1 p-3 text-[12.5px] text-slate-300">
+          <Card className="flex flex-wrap items-center gap-x-3 gap-y-1 p-3 text-[13px] text-slate-300">
             <span className="font-medium text-white">
               {hard.length ? `${plural(hard.length, 'Ding', 'Dinge')} aufzuräumen` : 'nichts Dringendes'}
             </span>
-            <span className="text-slate-500">·</span>
+            <span className="text-slate-400">·</span>
             <span className="text-rose-200">{findings.filter((f) => f.tone === 'bad').length} Fehler</span>
             <span className="text-amber-200/90">{findings.filter((f) => f.tone === 'warn').length} Achtungen</span>
             <span className="text-slate-400">{findings.filter((f) => f.tone === 'info').length} Hinweise</span>
-            <span className="ml-auto text-slate-500">Die Liste erneuert sich nach jedem Knopf von selbst.</span>
+            <span className="ml-auto text-slate-400">Die Liste erneuert sich nach jedem Knopf von selbst.</span>
           </Card>
 
           <ul className="space-y-2">
@@ -100,17 +100,17 @@ export default function CheckPage() {
                         <p className="flex flex-wrap items-center gap-2 text-[13.5px] font-medium leading-snug text-white">
                           <span aria-hidden>{tone.icon}</span>
                           {f.title}
-                          <span className="chip text-[10.5px] uppercase tracking-wide text-slate-400">{tone.label}</span>
+                          <span className="chip uppercase tracking-wide text-slate-400">{tone.label}</span>
                         </p>
-                        <p className="mt-1 text-[12.5px] leading-relaxed text-slate-400">{f.detail}</p>
+                        <p className="mt-1 text-[13px] leading-relaxed text-slate-400">{f.detail}</p>
                         {f.example ? (
-                          <p className="mt-1.5 text-[11.5px] leading-snug text-slate-500">{f.example}</p>
+                          <p className="mt-1.5 text-[13px] leading-snug text-slate-400">{f.example}</p>
                         ) : null}
                       </div>
                       <div className="flex shrink-0 flex-wrap items-center gap-1.5">
                         {f.actions.map((a) =>
                           a.href ? (
-                            <Link key={a.label} className="btn-ghost !px-2.5 !py-1 !text-[12px]" href={a.href} title={a.hint}>
+                            <Link key={a.label} className="btn-ghost !px-2.5 !py-1 !text-[13px]" href={a.href} title={a.hint}>
                               {a.label}
                             </Link>
                           ) : (
@@ -138,7 +138,7 @@ export default function CheckPage() {
       )}
 
       <Card className="p-4">
-        <p className="text-[12.5px] leading-relaxed text-slate-400">
+        <p className="text-[13px] leading-relaxed text-slate-400">
           <span className="font-medium text-slate-200">Wem traust du?</span> Ein verrutschter Zeitraum entsteht, wenn eine Seite
           (Reise oder Plan) um Tage umbogen wird, während die andere stehen bleibt. Deshalb gibt es hier zwei Knöpfe: einer zieht den
           Zeitraum zu den Einträgen, der andere die Einträge zum Zeitraum. Beide schreiben nur Daten, die schon da sind – Punkte,

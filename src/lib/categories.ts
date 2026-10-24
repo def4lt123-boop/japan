@@ -127,11 +127,21 @@ export function nextTicket(current?: TicketStatus | null): TicketStatus {
   return TICKET_ORDER[(i + 1) % TICKET_ORDER.length];
 }
 
-export const PRIORITY_META: Record<Priority, { label: string; icon: string }> = {
-  muss: { label: 'Muss', icon: '★' },
-  soll: { label: 'Soll', icon: '☆' },
-  kann: { label: 'Kann', icon: '·' },
+/**
+ * Die drei Stufen – an jeder Stelle der Seite gleich geschrieben und gleich dargestellt:
+ * ein Symbol, ein Wort, eine Farbe. Es gibt keine Kurzform "nur der Stern" und kein
+ * Wort ohne Stern; `PriorityTag` ist der einzige Weg, das anzuzeigen.
+ */
+export const PRIORITY_META: Record<Priority, { label: string; icon: string; word: string; tone: string }> = {
+  muss: { label: 'Muss', icon: '★', word: '★ Muss', tone: 'text-shu-300' },
+  soll: { label: 'Soll', icon: '☆', word: '☆ Soll', tone: 'text-amber-200' },
+  kann: { label: 'Kann', icon: '·', word: '· Kann', tone: 'text-slate-400' },
 };
+
+/** dasselbe Wort für dieselbe Stufe – auch dort, wo kein Knopf dabei steht */
+export function priorityLabel(priority?: Priority | null): string {
+  return (PRIORITY_META[(priority ?? 'soll') as Priority] ?? PRIORITY_META.soll).word;
+}
 
 /** Google-Maps-Link: bevorzugt Koordinaten, sonst Suchbegriff */
 export function mapsUrl(place: Pick<Place, 'lat' | 'lng' | 'maps_query' | 'name' | 'city'>): string {

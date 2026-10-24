@@ -13,7 +13,7 @@ import { Button, Card, Empty, Seg, Select, SectionTitle, cx } from '../../../../
 import { dayPlan, nightCoverage } from '../../../../lib/stats';
 import { hotelForDay, mapsLink, routeUrl } from '../../../../lib/maps';
 import { categoryMeta, STATUS_META, TICKET_META } from '../../../../lib/categories';
-import { fmtDate, fmtDuration, fmtMoney, plural, today, weekdayShort } from '../../../../lib/format';
+import { fmtDate, fmtDay, fmtDuration, fmtMoney, plural, today } from '../../../../lib/format';
 import { tintFor } from '../../../../lib/palette';
 import type { Place } from '../../../../lib/types';
 
@@ -96,7 +96,7 @@ export default function PrintPage() {
                 onChange={(e) => setPick(e.target.value)}
                 options={plan.map((d, n) => ({
                   value: d.date,
-                  label: `Tag ${n + 1} · ${weekdayShort(d.date)} ${fmtDate(d.date, { day: '2-digit', month: '2-digit' })}`,
+                  label: `Tag ${n + 1} · ${fmtDay(d.date)}`,
                 }))}
               />
             </label>
@@ -153,7 +153,7 @@ export default function PrintPage() {
               >
                 <header className="flex flex-wrap items-baseline justify-between gap-x-3 border-b border-neutral-300 pb-1">
                   <h2 className="text-[14.5px] font-semibold">
-                    Tag {firstIndex + i + 1} · {weekdayShort(day.date)} {fmtDate(day.date, { day: '2-digit', month: '2-digit' })}
+                    Tag {firstIndex + i + 1} · {fmtDay(day.date)}
                   </h2>
                   <span className="text-[11.5px] text-neutral-600">{day.cities.join(' → ') || day.journeys[0]?.to_city || ''}</span>
                 </header>
@@ -235,7 +235,7 @@ export default function PrintPage() {
                   {plural(pool.length, 'Wunsch', 'Wünsche')} – zum Ankreuzen unterwegs
                 </span>
               </header>
-              <ul className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+              <ul className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
                 {pool.map((p) => (
                   <li key={p.id} className="flex items-baseline gap-2 text-[12px]">
                     <span aria-hidden className="inline-block h-3 w-3 shrink-0 translate-y-0.5 border border-neutral-400" />
