@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useStore, useTrip } from '../../../../lib/store';
 import { useEditor } from '../../../../components/EditorProvider';
 import { Button, Card, Empty, Money, ProgressBar, SectionTitle, Stat, cx } from '../../../../components/ui';
-import { fmtDate, fmtMoney, plural } from '../../../../lib/format';
+import { fmtDay, fmtMoney, plural } from '../../../../lib/format';
 import { costsOf } from '../../../../lib/stats';
 import { STATUS_META } from '../../../../lib/categories';
 import { settleUp, splitShares } from '../../../../lib/shares';
@@ -98,7 +98,7 @@ export default function CostsPage() {
         <Card className="p-4">
           <div className="mb-2 flex items-baseline justify-between">
             <h3 className="text-[14px] font-semibold text-white">Budgetauslastung</h3>
-            <span className={cx('text-[12.5px] tabular-nums', total > budget ? 'text-shu-200' : 'text-slate-400')}>{Math.round((total / budget) * 100)} %</span>
+            <span className={cx('text-[13px] tabular-nums', total > budget ? 'text-shu-200' : 'text-slate-400')}>{Math.round((total / budget) * 100)} %</span>
           </div>
           <ProgressBar value={total} max={budget} />
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-4">
@@ -108,9 +108,9 @@ export default function CostsPage() {
                 onClick={() => setOnly((v) => (v === c.label ? '' : v))}
                 className={cx('rounded-lg border px-2.5 py-2 text-left transition', only === c.label ? 'border-shu-400/60 bg-shu-500/10' : 'border-white/[0.07] bg-white/[0.02] hover:border-white/20')}
               >
-                <div className="text-[11px] uppercase tracking-wide text-slate-500">{c.label}</div>
+                <div className="text-[13px] uppercase tracking-wide text-slate-400">{c.label}</div>
                 <div className="mt-0.5 text-[15px] font-semibold tabular-nums text-white">{fmtMoney(c.value)}</div>
-                <div className="text-[11px] text-slate-500">{c.value && total ? `${Math.round((c.value / total) * 100)} % · ` : ''}
+                <div className="text-[13px] text-slate-400">{c.value && total ? `${Math.round((c.value / total) * 100)} % · ` : ''}
                   {plural(c.count, 'Posten', 'Posten')}
                 </div>
               </button>
@@ -140,11 +140,11 @@ export default function CostsPage() {
               </button>
             ))}
             {only ? (
-              <button className="btn-quiet !text-[12px]" onClick={() => setOnly('')}>
+              <button className="btn-quiet !text-[13px]" onClick={() => setOnly('')}>
                 ✕ alles
               </button>
             ) : null}
-            <span className="ml-auto text-[12px] text-slate-400">
+            <span className="ml-auto text-[13px] text-slate-400">
               Summe: <span className="font-semibold tabular-nums text-white">{fmtMoney(filtered.reduce((a, r) => a + r.amount, 0))}</span>
             </span>
           </div>
@@ -157,7 +157,7 @@ export default function CostsPage() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[520px] border-collapse text-left">
                 <thead>
-                  <tr className="text-[11px] uppercase tracking-wide text-slate-500">
+                  <tr className="text-[13px] uppercase tracking-wide text-slate-400">
                     <th className="px-3 py-1.5 font-semibold">Datum</th>
                     <th className="px-3 py-1.5 font-semibold">Posten</th>
                     <th className="px-3 py-1.5 font-semibold">Gruppe</th>
@@ -167,8 +167,8 @@ export default function CostsPage() {
                 </thead>
                 <tbody>
                   {filtered.map((r) => (
-                    <tr key={`${r.group}-${r.id}`} className="border-t border-white/[0.05] text-[12.5px] hover:bg-white/[0.03]">
-                      <td className="whitespace-nowrap px-3 py-1.5 tabular-nums text-slate-400">{r.date ? fmtDate(r.date, { day: '2-digit', month: '2-digit' }) : '—'}</td>
+                    <tr key={`${r.group}-${r.id}`} className="border-t border-white/[0.05] text-[13px] hover:bg-white/[0.03]">
+                      <td className="whitespace-nowrap px-3 py-1.5 tabular-nums text-slate-400">{r.date ? fmtDay(r.date) : '—'}</td>
                       <td className="px-3 py-1.5">
                         <button
                           className="text-left text-slate-100 underline-offset-2 hover:underline"
@@ -176,7 +176,7 @@ export default function CostsPage() {
                         >
                           {r.label}
                         </button>
-                        <span className="block text-[11px] text-slate-500">{r.source}</span>
+                        <span className="block text-[13px] text-slate-400">{r.source}</span>
                       </td>
                       <td className="whitespace-nowrap px-3 py-1.5 text-slate-400">{r.group}</td>
                       <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums font-medium text-slate-100">{fmtMoney(r.amount)}</td>
@@ -194,14 +194,14 @@ export default function CostsPage() {
         <div className="space-y-3">
           <Card className="p-3">
             <h3 className="mb-2 text-[13px] font-semibold text-white">Nach Buchungsstatus</h3>
-            <ul className="space-y-1.5 text-[12.5px]">
+            <ul className="space-y-1.5 text-[13px]">
               {Object.entries(STATUS_META).map(([key, meta]) => {
                 const v = byStatus.get(key) ?? { value: 0, count: 0 };
                 return (
                   <li key={key} className="flex items-center gap-2">
                     <span className="h-1.5 w-1.5 rounded-full" style={{ background: meta.dot }} />
                     <span className="flex-1 text-slate-300">{meta.label}</span>
-                    <span className="tabular-nums text-slate-500">{v.count}×</span>
+                    <span className="tabular-nums text-slate-400">{v.count}×</span>
                     <Money value={v.value} className="w-20 text-right" />
                   </li>
                 );
@@ -212,21 +212,21 @@ export default function CostsPage() {
           <Card className="p-3">
             <h3 className="mb-1 text-[13px] font-semibold text-white">Wer hat vorgestreckt?</h3>
             {!split.rows.length ? (
-              <p className="text-[12.5px] text-slate-500">Noch keine Ausgaben mit Zahler. Trage bei Ausgaben „Wer war in Vorleistung?“ ein – dann rechne ich den Ausgleich aus.</p>
+              <p className="text-[13px] text-slate-400">Noch keine Ausgaben mit Zahler. Trage bei Ausgaben „Wer war in Vorleistung?“ ein – dann rechne ich den Ausgleich aus.</p>
             ) : (
-              <ul className="space-y-1 text-[12.5px]">
+              <ul className="space-y-1 text-[13px]">
                 {split.rows.map((r) => (
                   <li key={r.who} className="flex items-center gap-2">
                     <span className="flex-1 text-slate-300">{r.who}</span>
-                    {maxShares > 1 ? <span className="text-[11px] tabular-nums text-slate-500">{plural(r.shares, 'Anteil', 'Anteile')}</span> : null}
+                    {maxShares > 1 ? <span className="text-[13px] tabular-nums text-slate-400">{plural(r.shares, 'Anteil', 'Anteile')}</span> : null}
                     <Money value={r.paid} className="tabular-nums" />
                   </li>
                 ))}
-                <li className="flex items-center gap-2 border-t border-white/10 pt-1.5 text-[11.5px] text-slate-500">
+                <li className="flex items-center gap-2 border-t border-white/10 pt-1.5 text-[13px] text-slate-400">
                   <span className="flex-1">zu je {fmtMoney(split.pool / Math.max(1, split.heads))} bei {plural(split.heads, 'Kopf', 'Köpfen')}</span>
                   <span className="tabular-nums">{fmtMoney(split.pool)}</span>
                 </li>
-                <li className="pt-1 text-[12px] text-slate-400">
+                <li className="pt-1 text-[13px] text-slate-400">
                   {(() => {
                     const lines = settleUp(split);
                     const outgoers = lines.filter((l) => l.diff > 0);
@@ -257,7 +257,7 @@ export default function CostsPage() {
                   })()}
                 </li>
                 {split.unsplit.count ? (
-                  <li className="pt-1 text-[11.5px] text-amber-200/70">
+                  <li className="pt-1 text-[13px] text-amber-200/70">
                     {plural(split.unsplit.count, 'Ausgabe', 'Ausgaben')} ohne Zahler ({fmtMoney(split.unsplit.amount)}) bleiben in der Rechnung außen vor.
                   </li>
                 ) : null}

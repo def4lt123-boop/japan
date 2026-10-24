@@ -8,9 +8,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Place } from '../lib/types';
-import { PRIORITY_META, categoryMeta } from '../lib/categories';
+import { categoryMeta } from '../lib/categories';
 import { fmtMoney, knownCity, plural } from '../lib/format';
-import { Button, Select, TextInput, cx } from './ui';
+import { Button, PriorityTag, Select, TextInput, cx } from './ui';
 
 export function DayPickerSheet({
   date,
@@ -89,7 +89,7 @@ export function DayPickerSheet({
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <div className="relative min-w-[9rem] flex-1">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-slate-500">🔎</span>
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-slate-400">🔎</span>
               <TextInput value={q} onChange={(e) => setQ(e.target.value)} placeholder="Idee suchen …" className="!py-1.5 pl-9" />
             </div>
             {städte.length > 1 ? (
@@ -109,7 +109,6 @@ export function DayPickerSheet({
           <ul className="space-y-1.5 p-2">
             {shown.map((p) => {
               const meta = categoryMeta(p.category);
-              const prio = PRIORITY_META[p.priority];
               return (
                 <li key={p.id}>
                   <button
@@ -123,20 +122,19 @@ export function DayPickerSheet({
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13.5px] font-medium text-slate-100">{p.name}</span>
-                      <span className="block truncate text-[11.5px] text-slate-500">
-                        {knownCity(p.city) ?? 'ohne Stadt'}
-                        {prio ? ` · ${prio.icon} ${prio.label}` : ''}
+                      <span className="block truncate text-[13px] text-slate-400">
+                        {knownCity(p.city) ?? 'ohne Stadt'} · <PriorityTag priority={p.priority} />
                         {p.price_eur ? ` · ${fmtMoney(p.price_eur)}` : ''}
                       </span>
                     </span>
-                    <span className="shrink-0 rounded-lg bg-shu-500/15 px-2 py-1 text-[11.5px] text-shu-100 ring-1 ring-inset ring-shu-400/30">hinlegen</span>
+                    <span className="shrink-0 rounded-lg bg-shu-500/15 px-2 py-1 text-[13px] text-shu-100 ring-1 ring-inset ring-shu-400/30">hinlegen</span>
                   </button>
                 </li>
               );
             })}
           </ul>
         ) : (
-          <p className="px-3 py-4 text-[12.5px] leading-snug text-slate-400">
+          <p className="px-3 py-4 text-[13px] leading-snug text-slate-400">
             {pool.length ? 'Keine Idee passt zu Suche oder Stadt – oben zurücksetzen oder unten eine neue anlegen.' : '🎉 Jede Idee hat schon einen Tag. Was noch fehlt, entsteht hier.'}
           </p>
         )}
@@ -145,7 +143,7 @@ export function DayPickerSheet({
           <Button variant="primary" onClick={onNew}>
             ＋ Neue Aktivität anlegen
           </Button>
-          <span className="ml-auto hidden text-[11.5px] text-slate-500 sm:block">ein Tipp legt den Punkt nach unten</span>
+          <span className="ml-auto hidden text-[13px] text-slate-400 sm:block">ein Tipp legt den Punkt nach unten</span>
         </div>
       </div>
     </div>,

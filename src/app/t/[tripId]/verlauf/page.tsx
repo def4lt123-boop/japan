@@ -80,7 +80,7 @@ export default function JourneyPage() {
               return (
                 <li key={j.id} className="group grid grid-cols-[54px_minmax(0,1fr)_auto] items-start gap-3 px-3 py-2.5 transition hover:bg-white/[0.03]">
                   <div className="pt-0.5 text-right">
-                    <div className="text-[11px] uppercase text-slate-500">{j.date ? fmtDate(j.date, { weekday: 'narrow' }) : ''}</div>
+                    <div className="text-[13px] uppercase text-slate-400">{j.date ? fmtDate(j.date, { weekday: 'narrow' }) : ''}</div>
                     <div className="text-[13px] font-semibold tabular-nums text-slate-200">{j.date ? fmtDate(j.date, { day: '2-digit', month: '2-digit' }) : '—'}</div>
                   </div>
                   <div className="min-w-0">
@@ -92,7 +92,7 @@ export default function JourneyPage() {
                         {j.title}
                       </button>
                       {j.from_city && j.to_city ? (
-                        <span className="text-[12.5px] text-slate-400">
+                        <span className="text-[13px] text-slate-400">
                           {j.from_city} <span className="text-shu-300">→</span> {j.to_city}
                         </span>
                       ) : null}
@@ -102,7 +102,7 @@ export default function JourneyPage() {
                         </Pill>
                       ) : null}
                     </div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-slate-400">
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] text-slate-400">
                       {j.departure_time ? <span className="tabular-nums">Abflug {j.departure_time}</span> : null}
                       {j.end_date ? (
                         <span className="tabular-nums">
@@ -118,13 +118,13 @@ export default function JourneyPage() {
                       ) : null}
                       {j.price_eur ? <span className="tabular-nums text-emerald-200/80">· {fmtMoney(j.price_eur)}</span> : null}
                     </div>
-                    {j.notes ? <p className="mt-1 whitespace-pre-line text-[12.5px] leading-snug text-slate-300/85">{j.notes}</p> : null}
+                    {j.notes ? <p className="mt-1 whitespace-pre-line text-[13px] leading-snug text-slate-300/85">{j.notes}</p> : null}
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
                     <span className={cx('chip ring-1', meta.color)} title={`Status: ${meta.label}`}>
                       {meta.label}
                     </span>
-                    <span className="no-print flex gap-0.5 opacity-60 transition group-hover:opacity-100">
+                    <span className="no-print flex gap-0.5 opacity-60 transition group-hover:opacity-100 [@media(hover:none)]:opacity-100">
                       <button className="btn-quiet !px-1" title="Status: gebucht" onClick={() => store.patch('journeys', j.id, { booking_status: 'gebucht' })}>
                         ✓
                       </button>
@@ -149,7 +149,7 @@ export default function JourneyPage() {
           <div className="flex flex-wrap items-center gap-1.5">
             {cityStops.map(([city, info], i) => (
               <React.Fragment key={city}>
-                <span className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[12.5px]">
+                <span className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[13px]">
                   <b className="text-slate-100">{city}</b>
                   <span className="ml-1.5 text-slate-400">
                     {plural(info.days, 'Tag', 'Tage')} · {fmtDate(info.first, { day: '2-digit', month: '2-digit' })}–{fmtDate(info.last, { day: '2-digit', month: '2-digit' })}
@@ -159,7 +159,7 @@ export default function JourneyPage() {
               </React.Fragment>
             ))}
           </div>
-          <div className="mt-2 flex flex-wrap gap-1.5 text-[12px] text-slate-400">
+          <div className="mt-2 flex flex-wrap gap-1.5 text-[13px] text-slate-400">
             <span>
               <Money value={total} /> für {journeys.filter((j) => j.price_eur).length} Fahrten mit Preis
             </span>

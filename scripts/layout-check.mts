@@ -62,6 +62,7 @@ const quelltext = (rel: string) => readFileSync(path.join(ROOT, rel), 'utf8');
 
 const LEISTE = {
   rand: 3, // padding der Leiste oben/unten
+  flaeche: 44, // ein Reiter ist eine Tippfläche – darunter geht auf dem Handy nichts an
   spalt: 2, // Abstand zwischen zwei Reitern
   polster: 1, // waagrechtes Innenpolster eines Reiters
   polsterH: 4 + 3, // senkrechtes Innenpolster
@@ -85,9 +86,13 @@ assert.ok(
 );
 const kurzs = reiter.map((r) => r.short);
 
-const hoehe =
-  LEISTE.rand * 2 + LEISTE.polsterH + LEISTE.icon * LEISTE.iconHoehe + LEISTE.zeilenabstand + LEISTE.schrift * LEISTE.zeile;
-assert.ok(hoehe <= 46, `die Leiste ist ${hoehe.toFixed(1)}px hoch, reserviert sind 46px – Menü und «als nächstes» rutschen drunter`);
+const hoehe = Math.max(
+  LEISTE.rand * 2 + LEISTE.polsterH + LEISTE.icon * LEISTE.iconHoehe + LEISTE.zeilenabstand + LEISTE.schrift * LEISTE.zeile,
+  LEISTE.rand * 2 + LEISTE.flaeche,
+);
+assert.ok(hoehe <= 50, `die Leiste ist ${hoehe.toFixed(1)}px hoch, reserviert sind 50px – Menü und «als nächstes» rutschen drunter`);
+assert.ok(/--dock:\s*calc\(50px/.test(css), 'was die Leiste braucht, muss sie auch freihalten (--dock 50px)');
+assert.ok(/\.tabbar > a\s*\{[^}]*min-height:\s*44px/.test(css), 'ein Reiter der unteren Leiste ist eine 44er-Fläche');
 
 const gerate: [string, number][] = [
   ['kleines Android', 320],
@@ -190,4 +195,50 @@ assert.ok(!abgschnitten.length, `abgeschnittener Text ohne min-w-0 (drückt den 
 assert.ok(!doppelt.length, `dieselbe Zahl zweimal im Satz: ${doppelt.join(', ')}`);
 console.log(
   `🎉 Bildschirmbreite hält – ${dateien.length} Dateien (${geprüfteZeilen} Zeilen): jedes Raster mit Basis-Spalte, jede Tabelle im Scrollrahmen, kein abgeschnittener Text ohne min-w-0, keine Zahl doppelt`,
+);
+
+/* ── 4 · Schrift, Kontrast, Tippflächen ─────────────────────────────
+   Der Testdom rechnet nicht: zu kleine Schrift, zu grauer Text und zu kleine
+   Knöpfe fallen erst auf, wenn jemand auf dem echten Gerät liest oder tippt. */
+const DRUCKSEITE = 'src/app/t/[tripId]/druck/page.tsx'; // Papier ist davon ausgenommen
+const zuKlein: string[] = [];
+const zuGrau: string[] = [];
+const datumEigen: string[] = [];
+const stufeEigen: string[] = [];
+let unter13 = 0;
+for (const rel of dateien) {
+  const zeilen = quelltext(rel).split('\n');
+  zeilen.forEach((zeile, i) => {
+    if (rel !== DRUCKSEITE) {
+      // was auf dem Schirm steht, ist mindestens 13px – winzige Schrift in Grafiken
+      // (Hitzefeld, Nacht-Streifen, Kalender, Kartenrand) trägt `mikro` und ist damit gemeldet
+      const klein = /text-!?\[(\d+(?:\.\d+)?)px\]/.exec(zeile);
+      if (klein && Number(klein[1]) < 13) {
+        if (zeile.includes('mikro')) unter13 += 1;
+        else zuKlein.push(`${rel}:${i + 1} ${klein[0]}`);
+      }
+      // Grautext über der dunklen Karte: slate-400 sind 7:1, slate-500 nur 3,8:1 – das zweite ist zu wenig
+      if (/text-slate-[5-9]00\b/.test(zeile) && !/print:text-slate-[3-4]00/.test(zeile)) zuGrau.push(`${rel}:${i + 1} ${/text-slate-\d00/.exec(zeile)?.[0]}`);
+    }
+    if (rel !== 'src/lib/format.ts') {
+      // ein Datum in einer Liste kommt aus fmtDay – Intl setzt sonst „Sa., 06.03.“
+      if (/weekday:\s*'short'/.test(zeile) && /day:\s*'2-digit'/.test(zeile) && /month:\s*'2-digit'/.test(zeile) && !/year:/.test(zeile)) datumEigen.push(`${rel}:${i + 1}`);
+      // die drei Stufen stehen nur in PRIORITY_META, sonst schreibt sie jeder anders
+      if (rel !== 'src/lib/categories.ts' && /[★☆·]\s*(Muss|Soll|Kann)/.test(zeile) && !/priorityLabel|PRIORITY_META/.test(zeile)) stufeEigen.push(`${rel}:${i + 1} „${/[★☆·]\s*(Muss|Soll|Kann)/.exec(zeile)?.[0]}“`);
+    }
+  });
+}
+assert.ok(!zuKlein.length, `Schrift unter 13px ohne „mikro“: ${zuKlein.slice(0, 6).join(', ')}`);
+assert.ok(!zuGrau.length, `Grautext unter 4,5:1 Kontrast (slate-500 und dunkler): ${zuGrau.slice(0, 6).join(', ')}`);
+assert.ok(!datumEigen.length, `Kurzdatum von Hand gebaut statt fmtDay: ${datumEigen.join(', ')}`);
+assert.ok(!stufeEigen.length, `Priorität von Hand geschrieben: ${stufeEigen.join(', ')}`);
+// …und was die Quelle nicht zeigen kann: die Regeln in der CSS
+assert.ok(/@media \(hover: none\)[\s\S]*?button,[\s\S]*?min-height:\s*44px/.test(css), 'auf dem Handy muss jede Tippfläche 44px hoch sein');
+assert.ok(/@media \(hover: none\)[\s\S]*?\.icon-btn\s*\{[^}]*width:\s*44px/.test(css), 'auch die kleinen Knöpfe in einer Zeile sind 44px breit');
+assert.ok(/@media \(hover: none\)[\s\S]*?\.grip\s*\{[^}]*height:\s*44px/.test(css), 'der Greifpunkt zum Ziehen ist eine 44er-Fläche');
+assert.ok(/\.prio\s*\{[^}]*text-\[13px\]/.test(css), 'das Stufen-Etikett hat überall dieselbe Größe');
+assert.ok(/\.label\s*\{[^}]*text-\[13px\]/.test(css) && /\.chip\s*\{[^}]*text-\[13px\]/.test(css), 'Formularbeschriftung und Chips sind mindestens 13px');
+assert.ok(!/\.label\s*\{[^}]*text-slate-[5-9]00/.test(css), 'Beschriftungen bleiben hell genug');
+console.log(
+  `🎉 Lesen und Tippen hält – ${unter13} gemeldete Mikro-Ausnahmen in Grafiken, sonst nichts unter 13px, kein Grautext unter 4,5:1, Kurzdatum und Priorität aus einer Hand, 44×44 auf Touch`,
 );

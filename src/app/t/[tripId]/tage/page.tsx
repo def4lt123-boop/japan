@@ -23,7 +23,7 @@ import { Button, Card, Empty, Menu, SectionTitle, cx } from '../../../../compone
 import { dayPlan, nightCoverage } from '../../../../lib/stats';
 import { locusChanges } from '../../../../lib/locus';
 import { ChangeStrip } from '../../../../components/ChangeStrip';
-import { addDays, fmtDate, knownCity, plural, today } from '../../../../lib/format';
+import { addDays, fmtDay, fmtDayLong, knownCity, plural, today } from '../../../../lib/format';
 import { tintFor } from '../../../../lib/palette';
 import { TouchDragProvider, type DropZone } from '../../../../components/TouchDrag';
 import type { Place } from '../../../../lib/types';
@@ -124,7 +124,7 @@ export default function DaysPage() {
     if (id) applyDrop(id, { date, index });
   };
 
-  const zettel = (date: string) => fmtDate(date, { weekday: 'short', day: 'numeric', month: 'long' });
+  const zettel = (date: string) => fmtDayLong(date);
 
   const bettEintragen = (date: string, city?: string | null) => (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -141,22 +141,21 @@ export default function DaysPage() {
 
         <PendingList tripId={tripId} pool={pool} all={bundle.places} days={days.map((d) => ({ date: d.date, cities: d.cities, places: d.places }))} />
 
-        <div className="no-print sticky top-0 z-20 -mx-1 overflow-x-auto rounded-xl border border-white/[0.07] bg-ink-950/85 px-1 py-1 backdrop-blur">
+        <div className="day-nav no-print sticky top-0 z-20 -mx-1 overflow-x-auto rounded-xl border border-white/[0.07] bg-ink-950/85 px-1 py-1 backdrop-blur">
           <div className="flex gap-1">
             {days.map((d) => (
               <a
                 key={d.date}
                 href={`#${d.date}`}
-                className={cx('flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] transition hover:bg-white/[0.07]', d.places.length ? 'text-slate-200' : 'text-slate-500')}
+                className={cx('flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] transition hover:bg-white/[0.07]', d.places.length ? 'text-slate-200' : 'text-slate-400')}
                 title={plural(d.places.length, 'Aktivität', 'Aktivitäten')}
               >
-                <span className={cx('font-semibold', d.date === now && 'text-amber-200')}>{fmtDate(d.date, { weekday: 'short' })}</span>
-                <span className="tabular-nums">{fmtDate(d.date, { day: '2-digit', month: '2-digit' })}</span>
-                <span className={cx('rounded px-1 tabular-nums', d.places.length >= 5 ? 'bg-shu-500/25 text-shu-100' : d.places.length ? 'bg-white/[0.07] text-slate-300' : 'text-slate-600')}>{d.places.length}</span>
+                <span className={cx('font-semibold tabular-nums', d.date === now && 'text-amber-200')}>{fmtDay(d.date)}</span>
+                <span className={cx('rounded px-1 tabular-nums', d.places.length >= 5 ? 'bg-shu-500/25 text-shu-100' : d.places.length ? 'bg-white/[0.07] text-slate-300' : 'text-slate-400')}>{d.places.length}</span>
               </a>
             ))}
             {pool.length ? (
-              <a href="#pool" className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[12px] text-amber-100 ring-1 ring-inset ring-amber-400/25 hover:bg-amber-500/20">
+              <a href="#pool" className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[13px] text-amber-100 ring-1 ring-inset ring-amber-400/25 hover:bg-amber-500/20">
                 ✨ ohne Tag <span className="tabular-nums">{pool.length}</span>
               </a>
             ) : null}
@@ -213,21 +212,21 @@ export default function DaysPage() {
                   data-leer={d.date}
                 >
                   <button className="flex min-w-0 flex-1 items-center gap-x-1.5 text-left" onClick={() => setPick(d.date)} title={`${zettel(d.date)} – Ideen zeigen`} aria-label={`Ideen für ${zettel(d.date)}`}>
-                    <span className={cx('shrink-0 text-[12.5px] font-semibold', d.date === now ? 'text-amber-200' : 'text-slate-200')}>{fmtDate(d.date, { weekday: 'short', day: '2-digit', month: '2-digit' })}</span>
-                    {stadt ? <span aria-hidden className="shrink-0 text-slate-600">·</span> : null}
-                    {stadt ? <span className="min-w-0 truncate text-[12px] text-slate-400">{stadt}</span> : null}
+                    <span className={cx('shrink-0 text-[13px] font-semibold', d.date === now ? 'text-amber-200' : 'text-slate-200')}>{fmtDay(d.date)}</span>
+                    {stadt ? <span aria-hidden className="shrink-0 text-slate-400">·</span> : null}
+                    {stadt ? <span className="min-w-0 truncate text-[13px] text-slate-400">{stadt}</span> : null}
                     {d.journeys.length ? (
-                      <span className="inline-flex min-w-0 items-center gap-1 text-[11.5px] text-slate-400">
+                      <span className="inline-flex min-w-0 items-center gap-1 text-[13px] text-slate-400">
                         <span aria-hidden>{MODE_ICON[d.journeys[0]?.mode ?? ''] ?? '🧳'}</span>
                         <span className="min-w-0 truncate">{d.journeys[0]?.title ?? 'Fahrt'}</span>
                       </span>
                     ) : null}
                     {wechsel ? (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-shu-500/15 px-1.5 text-[11px] text-shu-100" title="Ortswechsel">
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-shu-500/15 px-1.5 text-[13px] text-shu-100" title="Ortswechsel">
                         <span aria-hidden>🔀</span> {wechsel.to}
                       </span>
                     ) : null}
-                    <span className="shrink-0 text-[11.5px] text-slate-500">frei</span>
+                    <span className="shrink-0 text-[13px] text-slate-400">frei</span>
                   </button>
                   {ohneBett ? (
                     <button className="day-warn shrink-0" onClick={bettEintragen(d.date, stadt)}>
@@ -252,8 +251,8 @@ export default function DaysPage() {
               >
                 <header className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-white/[0.06] px-3 py-2">
                   <span className="text-[13.5px] font-semibold text-white">{zettel(d.date)}</span>
-                  {stadt || d.journeys[0]?.to_city ? <span className="text-[12px] text-slate-400">{stadt ? d.cities.join(' / ') : d.journeys[0]?.to_city}</span> : null}
-                  <span className="ml-auto flex items-center gap-1 text-[11.5px] text-slate-400">
+                  {stadt || d.journeys[0]?.to_city ? <span className="text-[13px] text-slate-400">{stadt ? d.cities.join(' / ') : d.journeys[0]?.to_city}</span> : null}
+                  <span className="ml-auto flex items-center gap-1 text-[13px] text-slate-400">
                     <span className={cx('chip', geordnet.length >= 5 ? 'bg-shu-500/20 text-shu-100' : 'bg-white/[0.06] text-slate-300')}>{plural(geordnet.length, 'Punkt', 'Punkte')}</span>
                     <button className="icon-btn" title="Ideen für diesen Tag zeigen" onClick={() => setPick(d.date)}>
                       ＋
@@ -288,7 +287,7 @@ export default function DaysPage() {
                 {d.journeys.length || bettZeige ? (
                   <div className="space-y-1 border-b border-white/[0.07] bg-black/20 px-3 py-1.5">
                     {d.journeys.map((j) => (
-                      <button key={j.id} onClick={() => open({ kind: 'journey', id: j.id })} className="flex w-full items-center gap-2 text-left text-[12.5px] text-slate-300 hover:text-white">
+                      <button key={j.id} onClick={() => open({ kind: 'journey', id: j.id })} className="flex w-full items-center gap-2 text-left text-[13px] text-slate-300 hover:text-white">
                         <span aria-hidden>{MODE_ICON[j.mode ?? ''] ?? '🧳'}</span>
                         <span className="min-w-0 flex-1 truncate">
                           {j.title}
@@ -299,7 +298,7 @@ export default function DaysPage() {
                       </button>
                     ))}
                     {ohneBett ? (
-                      <p className="flex flex-wrap items-center gap-x-1.5 text-[12px] text-shu-200">
+                      <p className="flex flex-wrap items-center gap-x-1.5 text-[13px] text-shu-200">
                         <span className="h-2 w-2 shrink-0 rounded-full bg-shu-400" aria-hidden />
                         Kein Bett eingetragen
                         <button className="day-warn ml-auto" onClick={bettEintragen(d.date, stadt)}>
@@ -307,14 +306,14 @@ export default function DaysPage() {
                         </button>
                       </p>
                     ) : bettZeige ? (
-                      <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] text-slate-400" title={`Nacht in ${night?.hotel}`}>
+                      <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px] text-slate-400" title={`Nacht in ${night?.hotel}`}>
                         <span aria-hidden>{checkIn.has(d.date) ? '🛏' : '🛏️'}</span>
                         <span className="min-w-0 flex-1 truncate">
                           {checkIn.has(d.date) ? 'Ankunft im ' : ''}
                           {night?.hotel}
                           {checkIn.has(d.date) && night?.stays ? ` · ${plural(night.stays, 'Nacht', 'Nächten')}` : ''}
                         </span>
-                        <button className="ml-auto text-[11px] text-slate-500 underline-offset-2 hover:text-white hover:underline" onClick={() => night?.hotelId && open({ kind: 'hotel', id: night.hotelId })}>
+                        <button className="ml-auto text-[13px] text-slate-400 underline-offset-2 hover:text-white hover:underline" onClick={() => night?.hotelId && open({ kind: 'hotel', id: night.hotelId })}>
                           ✎ Bett
                         </button>
                       </p>
@@ -325,11 +324,11 @@ export default function DaysPage() {
                 {mapDay === d.date && origin && destination ? (
                   <div className="border-b border-white/[0.07] p-2.5">
                     {stops.length > 1 ? (
-                      <RoutePreview origin={origin} destination={destination} stops={via} mode="transit" height={230} heading={`${fmtDate(d.date, { weekday: 'short', day: '2-digit', month: '2-digit' })} · ${stops.length} Halte`} />
+                      <RoutePreview origin={origin} destination={destination} stops={via} mode="transit" height={230} heading={`${fmtDay(d.date)} · ${stops.length} Halte`} />
                     ) : (
                       <MapPreview place={destination} height={190} heading={destination?.name ?? 'Karte'} />
                     )}
-                    <p className="mt-1 text-[11px] leading-snug text-slate-500">
+                    <p className="mt-1 text-[13px] leading-snug text-slate-400">
                       {hotel ? `Start an der Unterkunft „${hotel.name}“ · ` : 'Erster Punkt ist der Start · '} die Liste unten ist die Reihenfolge der Stationen.
                     </p>
                   </div>

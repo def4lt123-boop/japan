@@ -5,10 +5,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { CircleMarker, MapContainer, Marker, Popup, Polyline, ScaleControl, TileLayer, Tooltip, ZoomControl, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import type { Hotel, Place } from '../lib/types';
-import { categoryMeta, mapsUrl, routeUrl } from '../lib/categories';
+import { categoryMeta, mapsUrl, priorityLabel, routeUrl } from '../lib/categories';
 import { cx } from './ui';
 import { CategoryPicker } from './CategoryPicker';
-import { fmtDate, fmtDuration, fmtMoney } from '../lib/format';
+import { fmtDate, fmtDay, fmtDuration, fmtMoney } from '../lib/format';
 
 interface Props {
   places: Place[];
@@ -139,7 +139,7 @@ export default function MapView({ places, hotels, showHotels, routePlaces, selec
             <Tooltip direction="top" offset={[0, -6]} opacity={1}>
               <span style={{ fontSize: 11 }}>
                 {meta.icon} <b>{p.name}</b>
-                {p.date ? ` · ${fmtDate(p.date, { day: '2-digit', month: '2-digit' })}` : ' · Pool'}
+                {p.date ? ` · ${fmtDay(p.date)}` : ' · Pool'}
               </span>
             </Tooltip>
             <Popup>
@@ -148,13 +148,13 @@ export default function MapView({ places, hotels, showHotels, routePlaces, selec
                   <span style={{ fontSize: 15 }}>{meta.icon}</span>
                   <b>{p.name}</b>
                 </div>
-                <div style={{ marginTop: 4, color: '#94a3b8', fontSize: 11.5 }}>
-                  {p.city} · {p.date ? fmtDate(p.date, { weekday: 'short', day: '2-digit', month: '2-digit' }) : 'noch ohne Tag'}
+                <div style={{ marginTop: 4, color: '#94a3b8', fontSize: 13 }}>
+                  {p.city} · {p.date ? fmtDay(p.date) : 'noch ohne Tag'}
                 </div>
-                <div style={{ marginTop: 4, fontSize: 12 }}>
-                  {[meta.label, p.priority === 'muss' ? '★ Muss' : null, p.price_eur ? fmtMoney(p.price_eur) : p.price_note || null].filter(Boolean).join(' · ')}
+                <div style={{ marginTop: 4, fontSize: 13 }}>
+                  {[meta.label, priorityLabel(p.priority), p.price_eur ? fmtMoney(p.price_eur) : p.price_note || null].filter(Boolean).join(' · ')}
                 </div>
-                {p.notes ? <p style={{ marginTop: 5, fontSize: 12 }}>{p.notes}</p> : null}
+                {p.notes ? <p style={{ marginTop: 5, fontSize: 13 }}>{p.notes}</p> : null}
                 {onCategory ? (
                   <div style={{ marginTop: 7, display: 'flex', gap: 6, alignItems: 'center', maxWidth: 250 }} onPointerDown={(e) => e.stopPropagation()}>
                     <span style={{ fontSize: 11, color: '#94a3b8' }}>🏷️</span>
@@ -187,12 +187,12 @@ export default function MapView({ places, hotels, showHotels, routePlaces, selec
         <button
           type="button"
           onClick={() => setDark((v) => !v)}
-          className="chip bg-white/[0.06] px-2 py-1 text-[11.5px] text-slate-200 ring-1 ring-inset ring-white/10 transition hover:bg-white/[0.12]"
+          className="chip bg-white/[0.06] px-2 py-1 text-[13px] text-slate-200 ring-1 ring-inset ring-white/10 transition hover:bg-white/[0.12]"
           title={dark ? 'Helle OpenStreetMap-Kacheln zeigen' : 'Dunkle Kacheln zeigen'}
         >
           {dark ? '☀️ hell' : '🌙 dunkel'}
         </button>
-        <span className="px-1 text-[10.5px] text-slate-500">Kacheln: OpenStreetMap</span>
+        <span className="mikro px-1 text-[10.5px] text-slate-400">Kacheln: OpenStreetMap</span>
       </div>
     </div>
   );

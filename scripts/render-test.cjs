@@ -64,7 +64,7 @@ const { StoreProvider } = require('../src/lib/store.tsx');
 const PAGES = [
   { name: 'Reisen', path: '/', file: '../src/app/page.tsx', expect: [/Urlaubsplanung/, /Japan 2027/, /Japan 2025/] },
   { name: 'Übersicht', path: '/t/trip-2027/uebersicht', file: '../src/app/t/[tripId]/uebersicht/page.tsx', expect: [/Reisedauer/, /Reise auf einem Blick/, /Jeder Tag im Bild/, /Was noch fehlen würde/, /Was noch verfügbar ist/, /Bett pro Nacht/] },
-  { name: 'Tage', path: '/t/trip-2027/tage', file: '../src/app/t/[tripId]/tage/page.tsx', expect: [/Tagesplan/, /Sa06\.03\./, /noch frei|Aktivitäten/] },
+  { name: 'Tage', path: '/t/trip-2027/tage', file: '../src/app/t/[tripId]/tage/page.tsx', expect: [/Tagesplan/, /Sa ?06\.03\./, /noch frei|Aktivitäten/] },
   { name: 'Aktivitäten', path: '/t/trip-2027/aktivitaeten', file: '../src/app/t/[tripId]/aktivitaeten/page.tsx', expect: [/Noch ohne Tag/, /Aktivität/, /Ticket offen/, /Ohne Karte/] },
   { name: 'Tabelle', path: '/t/trip-2027/tabelle', file: '../src/app/t/[tripId]/tabelle/page.tsx', expect: [/Reihe/, /Aktivität/] },
   { name: 'Karte', path: '/t/trip-2027/karte', file: '../src/app/t/[tripId]/karte/page.tsx', expect: [/Karte/, /Legende/, /Alle Kategorien/, /Kategorie/] },
@@ -261,8 +261,8 @@ async function render(name, Page, tripId) {
     await new Promise((r) => setTimeout(r, 80));
   });
   const reihe = [...cAct.querySelectorAll('.filter-row button')].map((b) => (b.textContent || '').replace(/\s+/g, ' ').trim().replace(/(\d+)$/, ' $1'));
-  const solo = ['Alle', 'Ohne Tag', 'Ticket offen', 'Muss', 'Ohne Karte'];
-  const eineReihe = reihe.length === 5 && solo.every((label, i) => reihe[i].indexOf(label) === 0);
+  const solo = ['Alle', 'Ohne Tag', 'Ticket offen', '★ Muss', '☆ Soll', '· Kann', 'Ohne Karte'];
+  const eineReihe = reihe.length === 7 && solo.every((label, i) => reihe[i].replace(/\s+/g, ' ').trim().indexOf(label) === 0);
   const zu = !/Was noch keinen Tag hat/.test(actText());
   await tipp([...cAct.querySelectorAll('button')].find((b) => (b.textContent || '').trim() === 'ⓘ'));
   const auf = /Was noch keinen Tag hat/.test(actText());
@@ -275,6 +275,20 @@ async function render(name, Page, tripId) {
   if (!chromeOk) {
     failures.push('Aktivit\u00e4ten-Chrome');
     console.log('   reihe=', JSON.stringify(reihe), 'zu=', zu, 'auf=', auf, 'suche=', Boolean(feld), 'stadt=', stadtMit);
+  }
+  // 🏷️ drei Stufen, ein Wort: was in der Reihe steht, steht auch am Punkt
+  const { PRIORITY_META } = require('../src/lib/categories.ts');
+  const stufen = Object.keys(PRIORITY_META).map((k) => PRIORITY_META[k].word.replace(/\s+/g, ' '));
+  // das Symbol steckt in einer eigenen (aria-hidden) Fläche, dazwischen liegt der Abstand –
+  // verglichen wird deshalb ohne Leerzeichen
+  const ohne = (v) => v.replace(/\s+/g, '');
+  const amPunkt = [...cAct.querySelectorAll('.prio')].map((e) => (e.textContent || '').trim());
+  const stufenOk =
+    stufen.length === 3 && amPunkt.length >= 5 && amPunkt.every((w) => stufen.map(ohne).includes(ohne(w))) && stufen.every((w) => amPunkt.some((p) => ohne(p) === ohne(w))) && stufen.every((w) => reihe.some((r) => r.indexOf(w) === 0));
+  console.log((stufenOk ? '\u2705' : '\u274c') + ' 🏷️ Priorität: ' + stufen.join(' · ') + ' – dieselben Worte in Filterreihe, Liste und Formular (' + amPunkt.length + ' Punkte beschriftet)');
+  if (!stufenOk) {
+    failures.push('Prioritäts-Wording');
+    console.log('   reihe=', JSON.stringify(reihe), 'punkte=', JSON.stringify([...new Set(amPunkt)].slice(0, 6)));
   }
   // und: was leer ist, wird nicht gezeigt – ein Kasten f\u00fcr null offene Punkte bleibt weg
   const nameDer = (el) => {
@@ -943,6 +957,32 @@ async function render(name, Page, tripId) {
   await act(async () => rToday.unmount());
   cToday.remove();
 
+  // ✍️ Reinschrift: Städte und Unterkünfte schreiben sich selbst groß – anzeigen tut die App dasselbe
+  const { properName, fmtDay, fmtDate } = require('../src/lib/format.ts');
+  const { reinschrift, cleanForSave } = require('../src/lib/normalize.ts');
+  const rein =
+    properName('  osaka ') === 'Osaka' &&
+    properName('hotel osaka') === 'Hotel Osaka' &&
+    properName('\tFrankfurt\nam\tMain ') === 'Frankfurt am Main' &&
+    properName('JR Pass') === 'JR Pass' &&
+    properName('teamLab') === 'teamLab' &&
+    properName('') === '' &&
+    properName(null) === '';
+  const speicher = reinschrift('hotels', { name: ' hotel osaka ', city: '  osaka ' });
+  const speicherOk = speicher.name === 'Hotel Osaka' && speicher.city === 'Osaka';
+  const stellen = reinschrift('places', { city: 'hakodate', name: 'bergwerk' });
+  const orteOk = stellen.city === 'Hakodate' && stellen.name === 'bergwerk'; // Aktivitätsnamen bleiben, wie man sie schreibt
+  const db = cleanForSave('hotels', { id: 'x', name: ' hotel tokio ', city: 'tokio ' });
+  const dbOk = db.name === 'Hotel Tokio' && db.city === 'Tokio';
+  const reinschriftOk = rein && speicherOk && orteOk && dbOk;
+  console.log((reinschriftOk ? '\u2705' : '\u274c') + ' ✍️ Reinschrift: „ osaka “ \u2192 Osaka, \u201ehotel osaka\u201c \u2192 Hotel Osaka, \u201ehotel tokio\u201c \u2192 Hotel Tokio \u2013 beim Speichern wie beim Anzeigen, Aktivitätsnamen bleiben wie getippt');
+  if (!reinschriftOk) failures.push('Reinschrift');
+
+  // 📅 Kurzdatum: ein Format für alle Listen, ausgeschrieben nur in Überschriften
+  const tagKurz = fmtDay('2027-03-06');
+  const fmtOk = tagKurz === 'Sa 06.03.' && fmtDay('2027-04-01') === 'Do 01.04.' && fmtDay('2027-04-05') === 'Mo 05.04.' && fmtDay('') === '\u2014' && !/[,.] 2027/.test(tagKurz);
+  console.log((fmtOk ? '\u2705' : '\u274c') + ' 📅 Kurzdatum in Listen: ' + tagKurz + ' · ' + fmtDay('2027-04-01') + ' · ' + fmtDay('2027-04-05') + ' \u2013 ausgeschrieben nur, wo eine \u00DCberschrift steht');
+  if (!fmtOk) failures.push('Datumsformat');
   if (warnings.length) {
     console.log('\n⚠️  Hinweise:');
     [...new Set(warnings)].slice(0, 8).forEach((w) => console.log('   ' + w));

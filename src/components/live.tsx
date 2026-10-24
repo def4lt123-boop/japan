@@ -9,7 +9,7 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { categoryMeta, mapsUrl } from '../lib/categories';
-import { fmtDate, plural } from '../lib/format';
+import { fmtDate, plural, fmtDay } from '../lib/format';
 import type { Place } from '../lib/types';
 import { cx } from './ui';
 
@@ -41,7 +41,7 @@ export function DayRing({ tag, total, done, count, color, size = 62 }: { tag: nu
       </svg>
       <span className="absolute inset-0 grid place-items-center leading-none">
         <b className="text-[19px] font-semibold text-white tabular-nums">{tag}</b>
-        <span className="mt-0.5 text-[8px] uppercase tracking-wider text-slate-400">von {total || '?'}</span>
+        <span className="mikro mt-0.5 text-[8px] uppercase tracking-wider text-slate-400">von {total || '?'}</span>
       </span>
     </div>
   );
@@ -74,7 +74,7 @@ export function TripBar({
             data-tripday={d}
             data-bed={last ? 'abreise' : bed ? 'ja' : 'nein'}
             onClick={() => onPick(d)}
-            title={`${fmtDate(d, { weekday: 'short', day: '2-digit', month: '2-digit' })}${last ? ' · Abreise, keine Nacht' : bed ? '' : ' · Nacht ohne Bett'}${isToday ? ' · heute' : ''}`}
+            title={`${fmtDay(d)}${last ? ' · Abreise, keine Nacht' : bed ? '' : ' · Nacht ohne Bett'}${isToday ? ' · heute' : ''}`}
             aria-label={`Tag ${fmtDate(d, { day: '2-digit', month: '2-digit' })}`}
             aria-current={isToday ? 'date' : undefined}
             className={cx('trip-seg', isViewed && 'is-viewed', isToday && 'is-today', last && 'is-last')}
@@ -114,7 +114,7 @@ export function DayNav({
       </button>
       <div className="min-w-0 flex-1 text-center">
         <p className="truncate text-[13px] font-semibold text-white">{label}</p>
-        <p className="text-[10.5px] uppercase tracking-wider text-slate-400">{fmtDate(viewed, { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
+        <p className="text-[13px] uppercase tracking-wider text-slate-400">{fmtDate(viewed, { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
       </div>
       <button type="button" className="day-arrow" onClick={onNext} disabled={!canNext} aria-label="einen Tag vor">
         ▶
@@ -161,7 +161,7 @@ export function NextUpCard({
   return (
     <div ref={cardRef} className="card nextup" data-nextup={place.id} style={{ '--nc': meta.color } as React.CSSProperties}>
       <span className="nextup-rail" aria-hidden />
-      <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+      <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-slate-400">
         {eyebrow ?? `als nächstes · stelle ${nr} von ${total}`}
       </p>
       <div className="mt-2 flex items-start gap-3">
@@ -170,12 +170,12 @@ export function NextUpCard({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[17px] font-semibold leading-snug text-white">{place.name}</p>
-          <p className="mt-0.5 text-[12.5px] leading-snug text-slate-300">
+          <p className="mt-0.5 text-[13px] leading-snug text-slate-300">
             {place.city || '—'}
             {note ? <span className="text-slate-400"> · {note}</span> : null}
           </p>
           {ticket ? (
-            <p className="mt-1 inline-flex rounded-lg bg-amber-400/15 px-1.5 py-0.5 text-[11.5px] text-amber-100">
+            <p className="mt-1 inline-flex rounded-lg bg-amber-400/15 px-1.5 py-0.5 text-[13px] text-amber-100">
               🎫 Ticket nötig{place.ticket_note ? ` – ${place.ticket_note}` : ''}
             </p>
           ) : null}
@@ -194,7 +194,7 @@ export function NextUpCard({
           </a>
         ) : null}
       </div>
-      {offen > 1 ? <p className="mt-2 text-center text-[11px] text-slate-500">noch {plural(offen - 1, 'Punkt', 'Punkte')} {when}</p> : null}
+      {offen > 1 ? <p className="mt-2 text-center text-[13px] text-slate-400">noch {plural(offen - 1, 'Punkt', 'Punkte')} {when}</p> : null}
     </div>
   );
 }
@@ -209,8 +209,8 @@ export function StickyNext({ place, visible, onDone }: { place: Place | null; vi
           {meta.icon}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[12.5px] font-medium text-white">{place?.name ?? ''}</p>
-          <p className="truncate text-[10.5px] uppercase tracking-wide text-slate-400">als nächstes · tippe ✓</p>
+          <p className="truncate text-[13px] font-medium text-white">{place?.name ?? ''}</p>
+          <p className="truncate text-[13px] uppercase tracking-wide text-slate-400">als nächstes · tippe ✓</p>
         </div>
         <button type="button" className="big-check !h-11 !w-11" onClick={onDone} aria-label="erledigt" title="erledigt">
           ✓
@@ -285,38 +285,38 @@ export function LiveRow({
         </button>
         <button type="button" onClick={onExpand} className="min-w-0 flex-1 text-left" aria-expanded={expanded}>
           <span className="flex items-baseline gap-2">
-            <span className={cx('text-[11px] tabular-nums', done ? 'text-slate-600' : 'text-slate-400')}>
+            <span className={cx('text-[13px] tabular-nums', done ? 'text-slate-400' : 'text-slate-400')}>
               {nr}/{total}
             </span>
-            <span className={cx('min-w-0 flex-1 truncate text-[15.5px] font-medium leading-snug', done ? 'text-slate-500 line-through' : 'text-white')}>
+            <span className={cx('min-w-0 flex-1 truncate text-[15.5px] font-medium leading-snug', done ? 'text-slate-400 line-through' : 'text-white')}>
               {place.name}
             </span>
-            <span className={cx('shrink-0 text-[11px] text-slate-500 transition-transform', expanded && 'rotate-180')} aria-hidden>
+            <span className={cx('shrink-0 text-[13px] text-slate-400 transition-transform', expanded && 'rotate-180')} aria-hidden>
               ⌄
             </span>
           </span>
-          <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11.5px] text-slate-400">
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px] text-slate-400">
             <span aria-hidden style={{ color: meta.color }}>
               {meta.icon}
             </span>
             <span>{meta.label}</span>
-            {place.city ? <span className="text-slate-600">· {place.city}</span> : null}
-            {ticket ? <span className={cx('chip !py-0 !text-[10px]', ticket === 'gekauft' ? 'bg-emerald-500/15 text-emerald-100' : 'bg-amber-500/15 text-amber-100')}>{ticket === 'gekauft' ? '🎫 gekauft' : '🎫 besorgen'}</span> : null}
-            {place.price_eur ? <span className="text-slate-500">· {place.price_eur} €</span> : null}
+            {place.city ? <span className="text-slate-400">· {place.city}</span> : null}
+            {ticket ? <span className={cx('mikro chip !py-0 !text-[10px]', ticket === 'gekauft' ? 'bg-emerald-500/15 text-emerald-100' : 'bg-amber-500/15 text-amber-100')}>{ticket === 'gekauft' ? '🎫 gekauft' : '🎫 besorgen'}</span> : null}
+            {place.price_eur ? <span className="text-slate-400">· {place.price_eur} €</span> : null}
           </span>
         </button>
       </div>
       {expanded ? (
         <div className="row-detail pop-in">
-          {place.notes ? <p className="text-[12.5px] leading-relaxed text-slate-300">{place.notes}</p> : <p className="text-[12.5px] text-slate-500">keine Notiz</p>}
-          {place.ticket_note ? <p className="text-[12.5px] text-amber-100/90">🎫 {place.ticket_note}</p> : null}
-          {place.price_note ? <p className="text-[12.5px] text-slate-400">💶 {place.price_note}</p> : null}
+          {place.notes ? <p className="text-[13px] leading-relaxed text-slate-300">{place.notes}</p> : <p className="text-[13px] text-slate-400">keine Notiz</p>}
+          {place.ticket_note ? <p className="text-[13px] text-amber-100/90">🎫 {place.ticket_note}</p> : null}
+          {place.price_note ? <p className="text-[13px] text-slate-400">💶 {place.price_note}</p> : null}
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <a href={mapsUrl(place)} target="_blank" rel="noreferrer" className="btn-ghost !px-2.5 !py-1.5 !text-[12.5px]">
+            <a href={mapsUrl(place)} target="_blank" rel="noreferrer" className="btn-ghost !px-2.5 !py-1.5 !text-[13px]">
               🗺️ Karte
             </a>
             {place.booking_url ? (
-              <a href={place.booking_url.startsWith('http') ? place.booking_url : `https://${place.booking_url}`} target="_blank" rel="noreferrer" className="btn-ghost !px-2.5 !py-1.5 !text-[12.5px]">
+              <a href={place.booking_url.startsWith('http') ? place.booking_url : `https://${place.booking_url}`} target="_blank" rel="noreferrer" className="btn-ghost !px-2.5 !py-1.5 !text-[13px]">
                 🔗 Buchung
               </a>
             ) : null}
@@ -371,15 +371,15 @@ export function PlanChip({
     >
       <span className="flex items-baseline gap-1.5">
         <b className="text-[13px] font-semibold text-white">{label}</b>
-        <span className="text-[10.5px] text-slate-400">{fmtDate(date, { day: '2-digit', month: '2-digit' })}</span>
+        <span className="mikro text-[10.5px] text-slate-400">{fmtDate(date, { day: '2-digit', month: '2-digit' })}</span>
       </span>
-      <span className="mt-1 block min-w-0 truncate text-[11.5px] text-slate-300">{count ? plural(count, 'Punkt', 'Punkte') : 'frei'}</span>
-      <span className="mt-1 flex items-center gap-1 text-[10.5px] text-slate-400">
+      <span className="mt-1 block min-w-0 truncate text-[13px] text-slate-300">{count ? plural(count, 'Punkt', 'Punkte') : 'frei'}</span>
+      <span className="mikro mt-1 flex items-center gap-1 text-[10.5px] text-slate-400">
         <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: color }} aria-hidden />
         <span className="min-w-0 truncate">{city ?? 'ohne Ort'}</span>
       </span>
-      {change ? <span className="mt-1 block min-w-0 truncate text-[10.5px] text-shu-200">🔀 {change.from} → {change.to}</span> : null}
-      {noBed ? <span className="mt-1 block text-[10.5px] text-amber-200/80">🏨 ohne Bett</span> : null}
+      {change ? <span className="mikro mt-1 block min-w-0 truncate text-[10.5px] text-shu-200">🔀 {change.from} → {change.to}</span> : null}
+      {noBed ? <span className="mikro mt-1 block text-[10.5px] text-amber-200/80">🏨 ohne Bett</span> : null}
     </button>
   );
 }

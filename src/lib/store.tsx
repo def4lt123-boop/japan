@@ -5,7 +5,7 @@ import { cloneInto, seedSnapshot } from './seed';
 import type { Expense, Hotel, Journey, Place, Snapshot, Trip } from './types';
 import { hasSupabase, supaDelete, supaPatch, supaSelect, supaUpsert, type TableName } from './supabase';
 import { uid } from './format';
-import { normalizeExpense, normalizeHotel, normalizeJourney, normalizePlace, normalizeTrip } from './normalize';
+import { normalizeExpense, normalizeHotel, normalizeJourney, normalizePlace, normalizeTrip, reinschriftImSnapshot } from './normalize';
 
 export type RowKey = 'trips' | 'places' | 'hotels' | 'journeys' | 'expenses';
 export type RowOf<K extends RowKey> = K extends 'trips'
@@ -91,7 +91,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const persist = useCallback(
-    (next: Snapshot) => {
+    (raw: Snapshot) => {
+      // Städte und Unterkünfte in Reinschrift, bevor irgendwas daraus gezeigt oder
+      // geschrieben wird – auch bei Daten, die schon kleinbuchstabiert herumlagen.
+      // Die Quelle selbst (seed.json) bleibt, wie sie ist.
+      const next = reinschriftImSnapshot(raw);
       dataRef.current = next;
       setData(next);
       if (!hasSupabase) {

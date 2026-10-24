@@ -7,8 +7,8 @@ import { useStore } from '../lib/store';
 import { assign, dayPlaces } from '../lib/dayplan';
 import { categoryMeta } from '../lib/categories';
 import { CategoryDot } from './CategoryDot';
-import { fmtDate, plural } from '../lib/format';
-import { Card, Select, TextInput, cx } from './ui';
+import { fmtDate, fmtDay, knownCity, plural } from '../lib/format';
+import { Card, PriorityTag, Select, TextInput, cx } from './ui';
 import { Grip, useDrag } from './TouchDrag';
 
 type DayLite = { date: string; places: Place[] };
@@ -63,15 +63,15 @@ export function PendingList({
         <h3 className="text-[13px] font-semibold text-amber-50">
           Noch ohne Tag <span className="tabular-nums text-amber-100/70">{pool.length}</span>
         </h3>
-        <p className="text-[11.5px] text-amber-100/70">Tag wählen und ✓ hinlegen – oder am Griff ⠿ ziehen, auf dem Handy: halten und loslassen</p>
-        <Link href={`/t/${tripId}/aktivitaeten`} className="ml-auto text-[11.5px] text-amber-100/80 underline-offset-2 hover:text-white hover:underline">
+        <p className="text-[13px] text-amber-100/70">Tag wählen und ✓ hinlegen – oder am Griff ⠿ ziehen, auf dem Handy: halten und loslassen</p>
+        <Link href={`/t/${tripId}/aktivitaeten`} className="ml-auto text-[13px] text-amber-100/80 underline-offset-2 hover:text-white hover:underline">
           alle Aktivitäten →
         </Link>
       </div>
 
       <div className="p-2.5">
         {pool.length > 5 ? (
-          <TextInput className="mb-2 !py-1 !text-[12.5px]" value={q} onChange={(e) => setQ(e.target.value)} placeholder="in der Liste suchen …" />
+          <TextInput className="mb-2 !py-1 !text-[13px]" value={q} onChange={(e) => setQ(e.target.value)} placeholder="in der Liste suchen …" />
         ) : null}
         <ul className="space-y-1.5">
           {(showAll ? shown : shown.slice(0, 6)).map((p) => {
@@ -100,9 +100,9 @@ export function PendingList({
                   <CategoryDot category={p.category} size={19} />
                   <span className="min-w-0">
                     <span className="block truncate text-[13px] font-medium text-slate-100">{p.name}</span>
-                    <span className="block truncate text-[11px] text-slate-500">
-                      <span aria-hidden>{meta.icon}</span> {p.city || '—'}
-                      {p.priority === 'muss' ? ' · ★ Muss' : p.priority === 'kann' ? ' · Kann' : ''}
+                    <span className="block truncate text-[13px] text-slate-400">
+                      <span aria-hidden>{meta.icon}</span> {knownCity(p.city) ?? '—'}
+                      <PriorityTag priority={p.priority} className="mx-1" />
                       {p.ticket_status === 'noetig' ? ' · 🎟 offen' : ''}
                     </span>
                   </span>
@@ -110,17 +110,17 @@ export function PendingList({
 
                 <span className="flex w-full shrink-0 flex-wrap items-center gap-1 sm:w-auto sm:justify-end">
                   <Select
-                    className="!w-auto min-w-[8.5rem] flex-1 !py-1.5 !text-[12px] sm:flex-none sm:!py-1"
+                    className="!w-auto min-w-[8.5rem] flex-1 !py-1.5 !text-[13px] sm:flex-none sm:!py-1"
                     allowEmpty
                     emptyLabel="Tag wählen"
-                    options={days.map((x) => ({ value: x.date, label: `${fmtDate(x.date, { weekday: 'short', day: '2-digit', month: '2-digit' })} · ${plural(x.places.length, 'Punkt', 'Punkte')}` }))}
+                    options={days.map((x) => ({ value: x.date, label: `${fmtDay(x.date)} · ${plural(x.places.length, 'Punkt', 'Punkte')}` }))}
                     value={date ?? ''}
                     onChange={(e) => setDraft((d) => ({ ...d, [p.id]: e.target.value || null }))}
                   />
-                  {ansEnde ? <span className="text-[11px] text-slate-500">→ Stelle {ansEnde}</span> : null}
+                  {ansEnde ? <span className="text-[13px] text-slate-400">→ Stelle {ansEnde}</span> : null}
                   <button
                     type="button"
-                    className={cx('btn !py-1 !text-[12px]', date ? 'bg-matcha-500/25 text-white ring-1 ring-inset ring-shu-400/40 hover:bg-shu-500/35' : 'bg-white/[0.04] text-slate-600 ring-white/10')}
+                    className={cx('btn !py-1 !text-[13px]', date ? 'bg-matcha-500/25 text-white ring-1 ring-inset ring-shu-400/40 hover:bg-shu-500/35' : 'bg-white/[0.04] text-slate-400 ring-white/10')}
                     title={date ? `Auf ${fmtDate(date, { weekday: 'short', day: 'numeric', month: 'short' })} legen` : 'Erst einen Tag wählen'}
                     onClick={() => place(p)}
                   >
@@ -132,11 +132,11 @@ export function PendingList({
           })}
         </ul>
         {shown.length > 6 ? (
-          <button type="button" className="mt-2 text-[11.5px] text-slate-400 underline-offset-2 hover:text-white hover:underline" onClick={() => setShowAll((v) => !v)}>
+          <button type="button" className="mt-2 text-[13px] text-slate-400 underline-offset-2 hover:text-white hover:underline" onClick={() => setShowAll((v) => !v)}>
             {showAll ? 'weniger zeigen' : `alle ${shown.length} zeigen`}
           </button>
         ) : null}
-        {!shown.length ? <p className="px-1 py-2 text-center text-[12px] text-slate-500">Keine Treffer für „{q}“.</p> : null}
+        {!shown.length ? <p className="px-1 py-2 text-center text-[13px] text-slate-400">Keine Treffer für „{q}“.</p> : null}
       </div>
     </Card>
   );

@@ -6,7 +6,7 @@
  * `sort_order` ist dabei der einzige Anker und wird beim Umhängen neu geschrieben.
  */
 import type { Place } from './types';
-import { fmtDate } from './format';
+import { fmtDay } from './format';
 
 export interface DayStore {
   patch: (table: 'places', id: string, patch: Partial<Place>) => Promise<void> | void;
@@ -40,7 +40,8 @@ export function dayPlaces(all: Place[], date: string | null): Place[] {
   return all.filter((p) => p.date === date).slice().sort(byOrder);
 }
 
-export const dayLabel = (iso: string) => fmtDate(iso, { weekday: 'short', day: '2-digit', month: '2-digit' });
+/** das Kurzdatum der Listen – ein Name, eine Schreibweise (`fmtDay`) */
+export const dayLabel = fmtDay;
 
 /** Reihenfolge eines Tages festschreiben: 0, 1, 2 … (nur was sich ändert) */
 function writeOrder(store: DayStore, all: Place[], ordered: Place[]) {

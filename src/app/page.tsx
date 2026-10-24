@@ -91,7 +91,7 @@ export default function HomePage() {
           title="Reisen"
           hint="Archivierte Reisen bleiben als Referenz erhalten – ändern kannst du sie trotzdem."
           icon="🧳"
-          right={bundles.length ? <span className="text-[12px] text-slate-500">{plural(bundles.length, 'Reise', 'Reisen')}</span> : null}
+          right={bundles.length ? <span className="text-[13px] text-slate-400">{plural(bundles.length, 'Reise', 'Reisen')}</span> : null}
         />
 
         {!store.ready ? (
@@ -184,7 +184,7 @@ export default function HomePage() {
               </Field>
             </div>
           </div>
-          <p className="mt-2 text-[12px] leading-relaxed text-slate-400">
+          <p className="mt-2 text-[13px] leading-relaxed text-slate-400">
             Die Quelle ist „{store.trips.find((t) => t.id === duplicateSource)?.name}“. Jeder Punkt behält seinen Tag – was in der Quelle ohne Tag liegt, startet in der <b>Liste</b> und wartet dort auf dich.
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -226,7 +226,7 @@ function TripCard({ bundle, onEdit, onDuplicate, onDelete, onStart, onEnd }: { b
             </h3>
             {bundle.trip.archived ? <span className="chip bg-white/[0.06] text-slate-300 ring-white/10">Archiv</span> : null}
           </div>
-          <p className="mt-0.5 text-[12.5px] text-slate-400">
+          <p className="mt-0.5 text-[13px] text-slate-400">
             {bundle.trip.destination || '—'} · {fmtRange(bundle.trip.start_date, bundle.trip.end_date)} · {tripLengthLabel(bundle.trip)} · {plural(bundle.trip.travelers, 'Person', 'Personen')}
           </p>
         </div>
@@ -239,7 +239,7 @@ function TripCard({ bundle, onEdit, onDuplicate, onDelete, onStart, onEnd }: { b
       </div>
 
       {live ? (
-        <Link href={`/t/${bundle.trip.id}/heute`} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-emerald-400/[0.09] px-2.5 py-1.5 text-[12px] text-emerald-100 ring-1 ring-inset ring-emerald-400/25 transition hover:bg-emerald-400/[0.16]">
+        <Link href={`/t/${bundle.trip.id}/heute`} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-emerald-400/[0.09] px-2.5 py-1.5 text-[13px] text-emerald-100 ring-1 ring-inset ring-emerald-400/25 transition hover:bg-emerald-400/[0.16]">
           <span aria-hidden>🚶</span>
           <span className="font-medium">
             Läuft · Tag {heuteTag ? (ctx?.dayIndex ?? 1) : 1} von {ctx?.totalDays || '?'}
@@ -250,17 +250,17 @@ function TripCard({ bundle, onEdit, onDuplicate, onDelete, onStart, onEnd }: { b
               : 'heute nichts eingetragen'}
             {heuteTag?.cities.length ? ` · ${heuteTag.cities.join(' / ')}` : ''}
           </span>
-          <span className="ml-auto text-[11px] text-emerald-200/60 underline-offset-2">Zum Tag →</span>
+          <span className="ml-auto text-[13px] text-emerald-200/60 underline-offset-2">Zum Tag →</span>
         </Link>
       ) : !bundle.trip.archived && ctx?.state === 'vorher' ? (
-        <Link href={`/t/${bundle.trip.id}/tage`} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-white/[0.03] px-2.5 py-1.5 text-[12px] text-slate-300 ring-1 ring-inset ring-white/[0.07] transition hover:bg-white/[0.07]">
+        <Link href={`/t/${bundle.trip.id}/tage`} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-white/[0.03] px-2.5 py-1.5 text-[13px] text-slate-300 ring-1 ring-inset ring-white/[0.07] transition hover:bg-white/[0.07]">
           <span aria-hidden>🗓️</span>
           <span>
             {bundle.trip.start_date
               ? `geplant ${ctx.daysToStart ? `in ${plural(ctx.daysToStart, 'Tag', 'Tagen')}` : 'dieses'} · ${fmtDate(bundle.trip.start_date, { day: '2-digit', month: '2-digit', year: 'numeric' })}`
               : 'noch ohne Reisezeitraum'}
           </span>
-          <span className="ml-auto text-[11px] text-slate-500">Zum Plan →</span>
+          <span className="ml-auto text-[13px] text-slate-400">Zum Plan →</span>
         </Link>
       ) : null}
 
@@ -271,16 +271,16 @@ function TripCard({ bundle, onEdit, onDuplicate, onDelete, onStart, onEnd }: { b
         <Stat label="Offene Punkte" value={openBookings} hint={gaps.length ? `${gaps.length} Nächte ohne Hotel` : 'Nächte abgedeckt'} tone={openBookings ? 'warn' : 'good'} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-slate-400">
+      <div className="flex flex-wrap items-center gap-1.5 text-[13px] text-slate-400">
         {costs.byCity.slice(0, 8).map((c) => (
           <span key={c.city} className="chip bg-white/[0.04] text-slate-300 ring-white/10">
-            {c.city} <span className="text-slate-500">{c.places}</span>
+            {c.city} <span className="text-slate-400">{c.places}</span>
           </span>
         ))}
       </div>
 
       <div className="mt-auto flex flex-wrap items-center gap-1.5 border-t border-white/[0.07] pt-3">
-        <span className="text-[11.5px] text-slate-500">
+        <span className="text-[13px] text-slate-400">
           <Money value={costs.accommodation} /> Unterkunft · <Money value={costs.transport} /> Transport · <Money value={costs.entries} /> Einträge
         </span>
         <span className="ml-auto flex items-center gap-1.5">

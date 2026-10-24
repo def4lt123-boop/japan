@@ -8,9 +8,9 @@
  */
 import React, { useMemo } from 'react';
 import type { Place } from '../lib/types';
-import { STATUS_META, TICKET_META, TICKET_ORDER } from '../lib/categories';
+import { PRIORITY_META, STATUS_META, TICKET_META, TICKET_ORDER } from '../lib/categories';
 import { Select, TextInput, cx } from './ui';
-import { BOOKING_STATUSES } from '../lib/types';
+import { BOOKING_STATUSES, PRIORITIES } from '../lib/types';
 
 export interface PlaceFilter {
   q: string;
@@ -71,7 +71,13 @@ export function FilterBar({
       on: value.missing === 'ohne-ticket',
       only: { missing: 'ohne-ticket' },
     },
-    { key: 'muss', label: 'Muss', n: count((p) => p.priority === 'muss'), on: value.prio === 'muss', only: { prio: 'muss' } },
+    ...PRIORITIES.map((k) => ({
+      key: `prio-${k}`,
+      label: PRIORITY_META[k].word,
+      n: count((p) => p.priority === k),
+      on: value.prio === k,
+      only: { prio: k },
+    })),
     { key: 'geo', label: 'Ohne Karte', n: count((p) => p.lat === null || p.lng === null), on: value.missing === 'ohne-koordinaten', only: { missing: 'ohne-koordinaten' } },
   ];
 
@@ -84,7 +90,7 @@ export function FilterBar({
             type="button"
             aria-pressed={pill.on}
             className={cx(
-              'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-medium transition',
+              'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[13px] font-medium transition',
               pill.on ? 'bg-shu-500/20 text-white ring-1 ring-inset ring-shu-400/40' : 'bg-white/[0.045] text-slate-300 hover:bg-white/[0.08]',
             )}
             onClick={() => onChange(pill.key === 'alle' ? { ...EMPTY_FILTER } : pill.on ? { ...value, missing: 'alle', prio: '' } : { ...value, missing: 'alle', prio: '', ...pill.only })}
@@ -97,7 +103,7 @@ export function FilterBar({
 
       <div className="flex flex-wrap items-center gap-1.5">
         <div className="relative min-w-[9rem] flex-1">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-slate-500">🔎</span>
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-slate-400">🔎</span>
           <TextInput value={value.q} onChange={(e) => set({ q: e.target.value })} placeholder="Suchen – Name, Stadt, Hinweis, Kategorie …" className="pl-9" />
         </div>
         {cities.length > 1 ? (
@@ -107,7 +113,7 @@ export function FilterBar({
         {detailed ? (
           <>
             <Select
-              className={cx('!w-auto !py-1 !text-[12px]', value.status && 'border-shu-400/60')}
+              className={cx('!w-auto !py-1 !text-[13px]', value.status && 'border-shu-400/60')}
               allowEmpty
               emptyLabel="Alle Status"
               options={BOOKING_STATUSES.map((s) => ({ value: s, label: STATUS_META[s].label }))}
@@ -115,7 +121,7 @@ export function FilterBar({
               onChange={(e) => set({ status: e.target.value })}
             />
             <Select
-              className={cx('!w-auto !py-1 !text-[12px]', value.ticket && 'border-shu-400/60')}
+              className={cx('!w-auto !py-1 !text-[13px]', value.ticket && 'border-shu-400/60')}
               allowEmpty
               emptyLabel="Alle Tickets"
               options={TICKET_ORDER.map((t) => ({ value: t, label: `${TICKET_META[t].icon} ${TICKET_META[t].short}` }))}

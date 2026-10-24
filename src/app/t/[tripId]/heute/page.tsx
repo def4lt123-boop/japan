@@ -24,7 +24,7 @@ import { dayPlan, nightCoverage } from '../../../../lib/stats';
 import { mapsUrl } from '../../../../lib/categories';
 import { dayStops, routeUrl } from '../../../../lib/maps';
 import { tintFor } from '../../../../lib/palette';
-import { fmtDate, plural, today } from '../../../../lib/format';
+import { fmtDate, plural, today, fmtDay } from '../../../../lib/format';
 import type { Place } from '../../../../lib/types';
 
 export default function TodayPage() {
@@ -85,7 +85,7 @@ function NichtGestartet({ bundle, tripId, open, store, iso, list, ctx }: View) {
   return (
     <div className="mx-auto w-full max-w-xl space-y-3">
       <section className="start-hero rise p-5">
-        <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-shu-200">🚶 unterwegs</p>
+        <p className="text-[13px] font-semibold uppercase tracking-[0.18em] text-shu-200">🚶 unterwegs</p>
         <h1 className="mt-1.5 text-[22px] font-semibold leading-snug text-white">
           {trip.archived ? `„${trip.name}“ ist Referenz` : 'Los geht’s, wenn du sagst'}
         </h1>
@@ -107,7 +107,7 @@ function NichtGestartet({ bundle, tripId, open, store, iso, list, ctx }: View) {
         </p>
         {!trip.archived && trip.start_date ? (
           <>
-            <div className="mt-3 flex flex-wrap gap-1.5 text-[11.5px] text-slate-300">
+            <div className="mt-3 flex flex-wrap gap-1.5 text-[13px] text-slate-300">
               <span className="chip bg-white/[0.07]">📅 Tag 1 wird heute</span>
               <span className="chip bg-white/[0.07]">↔️ Punkte und Betten rutschen mit</span>
               <span className="chip bg-white/[0.07]">✕ beendet jederzeit</span>
@@ -202,20 +202,20 @@ function Unterwegs({ bundle, tripId, open, store, iso, list, days, changes, offe
         <div className="flex items-start gap-3">
           <DayRing tag={tag} total={info?.total || days.length} done={done} count={list.length} color={schaffe ? '#4f9d5b' : tint.edge} />
           <div className="min-w-0 flex-1">
-            <p className="flex flex-wrap items-center gap-x-2 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+            <p className="flex flex-wrap items-center gap-x-2 text-[13px] font-semibold uppercase tracking-[0.16em] text-slate-400">
               <span aria-hidden>🚶</span> unterwegs · {gruss}
               {info?.klemmt ? <span className="normal-case tracking-normal text-amber-200/85">{info.klemmt === 'vorher' ? 'der Plan beginnt erst – Tag 1 wird gezeigt' : 'der Plan ist vorbei – letzter Tag wird gezeigt'}</span> : null}
             </p>
             <h1 className="mt-1 text-[21px] font-semibold leading-tight text-white">{fmtDate(iso, { weekday: 'long', day: 'numeric', month: 'long' })}</h1>
             <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="chip !py-0.5 !text-[11.5px] bg-white/[0.07] tabular-nums">
+              <span className="chip !py-0.5 !text-[13px] bg-white/[0.07] tabular-nums">
                 Tag {tag} von {info?.total || days.length}
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[12px]" style={{ background: tint.soft, boxShadow: `inset 0 0 0 1px ${tint.edge}55` }}>
+              <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[13px]" style={{ background: tint.soft, boxShadow: `inset 0 0 0 1px ${tint.edge}55` }}>
                 <span aria-hidden>📍</span>
                 <b className="font-semibold text-white">{ort}</b>
               </span>
-              <span className={cx('text-[12px] tabular-nums', schaffe ? 'text-emerald-200' : 'text-slate-400')}>
+              <span className={cx('text-[13px] tabular-nums', schaffe ? 'text-emerald-200' : 'text-slate-400')}>
                 {done}/{list.length} erledigt
               </span>
             </p>
@@ -239,7 +239,7 @@ function Unterwegs({ bundle, tripId, open, store, iso, list, days, changes, offe
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
             <div className="bar-fill h-full rounded-full" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${tint.base}, ${tint.edge})` }} />
           </div>
-          <span className="w-9 text-right text-[11px] tabular-nums text-slate-400">{pct}%</span>
+          <span className="w-9 text-right text-[13px] tabular-nums text-slate-400">{pct}%</span>
         </div>
 
         <div className="mt-3">
@@ -269,17 +269,17 @@ function Unterwegs({ bundle, tripId, open, store, iso, list, days, changes, offe
             href={mapsUrl({ name: stay.name, city: stay.city, lat: stay.lat, lng: stay.lng, maps_query: null })}
             target="_blank"
             rel="noreferrer"
-            className="mt-2.5 flex items-center gap-2 rounded-xl bg-black/25 px-2.5 py-2 text-[12.5px] text-slate-200 transition hover:bg-black/40 active:scale-[0.99]"
+            className="mt-2.5 flex items-center gap-2 rounded-xl bg-black/25 px-2.5 py-2 text-[13px] text-slate-200 transition hover:bg-black/40 active:scale-[0.99]"
           >
             <span aria-hidden>🏨</span>
             <span className="min-w-0 flex-1 truncate">{stay.name}</span>
-            <span className="shrink-0 text-[11.5px] text-sky-200/85">🗺️ Route ab Bett</span>
+            <span className="shrink-0 text-[13px] text-sky-200/85">🗺️ Route ab Bett</span>
           </a>
         ) : (
-          <Link href={`/t/${tripId}/unterkuenfte`} className="mt-2.5 flex items-center gap-2 rounded-xl bg-amber-500/12 px-2.5 py-2 text-[12.5px] text-amber-100 ring-1 ring-inset ring-amber-400/25 transition hover:bg-amber-500/20">
+          <Link href={`/t/${tripId}/unterkuenfte`} className="mt-2.5 flex items-center gap-2 rounded-xl bg-amber-500/12 px-2.5 py-2 text-[13px] text-amber-100 ring-1 ring-inset ring-amber-400/25 transition hover:bg-amber-500/20">
             <span aria-hidden>🏨</span>
             <span className="min-w-0 flex-1">Diese Nacht hat noch keine Unterkunft</span>
-            <span className="shrink-0 text-[11.5px] underline underline-offset-2">eine wählen</span>
+            <span className="shrink-0 text-[13px] underline underline-offset-2">eine wählen</span>
           </Link>
         )}
       </section>
@@ -310,7 +310,7 @@ function Unterwegs({ bundle, tripId, open, store, iso, list, days, changes, offe
       {!list.length ? (
         <Card className="rise p-5 text-center" style={{ ['--d' as string]: '90ms' } as React.CSSProperties}>
           <p className="text-[15px] font-medium text-white">Heute ist nichts eingetragen</p>
-          <p className="mx-auto mt-1 max-w-[28rem] text-[12.5px] leading-relaxed text-slate-400">
+          <p className="mx-auto mt-1 max-w-[28rem] text-[13px] leading-relaxed text-slate-400">
             {bundle.places.filter((p) => !p.date).length ? 'In der Liste warten Punkte auf einen Tag – auf der Planungsseite ist einer in zwei Klicks hier.' : 'Ein freier Tag. Auch der ist ein Plan.'}
           </p>
           <div className="mt-3 flex flex-wrap justify-center gap-1.5">
@@ -328,17 +328,17 @@ function Unterwegs({ bundle, tripId, open, store, iso, list, days, changes, offe
           style={{ borderColor: 'rgba(167,211,160,.34)', background: 'linear-gradient(150deg, rgba(79,157,91,.22), rgba(255,255,255,.02))' } as React.CSSProperties}
         >
           <p className="text-[16px] font-semibold text-white">🎉 Tag {tag} geschafft</p>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-slate-200">
+          <p className="mt-1 text-[13px] leading-relaxed text-slate-200">
             {plural(done, 'Punkt', 'Punkte')} erledigt.{' '}
             {naeheTage[0] ? `Morgen: ${plural(naeheTage[0].places.length, 'Punkt', 'Punkte')}${naeheTage[0].cities.length ? ` in ${naeheTage[0].cities.join(' / ')}` : ''}.` : 'Das war der letzte eingetragene Tag.'}
           </p>
           <div className="mt-2.5 flex flex-wrap justify-center gap-1.5">
             {naeheTage[0] ? (
-              <button type="button" className="btn-ghost !px-3 !py-1.5 !text-[12.5px]" onClick={() => setOffset(offset + 1)}>
+              <button type="button" className="btn-ghost !px-3 !py-1.5 !text-[13px]" onClick={() => setOffset(offset + 1)}>
                 Morgen ansehen →
               </button>
             ) : null}
-            <button type="button" className="btn-quiet !px-2.5 !py-1.5 !text-[12.5px]" onClick={() => endTrip(store, bundle, false)}>
+            <button type="button" className="btn-quiet !px-2.5 !py-1.5 !text-[13px]" onClick={() => endTrip(store, bundle, false)}>
               ✕ Reise beenden
             </button>
           </div>
@@ -369,9 +369,9 @@ function Unterwegs({ bundle, tripId, open, store, iso, list, days, changes, offe
       {naeheTage.length ? (
         <section className="rise" style={{ ['--d' as string]: '210ms' } as React.CSSProperties}>
           <div className="mb-1.5 flex items-baseline gap-2 px-1">
-            <h3 className="text-[12.5px] font-semibold text-white">Reiseplan</h3>
-            <span className="text-[11px] text-slate-500">die nächsten {plural(naeheTage.length, 'Tag', 'Tage')}</span>
-            <Link href={`/t/${tripId}/tage`} className="ml-auto text-[11.5px] text-slate-400 underline-offset-2 hover:text-white hover:underline">
+            <h3 className="text-[13px] font-semibold text-white">Reiseplan</h3>
+            <span className="text-[13px] text-slate-400">die nächsten {plural(naeheTage.length, 'Tag', 'Tage')}</span>
+            <Link href={`/t/${tripId}/tage`} className="ml-auto text-[13px] text-slate-400 underline-offset-2 hover:text-white hover:underline">
               ganzer Plan →
             </Link>
           </div>
@@ -396,8 +396,8 @@ function Unterwegs({ bundle, tripId, open, store, iso, list, days, changes, offe
             })}
           </div>
           {naechsteChange ? (
-            <p className="mt-1.5 px-1 text-[11.5px] text-shu-200/90">
-              🔀 nächster Ortswechsel {fmtDate(naechsteChange.date, { weekday: 'short', day: '2-digit', month: '2-digit' })}: {naechsteChange.from} → {naechsteChange.to}
+            <p className="mt-1.5 px-1 text-[13px] text-shu-200/90">
+              🔀 nächster Ortswechsel {fmtDay(naechsteChange.date)}: {naechsteChange.from} → {naechsteChange.to}
               {naechsteChange.toHotel ? ` · 🏨 ${naechsteChange.toHotel}` : ' · 🏨 noch ohne Bett'}
             </p>
           ) : null}
@@ -405,10 +405,10 @@ function Unterwegs({ bundle, tripId, open, store, iso, list, days, changes, offe
       ) : null}
 
       <div className="flex flex-wrap items-center gap-1.5 px-1 pt-1">
-        <button type="button" className="btn-quiet !px-2.5 !py-1.5 !text-[12.5px]" onClick={() => endTrip(store, bundle, false)}>
+        <button type="button" className="btn-quiet !px-2.5 !py-1.5 !text-[13px]" onClick={() => endTrip(store, bundle, false)}>
           ✕ Reise beenden
         </button>
-        <span className="text-[11.5px] text-slate-500">danach ist wieder die Planung dran</span>
+        <span className="text-[13px] text-slate-400">danach ist wieder die Planung dran</span>
       </div>
 
       <StickyNext place={offset === 0 && verdeckt ? next?.place ?? null : null} visible={offset === 0 && verdeckt && Boolean(next)} onDone={() => next && toggle(next.place)} />

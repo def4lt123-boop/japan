@@ -87,12 +87,12 @@ export default function TripPage() {
                 onClick={f.run}
                 className="flex w-full items-start gap-2 rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2 text-left transition hover:border-white/20 hover:bg-white/[0.05]"
               >
-                <span aria-hidden className="mt-0.5 text-[13px] text-slate-500">
+                <span aria-hidden className="mt-0.5 text-[13px] text-slate-400">
                   ⇩
                 </span>
                 <span className="min-w-0">
                   <span className="block text-[13px] font-medium text-slate-100">{f.label}</span>
-                  <span className="block text-[11.5px] leading-snug text-slate-500">{f.hint}</span>
+                  <span className="block text-[13px] leading-snug text-slate-400">{f.hint}</span>
                 </span>
               </button>
             </li>

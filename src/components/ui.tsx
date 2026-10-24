@@ -4,6 +4,8 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import clsx from 'clsx';
+import { PRIORITY_META } from '../lib/categories';
+import type { Priority } from '../lib/types';
 
 /** useLayoutEffect nur im Browser – beim Server-Rendering würde React sonst warnen */
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
@@ -16,12 +18,12 @@ export function cx(...parts: (string | false | null | undefined)[]) {
 export function Disclosure({ title, children, open = false, hint }: { title: React.ReactNode; children: React.ReactNode; open?: boolean; hint?: React.ReactNode }) {
   return (
     <details open={open} className="group/disclosure rounded-xl border border-white/[0.07] bg-white/[0.02] px-2.5 py-2">
-      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[12.5px] font-medium text-slate-300 [&::-webkit-details-marker]:hidden">
-        <span aria-hidden className="text-[10px] text-slate-500 transition group-open/disclosure:rotate-90">
+      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[13px] font-medium text-slate-300 [&::-webkit-details-marker]:hidden">
+        <span aria-hidden className="mikro text-[10px] text-slate-400 transition group-open/disclosure:rotate-90">
           ▸
         </span>
         {title}
-        {hint ? <span className="font-normal text-slate-500">· {hint}</span> : null}
+        {hint ? <span className="font-normal text-slate-400">· {hint}</span> : null}
       </summary>
       <div className="mt-2.5 space-y-2.5">{children}</div>
     </details>
@@ -34,6 +36,20 @@ export function IconBtn({ children, className, ...rest }: React.ButtonHTMLAttrib
     <button type="button" className={cx('icon-btn', className)} {...rest}>
       {children}
     </button>
+  );
+}
+
+/**
+ * Die Prioritätsstufe, so wie sie an jeder Stelle der Seite dasteht: Symbol und Wort,
+ * gleiche Größe, gleiche Farbe. Nirgends ein Stern allein, nirgends ein Wort ohne Stern.
+ */
+export function PriorityTag({ priority, title, className }: { priority?: Priority | null; title?: string; className?: string }) {
+  const meta = PRIORITY_META[(priority ?? 'soll') as Priority] ?? PRIORITY_META.soll;
+  return (
+    <span className={cx('prio', meta.tone, className)} title={title ?? `Priorität: ${meta.label}`}>
+      <span aria-hidden>{meta.icon}</span>
+      {meta.label}
+    </span>
   );
 }
 
@@ -160,7 +176,7 @@ export function Menu({
             {item.icon ? <span aria-hidden className="mt-px">{item.icon}</span> : null}
             <span className="min-w-0 flex-1">
               <span className="block">{item.label}</span>
-              {item.hint ? <span className="block text-[11px] text-slate-500">{item.hint}</span> : null}
+              {item.hint ? <span className="block text-[13px] text-slate-400">{item.hint}</span> : null}
             </span>
           </Link>
         ) : (
@@ -177,7 +193,7 @@ export function Menu({
             {item.icon ? <span aria-hidden className="mt-px">{item.icon}</span> : null}
             <span className="min-w-0 flex-1">
               <span className="block">{item.label}</span>
-              {item.hint ? <span className="block text-[11px] text-slate-500">{item.hint}</span> : null}
+              {item.hint ? <span className="block text-[13px] text-slate-400">{item.hint}</span> : null}
             </span>
           </button>
         ),
@@ -201,7 +217,7 @@ export function Menu({
       >
         {icon ? <span aria-hidden>{icon}</span> : null}
         {label}
-        <span aria-hidden className={cx('text-[9px] opacity-60 transition', open && 'rotate-180')}>
+        <span aria-hidden className={cx('mikro text-[9px] opacity-60 transition', open && 'rotate-180')}>
           ▾
         </span>
       </button>
@@ -213,7 +229,7 @@ export function Menu({
               <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]" onClick={() => setOpen(false)} aria-hidden />
               <div ref={popRef} role="menu" className="menu-pop menu-sheet">
                 <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-white/20" aria-hidden />
-                {title ? <p className="px-2 pb-1.5 text-[11px] uppercase tracking-[0.12em] text-slate-500">{title}</p> : null}
+                {title ? <p className="px-2 pb-1.5 text-[13px] uppercase tracking-[0.12em] text-slate-400">{title}</p> : null}
                 {rows(true)}
                 <button type="button" className="btn-quiet mt-1.5 w-full justify-center" onClick={() => setOpen(false)}>
                   schließen
@@ -269,7 +285,7 @@ export function SectionTitle({
           {icon ? <span aria-hidden>{icon}</span> : null}
           {title}
         </h2>
-        {hint ? <p className="mt-0.5 text-[12.5px] text-slate-400">{hint}</p> : null}
+        {hint ? <p className="mt-0.5 text-[13px] text-slate-400">{hint}</p> : null}
       </div>
       {right ? <div className="flex flex-wrap items-center gap-1.5">{right}</div> : null}
     </div>
@@ -297,9 +313,9 @@ export function Pill({
 export function Stat({ label, value, hint, tone }: { label: string; value: React.ReactNode; hint?: React.ReactNode; tone?: 'good' | 'warn' | 'bad' }) {
   return (
     <Card className={cx('px-3 py-2.5', tone === 'bad' && 'border-shu-500/40')}>
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</div>
+      <div className="text-[13px] font-semibold uppercase tracking-wider text-slate-400">{label}</div>
       <div className="mt-0.5 text-xl font-semibold leading-tight text-white">{value}</div>
-      {hint ? <div className={cx('mt-0.5 text-[11.5px]', tone === 'bad' ? 'text-shu-300' : tone === 'warn' ? 'text-amber-200/80' : tone === 'good' ? 'text-emerald-200/80' : 'text-slate-400')}>{hint}</div> : null}
+      {hint ? <div className={cx('mt-0.5 text-[13px]', tone === 'bad' ? 'text-shu-300' : tone === 'warn' ? 'text-amber-200/80' : tone === 'good' ? 'text-emerald-200/80' : 'text-slate-400')}>{hint}</div> : null}
     </Card>
   );
 }
@@ -317,7 +333,7 @@ export function Button({
         variant === 'ghost' && 'btn-ghost',
         variant === 'quiet' && 'btn-quiet',
         variant === 'danger' && 'btn bg-red-500/15 text-red-200 ring-1 ring-inset ring-red-500/30 hover:bg-red-500/25',
-        size === 'sm' && '!px-2 !py-1 !text-[12px]',
+        size === 'sm' && '!px-2 !py-1 !text-[13px]',
         className,
       )}
       {...rest}
@@ -330,7 +346,7 @@ export function Field({ label, children, hint, className }: { label: string; chi
     <label className={cx('block', className)}>
       <span className="label">{label}</span>
       {children}
-      {hint ? <span className="mt-1 block text-[11px] text-slate-500">{hint}</span> : null}
+      {hint ? <span className="mt-1 block text-[13px] text-slate-400">{hint}</span> : null}
     </label>
   );
 }
@@ -406,7 +422,7 @@ export function Modal({
         <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-3">
           <div>
             <h3 className="text-[15px] font-semibold text-white">{title}</h3>
-            {subtitle ? <p className="mt-0.5 text-[12px] text-slate-400">{subtitle}</p> : null}
+            {subtitle ? <p className="mt-0.5 text-[13px] text-slate-400">{subtitle}</p> : null}
           </div>
           <Button variant="quiet" size="sm" onClick={onClose} aria-label="Schließen">
             ✕
@@ -423,14 +439,14 @@ export function Empty({ title, hint, action }: { title: string; hint?: string; a
   return (
     <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-8 text-center">
       <p className="text-sm font-medium text-slate-300">{title}</p>
-      {hint ? <p className="mx-auto mt-1 max-w-md text-[12.5px] text-slate-500">{hint}</p> : null}
+      {hint ? <p className="mx-auto mt-1 max-w-md text-[13px] text-slate-400">{hint}</p> : null}
       {action ? <div className="mt-3 flex justify-center">{action}</div> : null}
     </div>
   );
 }
 
 export function Money({ value, className }: { value?: number | null; className?: string }) {
-  if (value === null || value === undefined) return <span className={cx('text-slate-600', className)}>—</span>;
+  if (value === null || value === undefined) return <span className={cx('text-slate-400', className)}>—</span>;
   return (
     <span className={cx('whitespace-nowrap tabular-nums', value === 0 ? 'text-emerald-300/80' : 'text-slate-100', className)}>
       {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 }).format(value)}
@@ -445,7 +461,7 @@ export function LinkTag({ href, children, title }: { href: string; children: Rea
       target="_blank"
       rel="noreferrer noopener"
       title={title}
-      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11.5px] font-medium text-sky-200/90 ring-1 ring-inset ring-sky-400/25 transition hover:bg-sky-400/10 hover:text-white"
+      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[13px] font-medium text-sky-200/90 ring-1 ring-inset ring-sky-400/25 transition hover:bg-sky-400/10 hover:text-white"
     >
       {children}
     </a>

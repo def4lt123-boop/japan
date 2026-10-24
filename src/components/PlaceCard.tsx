@@ -4,9 +4,9 @@ import React, { useState } from 'react';
 import type { Place } from '../lib/types';
 import { useStore } from '../lib/store';
 import { useEditor } from './EditorProvider';
-import { PRIORITY_META, STATUS_META, TICKET_META, categoryMeta, mapsUrl, nextTicket, routeUrl } from '../lib/categories';
-import { fmtDate, knownCity } from '../lib/format';
-import { Card, LinkTag, Menu, Money, Pill, cx } from './ui';
+import { STATUS_META, TICKET_META, categoryMeta, mapsUrl, nextTicket, routeUrl } from '../lib/categories';
+import { fmtDay, knownCity } from '../lib/format';
+import { Card, LinkTag, Menu, Money, Pill, PriorityTag, cx } from './ui';
 import { MapPreview } from './MapPreview';
 import { CategoryDot } from './CategoryDot';
 import { Grip, useDrag } from './TouchDrag';
@@ -53,7 +53,6 @@ export function PlaceCard({
   const { open } = useEditor();
   const drag = useDrag();
   const meta = categoryMeta(place.category);
-  const prio = PRIORITY_META[place.priority] ?? PRIORITY_META.soll;
   const ticket = TICKET_META[place.ticket_status ?? 'unklar'] ?? TICKET_META.unklar;
   const [showMap, setShowMap] = useState(false);
   const done = place.booking_status === 'erledigt';
@@ -72,7 +71,7 @@ export function PlaceCard({
     >
       <div className={cx('flex items-start gap-2.5', dense && 'px-2.5 py-2', !dense && 'px-3.5 py-3')}>
         {draggable && drag ? <Grip grab={drag.grab} id={place.id} label={place.name} className="mt-0.5" /> : null}
-        {nr ? <span className="mt-0.5 w-4 shrink-0 text-right text-[11.5px] tabular-nums text-slate-500" title={`Stelle ${nr}`}>{nr}</span> : null}
+        {nr ? <span className="mt-0.5 w-4 shrink-0 text-right text-[13px] tabular-nums text-slate-400" title={`Stelle ${nr}`}>{nr}</span> : null}
         <CategoryDot category={place.category} size={dense ? 19 : 23} className="mt-px" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
@@ -83,26 +82,18 @@ export function PlaceCard({
             >
               {place.name}
             </button>
-            {place.priority !== 'kann' ? (
-              <span className="text-[11px] text-shu-300" title={`Priorität: ${prio.label}`}>
-                {prio.icon}
-              </span>
-            ) : null}
-            {showDate && place.date ? (
-              <span className="text-[11px] text-slate-400">
-                {fmtDate(place.date, { weekday: 'short', day: '2-digit', month: '2-digit' })}
-              </span>
-            ) : null}
+            <PriorityTag priority={place.priority} />
+            {showDate && place.date ? <span className="text-[13px] text-slate-400">{fmtDay(place.date)}</span> : null}
 
           </div>
 
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-slate-400">
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-slate-400">
             {knownCity(place.city) ? <span className="text-slate-300">{knownCity(place.city)}</span> : null}
             {nr && !showDate ? null : null}
             {place.price_eur !== null && place.price_eur !== undefined ? (
               <span className="text-slate-200">
                 · <Money value={place.price_eur} />
-                {place.price_note ? <span className="text-[11px] text-slate-400"> ({place.price_note})</span> : null}
+                {place.price_note ? <span className="text-[13px] text-slate-400"> ({place.price_note})</span> : null}
               </span>
             ) : place.price_note ? (
               <span className="text-slate-300">· {place.price_note}</span>
@@ -112,7 +103,7 @@ export function PlaceCard({
             </LinkTag>
           </div>
 
-          {place.notes ? <p className="mt-1.5 whitespace-pre-line text-[12.5px] leading-snug text-slate-300/90">{place.notes}</p> : null}
+          {place.notes ? <p className="mt-1.5 whitespace-pre-line text-[13px] leading-snug text-slate-300/90">{place.notes}</p> : null}
 
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <button
@@ -132,22 +123,22 @@ export function PlaceCard({
               <span aria-hidden>{ticket.icon}</span>
               {ticket.short}
             </button>
-            {place.ticket_note ? <span className="text-[11.5px] text-slate-400">{place.ticket_note}</span> : null}
+            {place.ticket_note ? <span className="text-[13px] text-slate-400">{place.ticket_note}</span> : null}
             {place.image_url ? (
-              <a href={place.image_url} target="_blank" rel="noreferrer" className="text-[11.5px] text-slate-400 underline-offset-2 hover:text-white hover:underline">
+              <a href={place.image_url} target="_blank" rel="noreferrer" className="text-[13px] text-slate-400 underline-offset-2 hover:text-white hover:underline">
                 🖼 Bild
               </a>
             ) : null}
           </div>
         </div>
 
-        <div className="no-print flex shrink-0 items-start gap-0.5 opacity-70 transition group-hover:opacity-100">
+        <div className="no-print flex shrink-0 items-start gap-0.5 opacity-70 transition group-hover:opacity-100 [@media(hover:none)]:opacity-100">
           {onUp || onDown ? (
             <span className="mr-0.5 flex flex-col gap-0.5">
-              <button className="icon-btn !h-5 !text-[10px]" title="eine Stelle höher" onClick={onUp} disabled={!onUp}>
+              <button className="icon-btn" title="eine Stelle höher" onClick={onUp} disabled={!onUp}>
                 ▲
               </button>
-              <button className="icon-btn !h-5 !text-[10px]" title="eine Stelle tiefer" onClick={onDown} disabled={!onDown}>
+              <button className="icon-btn" title="eine Stelle tiefer" onClick={onDown} disabled={!onDown}>
                 ▼
               </button>
             </span>

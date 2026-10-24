@@ -99,14 +99,14 @@ function TripTopBar({ tripId }: { tripId: string }) {
           {trip?.name ?? 'Reise'}
           {trip?.archived ? <span className="chip text-slate-300">Referenz · {trip.name.match(/\d{4}/)?.[0] ?? 'Archiv'}</span> : null}
         </h1>
-        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12.5px] text-slate-400">
+        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] text-slate-400">
           {trip?.destination ? <span className="text-slate-300">{trip.destination}</span> : null}
           <span>{fmtRange(trip?.start_date, trip?.end_date)}</span>
-          <span className="text-slate-600">·</span>
+          <span className="text-slate-400">·</span>
           <span className="tabular-nums">{days ? `${plural(days, 'Tag', 'Tage')} · ${plural(bundle.places.length, 'Aktivität', 'Aktivitäten')}` : 'noch kein Zeitraum'}</span>
           {costs.total ? (
             <>
-              <span className="text-slate-600">·</span>
+              <span className="text-slate-400">·</span>
               <span className={cx('tabular-nums', trip?.budget_eur && costs.total > trip.budget_eur ? 'text-shu-300' : 'text-emerald-200/80')}>
                 {fmtMoney(costs.total)}
                 {trip?.budget_eur ? ` / ${fmtMoney(trip.budget_eur)}` : ''}

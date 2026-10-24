@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Disclosure, Field, Modal, Select, TextArea, TextInput, cx } from './ui';
 import { BOOKING_STATUSES, EXPENSE_CATEGORIES, JOURNEY_MODES, PRIORITIES, type Expense, type Hotel, type Journey, type Place, type Trip } from '../lib/types';
-import { PRIORITY_META, STATUS_META, TICKET_META, TICKET_ORDER, mapsUrl } from '../lib/categories';
+import { STATUS_META, TICKET_META, TICKET_ORDER, mapsUrl, priorityLabel } from '../lib/categories';
 import { eachDate, fmtDate, fmtDuration, num, parseDuration, uid } from '../lib/format';
 import { CategoryPicker } from './CategoryPicker';
 import { DateField, DateRangeField } from './dates';
@@ -13,7 +13,7 @@ import { MapPreview } from './MapPreview';
 import { useStore } from '../lib/store';
 
 const statusOptions = BOOKING_STATUSES.map((s) => ({ value: s, label: STATUS_META[s].label }));
-const priorityOptions = PRIORITIES.map((p) => ({ value: p, label: `${PRIORITY_META[p].icon} ${PRIORITY_META[p].label}` }));
+const priorityOptions = PRIORITIES.map((p) => ({ value: p, label: priorityLabel(p) }));
 
 /** Gemeinsame Geo-Komponente: OSM-Suche + Google-Maps-URL einfügen */
 function GeoFields({
@@ -99,8 +99,8 @@ function GeoFields({
   return (
     <Card className="bg-black/20 p-2.5">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Punkt auf der Karte</span>
-        <span className="text-[11.5px] text-slate-400">{lat !== null && lng !== null ? '✓ Punkt gesetzt' : 'noch kein Punkt'}</span>
+        <span className="text-[13px] font-semibold uppercase tracking-wider text-slate-400">Punkt auf der Karte</span>
+        <span className="text-[13px] text-slate-400">{lat !== null && lng !== null ? '✓ Punkt gesetzt' : 'noch kein Punkt'}</span>
       </div>
       <div className="grid gap-2">
         <Field label="Was soll Google Maps zeigen?" className="min-w-0">
@@ -159,18 +159,18 @@ function GeoFields({
             zoom={zoom ?? (lat !== null && lng !== null ? 16 : 13)}
             heading={lat !== null && lng !== null ? 'Kartenpunkt' : 'Suchvorschau'}
           />
-          <p className="mt-1 text-[11px] leading-snug text-slate-500">
+          <p className="mt-1 text-[13px] leading-snug text-slate-400">
             Die Vorschau folgt dem Suchbegriff – bei jedem Tipp, auch bevor etwas gespeichert ist.
           </p>
         </div>
       ) : null}
       {namedBy && onName ? (
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-lg bg-shu-500/10 px-2 py-1 text-[11.5px] text-slate-200 ring-1 ring-inset ring-shu-400/25">
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-lg bg-shu-500/10 px-2 py-1 text-[13px] text-slate-200 ring-1 ring-inset ring-shu-400/25">
           <span>Name aus Google Maps:</span>
           <b className="text-white">{namedBy}</b>
           <button
             type="button"
-            className="btn-quiet !px-1.5 !py-0.5 !text-[11px]"
+            className="btn-quiet !px-1.5 !py-0.5 !text-[13px]"
             onClick={() => {
               onName(namedBy);
               setMsg(`Namen „${namedBy}“ übernommen ✔`);
@@ -179,13 +179,13 @@ function GeoFields({
           >
             übernehmen
           </button>
-          <button type="button" className="text-[11px] text-slate-400 hover:text-white" onClick={() => setNamedBy(null)}>
+          <button type="button" className="text-[13px] text-slate-400 hover:text-white" onClick={() => setNamedBy(null)}>
             egal
           </button>
         </div>
       ) : null}
-      {msg ? <p className="mt-1.5 text-[11.5px] leading-snug text-slate-400">{msg}</p> : null}
-      <p className="mt-1 text-[11px] leading-snug text-slate-500">
+      {msg ? <p className="mt-1.5 text-[13px] leading-snug text-slate-400">{msg}</p> : null}
+      <p className="mt-1 text-[13px] leading-snug text-slate-400">
         So geht’s: bei Google Maps den Ort anklicken, den Link hier einfügen – Punkt und Name wandern in die Aktivität.
       </p>
     </Card>
@@ -235,7 +235,7 @@ function TicketPicker({
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-2">
-      <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{title}</h3>
+      <h3 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-slate-400">{title}</h3>
       {children}
     </section>
   );
@@ -411,7 +411,7 @@ export function PlaceForm({
               ))}
             </div>
           </div>
-          <p className="mt-2 text-[11.5px] leading-snug text-slate-500">
+          <p className="mt-2 text-[13px] leading-snug text-slate-400">
             {draft.date
               ? `Am ${draft.date.split('-').reverse().slice(0, 2).join('.')} stehen ${amTag ? `${amTag} ${amTag === 1 ? 'Punkt' : 'Punkte'} davor` : 'noch keine Punkte'} – die Liste beginnt mit dem, was du zuerst machen willst.`
               : 'Ohne Tag bleibt die Aktivität in der Liste „Noch ohne Tag“ und wartet dort auf ihren Platz.'}

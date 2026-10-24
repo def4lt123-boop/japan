@@ -16,7 +16,7 @@ import { useEditor } from '../../../../components/EditorProvider';
 import { ActivityRow, DayRowHeader } from '../../../../components/ActivityRow';
 import { FilterBar, EMPTY_FILTER, applyFilter, filterActive, type PlaceFilter } from '../../../../components/filters';
 import { Button, Card, Empty, SectionTitle } from '../../../../components/ui';
-import { eachDate, fmtDate, plural } from '../../../../lib/format';
+import { eachDate, plural, fmtDay } from '../../../../lib/format';
 import { assign, dayPlaces } from '../../../../lib/dayplan';
 
 const HINWEIS = 'Was noch keinen Tag hat, steht oben – in der Zeile den Tag wählen oder auf einen Tag ziehen. Punkte am Tag sind die Reihenfolge des Tages.';
@@ -34,7 +34,7 @@ export default function ActivitiesPage() {
   const dayOptions = useMemo(() => {
     const dates = eachDate(bundle.trip?.start_date, bundle.trip?.end_date);
     const extra = Array.from(new Set(bundle.places.map((p) => p.date).filter((d): d is string => Boolean(d)))).filter((d) => !dates.includes(d));
-    return [...dates, ...extra.sort()].map((d) => ({ value: d, label: fmtDate(d, { weekday: 'short', day: '2-digit', month: '2-digit' }) }));
+    return [...dates, ...extra.sort()].map((d) => ({ value: d, label: fmtDay(d) }));
   }, [bundle.trip?.start_date, bundle.trip?.end_date, bundle.places]);
 
   const shown = useMemo(() => applyFilter(bundle.places, filter), [bundle.places, filter]);
@@ -56,7 +56,7 @@ export default function ActivitiesPage() {
         hint={info ? HINWEIS : undefined}
         right={
           <>
-            <span className="text-[11.5px] text-slate-500">
+            <span className="text-[13px] text-slate-400">
               {shown.length} {shown.length === 1 ? 'Punkt' : 'Punkte'} · {placed.length} verteilt
             </span>
             <button
@@ -88,10 +88,10 @@ export default function ActivitiesPage() {
           {open_.length ? (
             <Card className="p-0" data-offen={open_.length}>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-t-lg border-b border-white/[0.07] bg-amber-500/[0.07] px-2.5 py-1.5">
-                <h3 className="text-[12.5px] font-semibold text-amber-100">✨ Noch ohne Tag</h3>
-                <span className="text-[11.5px] text-amber-100/70">{plural(open_.length, 'Punkt', 'Punkte')}</span>
+                <h3 className="text-[13px] font-semibold text-amber-100">✨ Noch ohne Tag</h3>
+                <span className="text-[13px] text-amber-100/70">{plural(open_.length, 'Punkt', 'Punkte')}</span>
                 {open_.length > 6 ? (
-                  <button className="ml-auto text-[11.5px] text-amber-200/90 underline-offset-2 hover:text-white hover:underline" onClick={() => setFolded((f) => ({ ...f, offen: !f.offen }))}>
+                  <button className="ml-auto text-[13px] text-amber-200/90 underline-offset-2 hover:text-white hover:underline" onClick={() => setFolded((f) => ({ ...f, offen: !f.offen }))}>
                     {folded.offen ? 'alle zeigen' : 'einklappen'}
                   </button>
                 ) : null}
@@ -101,7 +101,7 @@ export default function ActivitiesPage() {
                   <ActivityRow key={p.id} place={p} all={bundle.places} dayOptions={dayOptions} tripStart={bundle.trip?.start_date} tripEnd={bundle.trip?.end_date} />
                 ))}
                 {folded.offen && open_.length > 6 ? (
-                  <p className="px-1 text-[11px] text-slate-500">… {open_.length - 6} weitere – „alle zeigen".</p>
+                  <p className="px-1 text-[13px] text-slate-400">… {open_.length - 6} weitere – „alle zeigen".</p>
                 ) : null}
               </div>
             </Card>
@@ -116,7 +116,7 @@ export default function ActivitiesPage() {
                   right={
                     open_.length ? (
                       <button
-                        className="btn-quiet !px-1.5 !py-0.5 !text-[11px]"
+                        className="btn-quiet !px-1.5 !py-0.5 !text-[13px]"
                         title="Obersten Punkt aus der Liste oben ans Ende dieses Tages legen"
                         onClick={() => {
                           const candidate = open_.find((c) => c.city === list[0]?.city) ?? open_[0];
@@ -147,7 +147,7 @@ export default function ActivitiesPage() {
             ))
           ) : (
             <Card className="p-3">
-              <p className="text-[12.5px] text-slate-400">Noch ist nichts an einem Tag – in der Zeile den Tag wählen oder den Punkt auf einen Tag ziehen.</p>
+              <p className="text-[13px] text-slate-400">Noch ist nichts an einem Tag – in der Zeile den Tag wählen oder den Punkt auf einen Tag ziehen.</p>
             </Card>
           )}
         </div>

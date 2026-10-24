@@ -74,12 +74,12 @@ function Calendar({
         <button type="button" className="btn-quiet !px-1.5" onClick={() => onMove(-1)} aria-label="Voriger Monat">
           ‹
         </button>
-        <span className="flex-1 text-center text-[12px] font-semibold text-slate-200">{monthLabel}</span>
+        <span className="flex-1 text-center text-[13px] font-semibold text-slate-200">{monthLabel}</span>
         <button type="button" className="btn-quiet !px-1.5" onClick={() => onMove(1)} aria-label="Nächster Monat">
           ›
         </button>
       </div>
-      <div className="grid grid-cols-7 gap-[2px] text-center text-[9.5px] uppercase text-slate-500">
+      <div className="mikro grid grid-cols-7 gap-[2px] text-center text-[9.5px] uppercase text-slate-400">
         {WD.map((w) => (
           <span key={w}>{w}</span>
         ))}
@@ -98,8 +98,8 @@ function Calendar({
               aria-label={fmtDate(s, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               aria-pressed={isEdge}
               className={cx(
-                'h-[26px] rounded-md text-[11.5px] tabular-nums transition',
-                d.getMonth() !== monthOfCursor && 'text-slate-600',
+                'h-[26px] rounded-md text-[13px] tabular-nums transition',
+                d.getMonth() !== monthOfCursor && 'text-slate-400',
                 inSpan(s) && !isEdge && 'bg-shu-500/[0.18] text-shu-100',
                 isEdge ? 'bg-shu-500 font-semibold text-white' : 'hover:bg-white/[0.09]',
                 s === today() && !isEdge && 'ring-1 ring-inset ring-white/25',
@@ -121,7 +121,7 @@ function Calendar({
           ))}
         </div>
       ) : null}
-      {footer ? <div className="mt-1.5 border-t border-white/[0.07] pt-1.5 text-[11px] text-slate-400">{footer}</div> : null}
+      {footer ? <div className="mt-1.5 border-t border-white/[0.07] pt-1.5 text-[13px] text-slate-400">{footer}</div> : null}
     </div>
   );
 }
@@ -158,7 +158,7 @@ export function DateField({
     <div>
       <div className="mb-1 flex items-baseline justify-between gap-2">
         <span className="label !mb-0">{label}</span>
-        {hint ? <span className="text-[10.5px] text-slate-500">{hint}</span> : null}
+        {hint ? <span className="text-[13px] text-slate-400">{hint}</span> : null}
       </div>
       <div className="flex items-center gap-1">
         <button
@@ -166,7 +166,7 @@ export function DateField({
           onClick={() => setOpen((v) => !v)}
           className={cx(
             'input flex items-center justify-between gap-2 text-left',
-            !value && 'text-slate-500',
+            !value && 'text-slate-400',
             open && 'border-shu-400/50',
           )}
           aria-expanded={open}
@@ -219,7 +219,7 @@ export function DateField({
                   Reiseanfang
                 </button>
               ) : null}
-              <span className="ml-auto text-slate-500">
+              <span className="ml-auto text-slate-400">
                 {tripBounds?.[0] && tripBounds[1] ? `Reise: ${fmtDate(tripBounds[0], { day: '2-digit', month: '2-digit' })}–${fmtDate(tripBounds[1], { day: '2-digit', month: '2-digit' })}` : ''}
               </span>
             </div>
@@ -274,7 +274,7 @@ export function DateRangeField({
     <div>
       <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
         <span className="label !mb-0">{label}</span>
-        <span className={cx('text-[11px]', armed && !end ? 'text-shu-200' : 'text-slate-500')}>
+        <span className={cx('text-[13px]', armed && !end ? 'text-shu-200' : 'text-slate-400')}>
           {armed && !end ? ' jetzt das Ende klicken' : start && end ? `${count} ${unit === 'Nacht' ? (count === 1 ? 'Nacht' : 'Nächte') : `${count} ${unit}e`}` : (hint ?? 'zwei Tage anklicken')}
         </span>
       </div>
@@ -285,10 +285,10 @@ export function DateRangeField({
             setOpen((v) => !v);
             setArmed(false);
           }}
-          className={cx('input flex items-center justify-between gap-1 text-left min-w-0', !start && 'text-slate-500', armed && 'border-shu-400/60')}
+          className={cx('input flex items-center justify-between gap-1 text-left min-w-0', !start && 'text-slate-400', armed && 'border-shu-400/60')}
         >
           <span className="min-w-0 flex-1 truncate">
-            <span className="mr-1 text-[10px] uppercase tracking-wide text-slate-500">Start</span>
+            <span className="mr-1 text-[13px] uppercase tracking-wide text-slate-400">Start</span>
             {start ? fmtDate(start, { weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit' }) : 'wählen'}
           </span>
           <span aria-hidden className="opacity-60">
@@ -301,10 +301,10 @@ export function DateRangeField({
             setOpen(true);
             setArmed(Boolean(start && !end));
           }}
-          className={cx('input flex items-center justify-between gap-1 text-left min-w-0', !end && 'text-slate-500')}
+          className={cx('input flex items-center justify-between gap-1 text-left min-w-0', !end && 'text-slate-400')}
         >
           <span className="min-w-0 flex-1 truncate">
-            <span className="mr-1 text-[10px] uppercase tracking-wide text-slate-500">Ende</span>
+            <span className="mr-1 text-[13px] uppercase tracking-wide text-slate-400">Ende</span>
             {end ? fmtDate(end, { weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit' }) : armed ? 'Tag wählen …' : 'wählen'}
           </span>
           <span aria-hidden className="opacity-60">
@@ -313,7 +313,7 @@ export function DateRangeField({
         </button>
       </div>
       {start ? (
-        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
+        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[13px] text-slate-400">
           <span className="tabular-nums">
             {fmtDate(start, { day: '2-digit', month: '2-digit', year: 'numeric' })}
             {end ? ` → ${fmtDate(end, { day: '2-digit', month: '2-digit', year: 'numeric' })}` : ''}

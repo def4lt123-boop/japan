@@ -26,7 +26,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </span>
           <span className="leading-tight">
             <span className="block text-[15px] font-semibold tracking-tight text-white">Urlaubsplaner</span>
-            <span className="block text-[11px] text-slate-400">Tage · Betten · Kosten · Karte</span>
+            <span className="block text-[13px] text-slate-400">Tage · Betten · Kosten · Karte</span>
           </span>
         </Link>
 
@@ -65,25 +65,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {hasSupabase ? 'Datenbank verbunden' : 'Nur in diesem Browser'}
           </span>
           {store.ready ? (
-            <span className="text-[11.5px] tabular-nums text-slate-500">
+            <span className="text-[13px] tabular-nums text-slate-400">
               {store.trips.length} Reisen · {store.places.length} Aktivitäten · {store.hotels.length} Unterkünfte
             </span>
           ) : (
-            <span className="text-[11.5px] text-slate-500">lade Daten …</span>
+            <span className="text-[13px] text-slate-400">lade Daten …</span>
           )}
         </div>
       </header>
 
       {!hasSupabase ? (
-        <div className="no-print mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-400/25 bg-amber-500/[0.07] px-3 py-2 text-[12.5px] text-amber-100/90">
+        <div className="no-print mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-400/25 bg-amber-500/[0.07] px-3 py-2 text-[13px] text-amber-100/90">
           <span>💾</span>
           <span className="flex-1">
             <b>Nur in diesem Browser:</b> nichts geteilt, nichts gesichert – Änderungen siehst nur du auf diesem Gerät.
           </span>
-          <button className="btn-ghost !py-1 !text-[12px]" onClick={() => void store.refresh()}>
+          <button className="btn-ghost !py-1 !text-[13px]" onClick={() => void store.refresh()}>
             Neu laden
           </button>
-          <button className="btn-ghost !py-1 !text-[12px]" onClick={() => void store.resetLocalData()}>
+          <button className="btn-ghost !py-1 !text-[13px]" onClick={() => void store.resetLocalData()}>
             Vorlage neu laden
           </button>
         </div>
@@ -101,7 +101,7 @@ function Toast() {
   if (!note) return null;
   return (
     <div className="no-print pointer-events-none fixed inset-x-0 bottom-[calc(1rem+var(--dock,0px))] z-[1100] flex justify-center px-3">
-      <div className="pop-in max-w-2xl rounded-xl border border-white/15 bg-ink-800/95 px-3.5 py-2 text-center text-[12.5px] font-medium text-slate-100 shadow-[0_18px_50px_-20px_rgba(0,0,0,0.9)]">
+      <div className="pop-in max-w-2xl rounded-xl border border-white/15 bg-ink-800/95 px-3.5 py-2 text-center text-[13px] font-medium text-slate-100 shadow-[0_18px_50px_-20px_rgba(0,0,0,0.9)]">
         {note}
       </div>
     </div>
