@@ -347,7 +347,7 @@ async function render(name, Page, tripId) {
     await act(async () => r.unmount());
   }
 
-  // Klick-Test: auf der Tagesseite einen Ort am Tag anlegen -> Modal mit Datum
+  // ＋ am Tag: erst die Ideen als Blech von unten – ein Tipp legt nach unten, die Zeile wird zur Karte
   nav.setPath('/t/trip-2027/tage');
   const TagePage = require('../src/app/t/[tripId]/tage/page.tsx').default;
   const c2 = document.getElementById('root');
@@ -359,19 +359,46 @@ async function render(name, Page, tripId) {
     r2.render(React.createElement(StoreProvider, null, React.createElement(EditorProvider, { tripId: 'trip-2027' }, React.createElement(TagePage))));
   });
   await act(async () => { await new Promise((r) => setTimeout(r, 40)); });
-  const btns = [...c2.querySelectorAll('button')];
-  const addBtn = btns.find((b) => (b.title || '').includes('an diesem Tag anlegen'));
-  let clicked = false;
-  if (addBtn) {
-    await act(async () => { addBtn.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
-    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
-    clicked = /Was ist es\?/.test(c2.textContent || '');
+  const leereZeilen = () => c2.querySelectorAll('[data-leer]').length;
+  const blech = () => dom.window.document.body.querySelector('[data-ideen-sheet]');
+  const ideenImBlech = () => (blech() ? blech().querySelectorAll('[data-idee]').length : -1);
+  const bklick = async (el) => {
+    if (!el) return false;
+    await act(async () => { el.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 40)); });
+    return true;
+  };
+  const kzeile = c2.querySelector('[data-leer]');
+  const ktag = kzeile ? kzeile.id : '';
+  const kzeileText = kzeile ? (kzeile.textContent || '').replace(/\s+/g, ' ').trim() : '';
+  const einzeilig = Boolean(kzeile) && kzeile.tagName === 'DIV' && !kzeile.querySelector('[data-dropindex]') && /frei/.test(kzeileText) && /＋/.test(kzeileText);
+  const bvorher = leereZeilen();
+  await bklick(kzeile && kzeile.querySelector('button.icon-btn'));
+  const bsheet = blech();
+  const bideenVorher = ideenImBlech();
+  const bmitSuche = Boolean(bsheet && bsheet.querySelector('input'));
+  const bmitStadt = Boolean(bsheet && bsheet.querySelector('select'));
+  const bhinlegen = bsheet ? bsheet.querySelector('[data-idee]') : null;
+  const bname = bhinlegen ? (bhinlegen.textContent || '').replace(/\s+/g, ' ').trim() : '';
+  await bklick(bhinlegen);
+  const bkarte = ktag ? c2.querySelector(`[id="${ktag}"]`) : null;
+  const bamTag = bkarte ? bkarte.querySelectorAll('[data-dropindex]').length : 0;
+  const bdanach = leereZeilen();
+  const bideenNachher = ideenImBlech();
+  const legenOk = einzeilig && ktag && bideenVorher > 4 && bamTag === 1 && bdanach === bvorher - 1 && bideenNachher === bideenVorher - 1 && bmitSuche;
+  console.log((legenOk ? '✅' : '❌') + ` ＋ am leeren Tag: Blech mit ${bideenVorher} Ideen (Suche ${bmitSuche ? 'ja' : 'nein'}, Stadt ${bmitStadt ? 'ja' : 'nein'}), ein Tipp → ${bamTag} Punkt und ${bvorher} → ${bdanach} leere Zeilen`);
+  if (!legenOk) {
+    failures.push('Ideen-Blech');
+    console.log('   zeile:', JSON.stringify(kzeileText.slice(0, 70)), 'tag=', ktag, 'einzeilig=', einzeilig, 'amTag=', bamTag, 'ideen=', bideenVorher, '→', bideenNachher);
+    console.log('   idee:', JSON.stringify(bname.slice(0, 50)));
+    clickErr.filter((e) => /Error|not a function|Cannot read/.test(e)).slice(0, 2).forEach((e) => console.log('   ' + e.slice(0, 220)));
   }
-  const dateInputs = [...c2.querySelectorAll('input[type=date]')].map((i) => i.name + '=' + i.value).join(',');
-  const det = c2.querySelector('details');
-  const hasDate = clicked && /2027-[0-9]{2}-[0-9]{2}/.test(dateInputs);
-  console.log((clicked && hasDate ? '✅' : '❌') + ' Klick „Aktivität an diesem Tag anlegen“ öffnet Formular mit vorbelegtem Datum');
-  if (!(clicked && hasDate)) { failures.push('Klick Test'); console.log('   clicked=' + clicked + ' hasDate=' + hasDate); clickErr.filter(e=>/Error|not a function|Cannot read/.test(e)).slice(0,3).forEach(e=>console.log('   '+e.slice(0,240))); }
+  // darunter: neue Aktivität anlegen – das Blech weicht dem Formular, der Tag bleibt vorbelegt
+  await bklick(blech() ? [...blech().querySelectorAll('button')].find((b) => /Neue Aktivität anlegen/.test(b.textContent || '')) : null);
+  const bdate = [...c2.querySelectorAll('input[type=date]')].map((i) => i.name + '=' + i.value).join(',');
+  const banlegenOk = /Was ist es\?/.test(c2.textContent || '') && bdate.includes(ktag) && !blech();
+  console.log((banlegenOk ? '✅' : '❌') + ` „Neue Aktivität anlegen“ im Blech: Formular auf, ${ktag} vorbelegt, Blech zu`);
+  if (!banlegenOk) { failures.push('Anlegen aus dem Blech'); console.log('   daten:', bdate.slice(0, 120), 'blech=', !blech()); }
   console.error = oe2;
   // Die Tages-Aktionen stecken im ⋯-Menü, und das Menü lebt im document.body (Portal)
   const body = dom.window.document.body;
@@ -774,11 +801,14 @@ async function render(name, Page, tripId) {
       await new Promise((r) => setTimeout(r, 60));
     });
     const strips = [...cTage2.querySelectorAll('[data-change]')];
+    // auf dem vollen Tag ist es der Streifen, auf dem leeren der kurze Vermerk in der Zeile
+    const vermerk = [...cTage2.querySelectorAll('[data-leer]')].filter((el) => /🔀/.test(el.textContent || ''));
     const stripOk =
-      strips.length === rows.length &&
+      strips.length + vermerk.length === rows.length &&
       strips.every((el) => el.tagName === 'DIV' && !el.closest('button') && el.querySelectorAll('button').length === 0) &&
-      strips.every((el) => /→/.test(el.textContent || '') && /aus den Betten/.test(el.textContent || ''));
-    console.log((stripOk ? '✅' : '❌') + ` 🔀 Tageskarten: ${strips.length} Streifen, reine Info – nichts anzuklicken`);
+      strips.every((el) => /\u2192/.test(el.textContent || '') && /aus den Betten/.test(el.textContent || '')) &&
+      vermerk.every((el) => !el.querySelector('[data-change]'));
+    console.log((stripOk ? '\u2705' : '\u274c') + ` 🔀 Tageskarten: ${strips.length} Streifen auf vollen Tagen, ${vermerk.length} Kurz-Vermerk auf leeren \u2013 reine Info, nichts anzuklicken`);
     if (!stripOk) failures.push('Ortswechsel-Streifen ohne Dialog');
     await act(async () => rTage2.unmount());
     cTage2.remove();

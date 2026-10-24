@@ -178,6 +178,27 @@ body {
   .menu-pop {
     @apply pop-in absolute right-0 z-50 mt-1 w-60 rounded-xl border border-white/10 bg-ink-800/95 p-1 text-left shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] backdrop-blur;
   }
+  /* ein leerer Tag ist eine Zeile: gleiche Höhe wie die Tages navigation daneben,
+     derselbe Farbrand links wie die Karte, die daraus wird, sobald ein Punkt drinliegt */
+  .day-line {
+    min-height: 38px;
+  }
+  .day-warn {
+    @apply rounded-md bg-shu-500/15 px-1.5 py-0.5 text-[11px] text-shu-50 ring-1 ring-inset ring-shu-400/40 transition hover:bg-shu-500/30;
+  }
+  /* das Ideen-Blech: von unten, mit Sicherheitszone unter dem Fuß */
+  .day-sheet {
+    animation: sheet-up 0.18s ease-out;
+  }
+  .day-sheet .sheet-foot {
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+  @media (min-width: 768px) {
+    .day-sheet .sheet-foot {
+      padding-bottom: 8px;
+    }
+  }
+
   /* die Filterreihe auf dem Handy: eine Zeile, seitlich durchziehbar, ohne Scrollbalken */
   .filter-row {
     scrollbar-width: none;

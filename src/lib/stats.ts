@@ -2,7 +2,7 @@ import type { Trip, TripBundle } from './types';
 
 /** alle Helfer kommen auch mit einer noch unbekannten Reise zurecht */
 export type BundleLike = Omit<TripBundle, 'trip'> & { trip?: Trip };
-import { daysBetween, eachDate } from './format';
+import { daysBetween, eachDate, knownCity } from './format';
 import { byOrder } from './dayplan';
 
 export interface CostSummary {
@@ -128,7 +128,7 @@ export function dayPlan(bundle: BundleLike) {
 
   return all.map((date) => {
     const places = bundle.places.filter((p) => p.date === date).sort(byOrder);
-    const cityList = Array.from(new Set(places.map((p) => p.city).filter(Boolean)));
+    const cityList = Array.from(new Set(places.map((p) => knownCity(p.city)).filter((c): c is string => Boolean(c))));
     const journeys = journeysByDate.get(date) ?? [];
     const hotel = hotelsByCity.get((journeys[0]?.to_city ?? cityList[0] ?? '').toLowerCase()) ?? null;
     return { date, places, count: places.length, cities: cityList, journeys, hotel };

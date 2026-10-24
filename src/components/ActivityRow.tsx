@@ -12,7 +12,7 @@ import React, { useState } from 'react';
 import type { Place } from '../lib/types';
 import { useStore } from '../lib/store';
 import { useEditor } from './EditorProvider';
-import { eachDate, fmtDate, plural } from '../lib/format';
+import { eachDate, fmtDate, knownCity, plural } from '../lib/format';
 import { PRIORITY_META, TICKET_META, categoryMeta, mapsUrl, nextTicket } from '../lib/categories';
 import { assign, dayLabel, dayPlaces, shiftWithin } from '../lib/dayplan';
 import { Menu, Money, Select, cx } from './ui';
@@ -104,7 +104,7 @@ export function ActivityRow({
           </div>
 
           <div className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-[11.5px] text-slate-400">
-            <span>{place.city || '—'}</span>
+            <span>{knownCity(place.city) ?? '—'}</span>
             {place.date ? <span className="text-slate-500">· {dayLabel(place.date)}</span> : null}
             {place.price_eur ? (
               <span className="text-slate-300">

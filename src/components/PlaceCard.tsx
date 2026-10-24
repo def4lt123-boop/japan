@@ -5,7 +5,7 @@ import type { Place } from '../lib/types';
 import { useStore } from '../lib/store';
 import { useEditor } from './EditorProvider';
 import { PRIORITY_META, STATUS_META, TICKET_META, categoryMeta, mapsUrl, nextTicket, routeUrl } from '../lib/categories';
-import { fmtDate } from '../lib/format';
+import { fmtDate, knownCity } from '../lib/format';
 import { Card, LinkTag, Menu, Money, Pill, cx } from './ui';
 import { MapPreview } from './MapPreview';
 import { CategoryDot } from './CategoryDot';
@@ -97,7 +97,7 @@ export function PlaceCard({
           </div>
 
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-slate-400">
-            {place.city ? <span className="text-slate-300">{place.city}</span> : null}
+            {knownCity(place.city) ? <span className="text-slate-300">{knownCity(place.city)}</span> : null}
             {nr && !showDate ? null : null}
             {place.price_eur !== null && place.price_eur !== undefined ? (
               <span className="text-slate-200">

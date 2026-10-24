@@ -1,17 +1,21 @@
 'use client';
 
 /**
- * Der Tagesplan: eine Karte pro Reisetag, darin die Punkte der Reihe nach.
- * Oben die Liste „Noch ohne Tag“. Ziehen legt einen Punkt auf einen Tag,
- * ▲▼ (oder Ziehen auf eine Zeile) ändert die Reihenfolge. Uhrzeiten gibt es nicht.
+ * Der Tagesplan: ein Block pro Reisetag. Ein Tag mit Punkten ist eine Karte, ein leerer
+ * Tag eine Zeile – bei vier Wochen Plan wäre sonst alles nur Scrollen. Ziehen (oder das
+ * ＋ und die Ideen-Liste darunter) legt einen Punkt auf einen Tag, ▲▼ (oder Ziehen auf
+ * eine Zeile) ändert die Reihenfolge. Uhrzeiten gibt es nicht.
+ *
+ * Die Unterkunft steht nicht mehr als Zeile an jedem Tag: ihre Farbe läuft links am
+ * Kartenrand mit, genannt wird sie am Check-in, am Wechseltag und da, wo ein Bett fehlt.
  */
 import React, { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useStore, useTrip } from '../../../../lib/store';
 import { useEditor } from '../../../../components/EditorProvider';
 import { PendingList } from '../../../../components/PendingList';
 import { PlaceCard } from '../../../../components/PlaceCard';
+import { DayPickerSheet } from '../../../../components/DayPickerSheet';
 import { MapPreview, RoutePreview } from '../../../../components/MapPreview';
 import { dayStops, hotelForDay, routeUrl } from '../../../../lib/maps';
 import { assign, dayPlaces, moveToIndex, shiftWithin } from '../../../../lib/dayplan';
@@ -19,10 +23,10 @@ import { Button, Card, Empty, Menu, SectionTitle, cx } from '../../../../compone
 import { dayPlan, nightCoverage } from '../../../../lib/stats';
 import { locusChanges } from '../../../../lib/locus';
 import { ChangeStrip } from '../../../../components/ChangeStrip';
-import { addDays, today } from '../../../../lib/format';
-import { fmtDate, plural } from '../../../../lib/format';
+import { addDays, fmtDate, knownCity, plural, today } from '../../../../lib/format';
 import { tintFor } from '../../../../lib/palette';
 import { TouchDragProvider, type DropZone } from '../../../../components/TouchDrag';
+import type { Place } from '../../../../lib/types';
 
 const MODE_ICON: Record<string, string> = {
   Flug: '✈️',
@@ -35,6 +39,12 @@ const MODE_ICON: Record<string, string> = {
   'zu Fuß': '🚶',
 };
 
+/** links an der Karte läuft die Farbe der Unterkunft mit – das ersetzt die Hotelzeile */
+function randFarbe(night?: { covered: boolean; hotelId: string | null } | null): React.CSSProperties {
+  if (!night?.covered) return { boxShadow: 'inset 4px 0 0 rgba(240, 78, 35, 0.5)' };
+  return { boxShadow: `inset 4px 0 0 ${tintFor(night.hotelId).edge}` };
+}
+
 export default function DaysPage() {
   const params = useParams<{ tripId: string }>();
   const tripId = String(params?.tripId ?? '');
@@ -44,12 +54,14 @@ export default function DaysPage() {
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [insertAt, setInsertAt] = useState<string | null>(null);
   const [mapDay, setMapDay] = useState<string | null>(null);
+  const [pick, setPick] = useState<string | null>(null);
 
   const days = useMemo(() => (bundle.trip ? dayPlan(bundle) : []), [bundle]);
   const pool = bundle.places.filter((p) => !p.date);
   const coverage = new Map(bundle.trip ? nightCoverage(bundle).map((n) => [n.date, n]) : []);
   const dateIndex = new Map(days.map((d, i) => [d.date, i]));
   const changeByDate = new Map(locusChanges(bundle.hotels, days.map((d) => d.date), bundle.journeys).map((c) => [c.date, c]));
+  const checkIn = new Set(bundle.hotels.map((h) => h.check_in).filter(Boolean) as string[]);
   const now = today();
 
   const moveDay = (placeId: string, from: string | null, dir: -1 | 1) => {
@@ -112,161 +124,219 @@ export default function DaysPage() {
     if (id) applyDrop(id, { date, index });
   };
 
+  const zettel = (date: string) => fmtDate(date, { weekday: 'short', day: 'numeric', month: 'long' });
+
+  const bettEintragen = (date: string, city?: string | null) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    open({ kind: 'hotel', defaults: { check_in: date, check_out: addDays(date, 1), city: city ?? undefined } });
+  };
+
   if (!store.ready) return <Card className="p-8 text-center text-sm text-slate-400">lädt …</Card>;
   if (!bundle.trip) return null;
 
   return (
     <TouchDragProvider onDrop={applyDrop}>
-    <div className="space-y-4">
-      <SectionTitle title="Tagesplan" icon="🗓️" hint="Punkte untereinander = die Reihenfolge des Tages · ziehen legt auf einen Tag, auf dem Handy am ⠿ halten und loslassen, ▲▼ rückt um" />
+      <div className="space-y-4">
+        <SectionTitle title="Tagesplan" icon="🗓️" hint="Punkte untereinander = die Reihenfolge des Tages · ziehen legt auf einen Tag (Handy: am ⠿ halten), ▲▼ rückt um, ＋ zeigt die Ideen ohne Tag" />
 
-      <PendingList tripId={tripId} pool={pool} all={bundle.places} days={days.map((d) => ({ date: d.date, cities: d.cities, places: d.places }))} />
+        <PendingList tripId={tripId} pool={pool} all={bundle.places} days={days.map((d) => ({ date: d.date, cities: d.cities, places: d.places }))} />
 
-      <div className="no-print sticky top-0 z-20 -mx-1 overflow-x-auto rounded-xl border border-white/[0.07] bg-ink-950/85 px-1 py-1 backdrop-blur">
-        <div className="flex gap-1">
-          {days.map((d) => (
-            <a
-              key={d.date}
-              href={`#${d.date}`}
-              className={cx('flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] transition hover:bg-white/[0.07]', d.places.length ? 'text-slate-200' : 'text-slate-500')}
-              title={plural(d.places.length, 'Aktivität', 'Aktivitäten')}
-            >
-              <span className={cx('font-semibold', d.date === now && 'text-amber-200')}>{fmtDate(d.date, { weekday: 'short' })}</span>
-              <span className="tabular-nums">{fmtDate(d.date, { day: '2-digit', month: '2-digit' })}</span>
-              <span className={cx('rounded px-1 tabular-nums', d.places.length >= 5 ? 'bg-shu-500/25 text-shu-100' : d.places.length ? 'bg-white/[0.07] text-slate-300' : 'text-slate-600')}>{d.places.length}</span>
-            </a>
-          ))}
-          {pool.length ? (
-            <a href="#pool" className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[12px] text-amber-100 ring-1 ring-inset ring-amber-400/25 hover:bg-amber-500/20">
-              ✨ ohne Tag <span className="tabular-nums">{pool.length}</span>
-            </a>
-          ) : null}
+        <div className="no-print sticky top-0 z-20 -mx-1 overflow-x-auto rounded-xl border border-white/[0.07] bg-ink-950/85 px-1 py-1 backdrop-blur">
+          <div className="flex gap-1">
+            {days.map((d) => (
+              <a
+                key={d.date}
+                href={`#${d.date}`}
+                className={cx('flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] transition hover:bg-white/[0.07]', d.places.length ? 'text-slate-200' : 'text-slate-500')}
+                title={plural(d.places.length, 'Aktivität', 'Aktivitäten')}
+              >
+                <span className={cx('font-semibold', d.date === now && 'text-amber-200')}>{fmtDate(d.date, { weekday: 'short' })}</span>
+                <span className="tabular-nums">{fmtDate(d.date, { day: '2-digit', month: '2-digit' })}</span>
+                <span className={cx('rounded px-1 tabular-nums', d.places.length >= 5 ? 'bg-shu-500/25 text-shu-100' : d.places.length ? 'bg-white/[0.07] text-slate-300' : 'text-slate-600')}>{d.places.length}</span>
+              </a>
+            ))}
+            {pool.length ? (
+              <a href="#pool" className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[12px] text-amber-100 ring-1 ring-inset ring-amber-400/25 hover:bg-amber-500/20">
+                ✨ ohne Tag <span className="tabular-nums">{pool.length}</span>
+              </a>
+            ) : null}
+          </div>
         </div>
-      </div>
 
-      {!days.length ? (
-        <Empty
-          title="Für diese Reise ist noch kein Zeitraum gesetzt"
-          hint="Oben rechts auf ⋯ → „Reise bearbeiten“ und Start-/Enddatum eintragen. Danach erscheinen hier die Tage zum Befüllen."
-          action={
-            <Button variant="primary" onClick={() => open({ kind: 'trip', id: tripId })}>
-              Reise-Datum setzen
-            </Button>
-          }
-        />
-      ) : null}
+        {!days.length ? (
+          <Empty
+            title="Für diese Reise ist noch kein Zeitraum gesetzt"
+            hint="Oben rechts auf ⋯ → „Reise bearbeiten“ und Start-/Enddatum eintragen. Danach erscheinen hier die Tage zum Befüllen."
+            action={
+              <Button variant="primary" onClick={() => open({ kind: 'trip', id: tripId })}>
+                Reise-Datum setzen
+              </Button>
+            }
+          />
+        ) : null}
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
-        {days.map((d) => {
-          const night = coverage.get(d.date);
-          const stops = dayStops(d.places);
-          const hotel = hotelForDay(bundle.hotels, d.date, d.cities[0] ?? d.places[0]?.city ?? null);
-          const origin = hotel ?? stops[0] ?? null;
-          const destination = stops.length > 1 ? stops[stops.length - 1] : stops[0] ?? null;
-          const via = stops.length > 2 ? stops.slice(1, -1) : [];
-          const geordnet = dayPlaces(bundle.places, d.date);
-          return (
-            <Card
-              key={d.date}
-              id={d.date}
-              data-dropzone={d.date}
-              onDragOver={(e) => {
+        <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2 md:gap-2 xl:grid-cols-2 2xl:grid-cols-3">
+          {days.map((d) => {
+            const night = coverage.get(d.date);
+            const stops = dayStops(d.places);
+            const hotel = hotelForDay(bundle.hotels, d.date, d.cities[0] ?? d.places[0]?.city ?? null);
+            const origin = hotel ?? stops[0] ?? null;
+            const destination = stops.length > 1 ? stops[stops.length - 1] : stops[0] ?? null;
+            const via = stops.length > 2 ? stops.slice(1, -1) : [];
+            const geordnet = dayPlaces(bundle.places, d.date);
+            const wechsel = changeByDate.get(d.date);
+            const stadt = knownCity(d.cities[0] ?? hotel?.city ?? null);
+            const ohneBett = !night?.covered;
+            const Zone = {
+              id: d.date,
+              'data-dropzone': d.date,
+              onDragOver: (e: React.DragEvent) => {
                 e.preventDefault();
                 setDropTarget(d.date);
-              }}
-              onDragLeave={() => setDropTarget((cur) => (cur === d.date ? null : cur))}
-              onDrop={drop(d.date)}
-              className={cx('print-block min-w-0 scroll-mt-16 p-0 transition', dropTarget === d.date && 'drop-live', d.date === now && 'ring-1 ring-white/20')}
-            >
-              <header className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-white/[0.06] px-3 py-2">
-                <span className="text-[13.5px] font-semibold text-white">{fmtDate(d.date, { weekday: 'short', day: 'numeric', month: 'long' })}</span>
-                {d.cities.length || d.journeys[0]?.to_city ? <span className="text-[12px] text-slate-400">{d.cities.length ? d.cities.join(' / ') : d.journeys[0]?.to_city}</span> : null}
-                <span className="ml-auto flex items-center gap-1 text-[11.5px] text-slate-400">
-                  <span className={cx('chip', geordnet.length >= 5 ? 'bg-shu-500/20 text-shu-100' : geordnet.length ? 'bg-white/[0.06] text-slate-300' : 'bg-transparent text-slate-500')}>
-                    {geordnet.length ? plural(geordnet.length, 'Punkt', 'Punkte') : 'noch frei'}
-                  </span>
-                  <button className="icon-btn" title="Aktivität an diesem Tag anlegen" onClick={() => open({ kind: 'place', defaults: { date: d.date } })}>
+              },
+              onDragLeave: () => setDropTarget((cur) => (cur === d.date ? null : cur)),
+              onDrop: drop(d.date),
+            };
+
+            // ── der leere Tag: eine Zeile, keine Karte ──────────────────────
+            if (!geordnet.length) {
+              return (
+                <div
+                  key={d.date}
+                  {...Zone}
+                  style={randFarbe(night)}
+                  className={cx(
+                    'day-line flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 rounded-xl border border-white/[0.07] bg-white/[0.02] py-1 pr-1 pl-2.5 transition hover:bg-white/[0.05]',
+                    dropTarget === d.date && 'drop-live',
+                    d.date === now && 'ring-1 ring-white/20',
+                  )}
+                  data-leer={d.date}
+                >
+                  <button className="flex min-w-0 flex-1 items-center gap-x-1.5 text-left" onClick={() => setPick(d.date)} title={`${zettel(d.date)} – Ideen zeigen`} aria-label={`Ideen für ${zettel(d.date)}`}>
+                    <span className={cx('shrink-0 text-[12.5px] font-semibold', d.date === now ? 'text-amber-200' : 'text-slate-200')}>{fmtDate(d.date, { weekday: 'short', day: '2-digit', month: '2-digit' })}</span>
+                    {stadt ? <span aria-hidden className="shrink-0 text-slate-600">·</span> : null}
+                    {stadt ? <span className="min-w-0 truncate text-[12px] text-slate-400">{stadt}</span> : null}
+                    {d.journeys.length ? (
+                      <span className="inline-flex min-w-0 items-center gap-1 text-[11.5px] text-slate-400">
+                        <span aria-hidden>{MODE_ICON[d.journeys[0]?.mode ?? ''] ?? '🧳'}</span>
+                        <span className="min-w-0 truncate">{d.journeys[0]?.title ?? 'Fahrt'}</span>
+                      </span>
+                    ) : null}
+                    {wechsel ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-shu-500/15 px-1.5 text-[11px] text-shu-100" title="Ortswechsel">
+                        <span aria-hidden>🔀</span> {wechsel.to}
+                      </span>
+                    ) : null}
+                    <span className="shrink-0 text-[11.5px] text-slate-500">frei</span>
+                  </button>
+                  {ohneBett ? (
+                    <button className="day-warn shrink-0" onClick={bettEintragen(d.date, stadt)}>
+                      Kein Bett eingetragen
+                    </button>
+                  ) : null}
+                  <button className="icon-btn shrink-0" onClick={() => setPick(d.date)} title={`Was soll an diesem Tag? ${pool.length} Ideen sind noch ohne Tag`}>
                     ＋
                   </button>
-                  <Menu
-                    align="right"
-                    variant="quiet"
-                    icon="⋯"
-                    title="Mehr für diesen Tag"
-                    items={[
-                      ...(stops.length > 1 ? [{ icon: '🧭', label: 'Tag als Route bei Google Maps', hint: `${stops.length} Halte, in der Reihenfolge der Liste`, href: routeUrl({ origin: origin!, destination: destination!, stops: via, mode: 'transit' as const }) }] : []),
-                      ...(stops.length ? [{ icon: '🗺️', label: mapDay === d.date ? 'Karte ausblenden' : 'Karte zu diesem Tag zeigen', run: () => setMapDay((cur) => (cur === d.date ? null : d.date)) }] : []),
-                      ...(pool.length ? [{ icon: '✨', label: 'Obersten Wunsch hierher legen', hint: pool[0].name, run: () => { const candidate = pool.find((x) => x.city === d.places[0]?.city) ?? pool[0]; if (candidate) assign(store, bundle.places, candidate, { date: d.date }); } }] : []),
-                      { icon: '🗂️', label: 'Alle Aktivitäten der Reise', href: `/t/${tripId}/aktivitaeten` },
-                    ]}
-                  />
-                </span>
-              </header>
+                </div>
+              );
+            }
 
-              {changeByDate.get(d.date) ? (
-                <ChangeStrip
-                  date={d.date}
-                  from={changeByDate.get(d.date)!.from ?? '—'}
-                  to={changeByDate.get(d.date)!.to}
-                  fromHotel={changeByDate.get(d.date)!.fromHotel}
-                  toHotel={changeByDate.get(d.date)!.toHotel}
-                  nightsInOld={changeByDate.get(d.date)!.nightsInOld}
-                  journey={changeByDate.get(d.date)!.journey?.title ?? null}
-                />
-              ) : null}
-
-              {(d.journeys.length || night) && (
-                <div className="space-y-1 border-b border-white/[0.07] bg-black/20 px-3 py-2">
-                  {d.journeys.map((j) => (
-                    <button key={j.id} onClick={() => open({ kind: 'journey', id: j.id })} className="flex w-full items-center gap-2 text-left text-[12.5px] text-slate-300 hover:text-white">
-                      <span aria-hidden>{MODE_ICON[j.mode ?? ''] ?? '🧳'}</span>
-                      <span className="min-w-0 flex-1 truncate">
-                        {j.title}
-                        {j.from_city && j.to_city ? ` · ${j.from_city} → ${j.to_city}` : ''}
-                        {j.departure_time ? ` · ${j.departure_time}` : ''}
-                      </span>
-                      {j.price_eur ? <span className="tabular-nums text-slate-400">{j.price_eur} €</span> : null}
+            // ── der gefüllte Tag: die normale Karte ─────────────────────────
+            const bettZeige = checkIn.has(d.date) || Boolean(wechsel) || ohneBett;
+            return (
+              <Card
+                key={d.date}
+                {...Zone}
+                style={randFarbe(night)}
+                className={cx('print-block min-w-0 scroll-mt-16 rounded-xl p-0 transition', dropTarget === d.date && 'drop-live', d.date === now && 'ring-1 ring-white/20')}
+              >
+                <header className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-white/[0.06] px-3 py-2">
+                  <span className="text-[13.5px] font-semibold text-white">{zettel(d.date)}</span>
+                  {stadt || d.journeys[0]?.to_city ? <span className="text-[12px] text-slate-400">{stadt ? d.cities.join(' / ') : d.journeys[0]?.to_city}</span> : null}
+                  <span className="ml-auto flex items-center gap-1 text-[11.5px] text-slate-400">
+                    <span className={cx('chip', geordnet.length >= 5 ? 'bg-shu-500/20 text-shu-100' : 'bg-white/[0.06] text-slate-300')}>{plural(geordnet.length, 'Punkt', 'Punkte')}</span>
+                    <button className="icon-btn" title="Ideen für diesen Tag zeigen" onClick={() => setPick(d.date)}>
+                      ＋
                     </button>
-                  ))}
-                  {night && !night.covered ? (
-                    <p className="flex flex-wrap items-center gap-x-1.5 text-[12px] text-shu-200" title="Diese Nacht ist noch keinem Hotel zugeordnet">
-                      <span className="h-2 w-2 rounded-full bg-shu-400" aria-hidden />
-                      Nacht ohne Bett
-                      <button
-                        className="ml-auto rounded-md bg-shu-500/20 px-1.5 py-0.5 text-[11px] text-shu-50 ring-1 ring-inset ring-shu-400/40 transition hover:bg-shu-500/30"
-                        onClick={() => open({ kind: 'hotel', defaults: { check_in: d.date, check_out: addDays(d.date, 1), city: d.cities[0] ?? undefined } })}
-                      >
-                        ＋ Bett eintragen
-                      </button>
-                    </p>
-                  ) : night?.covered ? (
-                    <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] text-slate-400" title={`Nacht in ${night.hotel}`}>
-                      <span className="h-2 w-2 rounded-full" style={{ background: tintFor(night.hotelId).edge }} aria-hidden />
-                      <span className="min-w-0 flex-1 truncate">{night.hotel}</span>
-                      <button className="ml-auto text-[11px] text-slate-500 underline-offset-2 hover:text-white hover:underline" onClick={() => night.hotelId && open({ kind: 'hotel', id: night.hotelId })}>
-                        ✎ Bett
-                      </button>
-                    </p>
-                  ) : null}
-                </div>
-              )}
+                    <Menu
+                      align="right"
+                      variant="quiet"
+                      icon="⋯"
+                      title="Mehr für diesen Tag"
+                      items={[
+                        ...(stops.length > 1 ? [{ icon: '🧭', label: 'Tag als Route bei Google Maps', hint: `${stops.length} Halte, in der Reihenfolge der Liste`, href: routeUrl({ origin: origin!, destination: destination!, stops: via, mode: 'transit' as const }) }] : []),
+                        ...(stops.length ? [{ icon: '🗺️', label: mapDay === d.date ? 'Karte ausblenden' : 'Karte zu diesem Tag zeigen', run: () => setMapDay((cur) => (cur === d.date ? null : d.date)) }] : []),
+                        { icon: '✨', label: 'Ideen dieses Tags zeigen', hint: pool.length ? `${plural(pool.length, 'Punkt', 'Punkte')} noch ohne Tag` : 'alle Punkte haben schon einen Tag', run: () => setPick(d.date) },
+                        { icon: '🗂️', label: 'Alle Aktivitäten der Reise', href: `/t/${tripId}/aktivitaeten` },
+                      ]}
+                    />
+                  </span>
+                </header>
 
-              {mapDay === d.date && origin && destination ? (
-                <div className="border-b border-white/[0.07] p-2.5">
-                  {stops.length > 1 ? (
-                    <RoutePreview origin={origin} destination={destination} stops={via} mode="transit" height={230} heading={`${fmtDate(d.date, { weekday: 'short', day: '2-digit', month: '2-digit' })} · ${stops.length} Halte`} />
-                  ) : (
-                    <MapPreview place={destination} height={190} heading={destination?.name ?? 'Karte'} />
-                  )}
-                  <p className="mt-1 text-[11px] leading-snug text-slate-500">
-                    {hotel ? `Start an der Unterkunft „${hotel.name}“ · ` : 'Erster Punkt ist der Start · '} die Liste unten ist die Reihenfolge der Stationen.
-                  </p>
-                </div>
-              ) : null}
+                {wechsel ? (
+                  <ChangeStrip
+                    date={d.date}
+                    from={wechsel.from ?? '—'}
+                    to={wechsel.to}
+                    fromHotel={wechsel.fromHotel}
+                    toHotel={wechsel.toHotel}
+                    nightsInOld={wechsel.nightsInOld}
+                    journey={wechsel.journey?.title ?? null}
+                  />
+                ) : null}
 
-              <div className="space-y-2 p-2.5">
-                {geordnet.length ? (
-                  geordnet.map((p, i) => (
+                {d.journeys.length || bettZeige ? (
+                  <div className="space-y-1 border-b border-white/[0.07] bg-black/20 px-3 py-1.5">
+                    {d.journeys.map((j) => (
+                      <button key={j.id} onClick={() => open({ kind: 'journey', id: j.id })} className="flex w-full items-center gap-2 text-left text-[12.5px] text-slate-300 hover:text-white">
+                        <span aria-hidden>{MODE_ICON[j.mode ?? ''] ?? '🧳'}</span>
+                        <span className="min-w-0 flex-1 truncate">
+                          {j.title}
+                          {j.from_city && j.to_city ? ` · ${j.from_city} → ${j.to_city}` : ''}
+                          {j.departure_time ? ` · ${j.departure_time}` : ''}
+                        </span>
+                        {j.price_eur ? <span className="tabular-nums text-slate-400">{j.price_eur} €</span> : null}
+                      </button>
+                    ))}
+                    {ohneBett ? (
+                      <p className="flex flex-wrap items-center gap-x-1.5 text-[12px] text-shu-200">
+                        <span className="h-2 w-2 shrink-0 rounded-full bg-shu-400" aria-hidden />
+                        Kein Bett eingetragen
+                        <button className="day-warn ml-auto" onClick={bettEintragen(d.date, stadt)}>
+                          ＋ eintragen
+                        </button>
+                      </p>
+                    ) : bettZeige ? (
+                      <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] text-slate-400" title={`Nacht in ${night?.hotel}`}>
+                        <span aria-hidden>{checkIn.has(d.date) ? '🛏' : '🛏️'}</span>
+                        <span className="min-w-0 flex-1 truncate">
+                          {checkIn.has(d.date) ? 'Ankunft im ' : ''}
+                          {night?.hotel}
+                          {checkIn.has(d.date) && night?.stays ? ` · ${plural(night.stays, 'Nacht', 'Nächten')}` : ''}
+                        </span>
+                        <button className="ml-auto text-[11px] text-slate-500 underline-offset-2 hover:text-white hover:underline" onClick={() => night?.hotelId && open({ kind: 'hotel', id: night.hotelId })}>
+                          ✎ Bett
+                        </button>
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {mapDay === d.date && origin && destination ? (
+                  <div className="border-b border-white/[0.07] p-2.5">
+                    {stops.length > 1 ? (
+                      <RoutePreview origin={origin} destination={destination} stops={via} mode="transit" height={230} heading={`${fmtDate(d.date, { weekday: 'short', day: '2-digit', month: '2-digit' })} · ${stops.length} Halte`} />
+                    ) : (
+                      <MapPreview place={destination} height={190} heading={destination?.name ?? 'Karte'} />
+                    )}
+                    <p className="mt-1 text-[11px] leading-snug text-slate-500">
+                      {hotel ? `Start an der Unterkunft „${hotel.name}“ · ` : 'Erster Punkt ist der Start · '} die Liste unten ist die Reihenfolge der Stationen.
+                    </p>
+                  </div>
+                ) : null}
+
+                <div className="space-y-2 p-2.5">
+                  {geordnet.map((p, i) => (
                     <div
                       key={p.id}
                       data-dropindex={i}
@@ -286,21 +356,34 @@ export default function DaysPage() {
                         onDown={i < geordnet.length - 1 ? () => shiftWithin(store, bundle.places, p, 1) : undefined}
                       />
                     </div>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-dashed border-white/[0.12] px-3 py-4 text-center text-[12.5px] text-slate-500">
-                    Noch frei – Punkt aus der Leiste hierher ziehen oder{' '}
-                    <button className="text-shu-200 underline-offset-2 hover:underline" onClick={() => open({ kind: 'place', defaults: { date: d.date } })}>
-                      neue Aktivität anlegen
-                    </button>
-                  </div>
-                )}
-              </div>
-            </Card>
-          );
-        })}
+                  ))}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+
+        {pick
+          ? (() => {
+              const tag = pick;
+              const stadt = knownCity(days.find((d) => d.date === tag)?.cities[0] ?? null);
+              return (
+                <DayPickerSheet
+                  date={tag}
+                  label={zettel(tag)}
+                  city={stadt}
+                  pool={pool}
+                  onPick={(p: Place) => assign(store, bundle.places, p, { date: tag })}
+                  onNew={() => {
+                    setPick(null);
+                    open({ kind: 'place', defaults: { date: tag, city: stadt ?? undefined } });
+                  }}
+                  onClose={() => setPick(null)}
+                />
+              );
+            })()
+          : null}
       </div>
-    </div>
     </TouchDragProvider>
   );
 }

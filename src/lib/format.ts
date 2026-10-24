@@ -107,6 +107,15 @@ export function num(v: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Eine Stadt, die man nicht kennt, soll nicht als „Unbekannt“ im Weg stehen –
+ * leer heißt hier: noch nicht eingetragen, also nichts anzeigen (oder den Hinweis).
+ */
+export function knownCity(city?: string | null): string | null {
+  const c = (city ?? '').trim();
+  return !c || c.toLowerCase() === 'unbekannt' ? null : c;
+}
+
 export function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
 }
