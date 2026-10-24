@@ -20,11 +20,11 @@ import { applyCategories } from '../../../lib/categorize';
  * den beiden Knöpfen rechts („Anlegen“ und „⋯“) bzw. auf der Reise-Seite.
  */
 const TABS = [
-  { href: '/tage', label: 'Tage', icon: '🗓️' },
-  { href: '/aktivitaeten', label: 'Aktivitäten', icon: '🗂️' },
-  { href: '/karte', label: 'Karte', icon: '🗺️' },
-  { href: '/reise', label: 'Reise', icon: '🧳' },
-  { href: '/uebersicht', label: 'Übersicht', icon: '📊' },
+  { href: '/tage', label: 'Tage', short: 'Tage', icon: '🗓️' },
+  { href: '/aktivitaeten', label: 'Aktivitäten', short: 'Punkte', icon: '🗂️' },
+  { href: '/karte', label: 'Karte', short: 'Karte', icon: '🗺️' },
+  { href: '/reise', label: 'Reise', short: 'Reise', icon: '🧳' },
+  { href: '/uebersicht', label: 'Übersicht', short: 'Übersicht', icon: '📊' },
 ];
 
 export default function TripLayout({ children }: { children: React.ReactNode }) {
@@ -45,19 +45,20 @@ export default function TripLayout({ children }: { children: React.ReactNode }) 
   }
 
   const live = tripMode(trip) === 'live';
-  const tabs = live ? [{ href: '/heute', label: 'Unterwegs', icon: '🚶' }, ...TABS] : TABS;
+  const tabs = live ? [{ href: '/heute', label: 'Unterwegs', short: 'Heute', icon: '🚶' }, ...TABS] : TABS;
 
   return (
     <EditorProvider tripId={tripId}>
       <div className="mb-4">
         <TripTopBar tripId={tripId} />
-        <nav className="no-print mt-3 flex gap-1 overflow-x-auto rounded-2xl border border-white/[0.06] bg-white/[0.03] p-1">
+        {/* oben auf dem Desktop, unten als Leiste auf dem Handy */}
+        <nav className="tabbar no-print md:mt-3" data-tabbar={tabs.length} aria-label="Bereiche dieser Reise">
           {tabs.map((tab) => (
             <TabLink key={tab.href} tab={tab} tripId={tripId} />
           ))}
         </nav>
       </div>
-      {children}
+      <div className="pb-tabbar">{children}</div>
     </EditorProvider>
   );
 }

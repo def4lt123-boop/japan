@@ -30,13 +30,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </span>
         </Link>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex min-w-0 items-center gap-1.5">
           <label className="sr-only" htmlFor="trip-switch">
             Reise wählen
           </label>
           <select
             id="trip-switch"
-            className="input !w-auto !py-1.5 pr-7 text-[13px] font-medium"
+            className="input !w-auto min-w-0 max-w-[38vw] truncate !py-1.5 pr-7 text-[13px] font-medium"
             value={activeTripId ?? ''}
             onChange={(e) => {
               if (e.target.value) window.location.href = `/t/${e.target.value}`;
@@ -100,7 +100,7 @@ function Toast() {
   const { note } = useStore();
   if (!note) return null;
   return (
-    <div className="no-print pointer-events-none fixed inset-x-0 bottom-4 z-[1100] flex justify-center px-3">
+    <div className="no-print pointer-events-none fixed inset-x-0 bottom-[calc(1rem+var(--dock,0px))] z-[1100] flex justify-center px-3">
       <div className="pop-in max-w-2xl rounded-xl border border-white/15 bg-ink-800/95 px-3.5 py-2 text-center text-[12.5px] font-medium text-slate-100 shadow-[0_18px_50px_-20px_rgba(0,0,0,0.9)]">
         {note}
       </div>

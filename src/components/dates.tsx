@@ -171,7 +171,7 @@ export function DateField({
           )}
           aria-expanded={open}
         >
-          <span className="truncate">{value ? fmtDate(value, { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric' }) : startHint}</span>
+          <span className="min-w-0 flex-1 truncate">{value ? fmtDate(value, { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric' }) : startHint}</span>
           <span aria-hidden className="shrink-0 text-[13px] opacity-60">
             📅
           </span>
@@ -285,9 +285,9 @@ export function DateRangeField({
             setOpen((v) => !v);
             setArmed(false);
           }}
-          className={cx('input flex items-center justify-between gap-1 text-left', !start && 'text-slate-500', armed && 'border-shu-400/60')}
+          className={cx('input flex items-center justify-between gap-1 text-left min-w-0', !start && 'text-slate-500', armed && 'border-shu-400/60')}
         >
-          <span className="truncate">
+          <span className="min-w-0 flex-1 truncate">
             <span className="mr-1 text-[10px] uppercase tracking-wide text-slate-500">Start</span>
             {start ? fmtDate(start, { weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit' }) : 'wählen'}
           </span>
@@ -301,9 +301,9 @@ export function DateRangeField({
             setOpen(true);
             setArmed(Boolean(start && !end));
           }}
-          className={cx('input flex items-center justify-between gap-1 text-left', !end && 'text-slate-500')}
+          className={cx('input flex items-center justify-between gap-1 text-left min-w-0', !end && 'text-slate-500')}
         >
-          <span className="truncate">
+          <span className="min-w-0 flex-1 truncate">
             <span className="mr-1 text-[10px] uppercase tracking-wide text-slate-500">Ende</span>
             {end ? fmtDate(end, { weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit' }) : armed ? 'Tag wählen …' : 'wählen'}
           </span>

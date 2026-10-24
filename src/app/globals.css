@@ -5,6 +5,14 @@
 :root {
   --bg: #0b0e14;
   --line: rgba(255, 255, 255, 0.07);
+  /* Höhe des unteren Reiters auf dem Handy – Desktop: kein Dock */
+  --dock: 0px;
+}
+
+@media (max-width: 767.98px) {
+  :root {
+    --dock: calc(46px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 html,
@@ -12,6 +20,11 @@ body {
   background: var(--bg);
   color: #e8ecf4;
   -webkit-text-size-adjust: 100%;
+  /* auf dem Handy darf die Seite nicht über den Bildschirm hinausragen:
+     seitliches Wischen gibt es hier höchstens innerhalb einer Karte oder Tabelle */
+  max-width: 100%;
+  overflow-x: hidden; /* ältere Safari-Versionen */
+  overflow-x: clip;
 }
 
 body {
@@ -69,6 +82,90 @@ body {
   .tab-active {
     @apply bg-shu-500/15 text-white ring-1 ring-inset ring-shu-400/30;
   }
+
+  /* Reiter: auf dem Handy eine feste Leiste unten (der Daumen liegt ohnehin dort),
+     auf dem Desktop der Streifen oben. Ein Element, zwei Zustände – damit die
+     Reihenfolge der Bereiche dieselbe bleibt. */
+  .tabbar {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 45;
+    display: grid;
+    /* jede Spalte gleich breit und schrumpfbar – so passen alle Reiter nebeneinander,
+       ohne seitliches Scrollen und ohne dass einer den andern aus dem Bild schiebt */
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 2px;
+    padding: 3px 3px calc(3px + env(safe-area-inset-bottom, 0px));
+    background: rgba(11, 13, 18, 0.97);
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow: 0 -14px 34px -20px rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(10px);
+  }
+  .tabbar > a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    min-width: 0;
+    padding: 4px 1px 3px;
+    font-size: 9.5px;
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
+  }
+  .tabbar > a > [aria-hidden] {
+    font-size: 17px;
+    line-height: 1.1;
+  }
+  .tab-label-short {
+    overflow-wrap: anywhere;
+  }
+  .tab-label-full {
+    display: none;
+  }
+  /* der Inhalt muss über der Leiste enden, sonst liegt sie auf dem letzten Knopf –
+     die Grundbreite davon hat die Hülle schon (pb-16), hier kommt nur die Sicherheitzone dazu */
+  .pb-tabbar {
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 768px) {
+    .tabbar {
+      position: static;
+      display: flex;
+      inset: auto;
+      z-index: auto;
+      gap: 4px;
+      overflow-x: auto;
+      padding: 4px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      box-shadow: none;
+      backdrop-filter: none;
+    }
+    .tabbar > a {
+      flex-direction: row;
+      gap: 6px;
+      padding: 8px 12px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .tabbar > a > [aria-hidden] {
+      font-size: inherit;
+    }
+    .tab-label-short {
+      display: none;
+    }
+    .tab-label-full {
+      display: inline;
+    }
+    .pb-tabbar {
+      padding-bottom: 0;
+    }
+  }
   .seg {
     @apply inline-flex items-center gap-0.5 rounded-xl bg-white/[0.045] p-0.5;
   }
@@ -82,7 +179,8 @@ body {
     @apply pop-in absolute right-0 z-50 mt-1 w-60 rounded-xl border border-white/10 bg-ink-800/95 p-1 text-left shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] backdrop-blur;
   }
   .menu-sheet {
-    @apply fixed inset-x-2 bottom-2 z-50 mx-auto max-h-[72vh] w-auto max-w-lg overflow-y-auto rounded-2xl p-2;
+    @apply fixed inset-x-2 z-50 mx-auto max-h-[72vh] w-auto max-w-lg overflow-y-auto rounded-2xl p-2;
+    bottom: calc(6px + var(--dock, 0px));
     animation: sheet-up 0.18s ease-out;
   }
   @keyframes sheet-up {
@@ -573,7 +671,9 @@ a {
   margin-inline: auto;
   width: 100%;
   max-width: 36rem;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  bottom: var(--dock, 0px);
+  /* die Sicherheitszone steckt schon im Dock – hier nicht noch einmal */
+  padding: 10px 12px;
   opacity: 0;
   transform: translateY(130%);
   pointer-events: none;
@@ -711,6 +811,10 @@ a {
   .sticky-next,
   .trip-seg {
     display: none !important;
+  }
+  /* der Platz für die untere Reiterleiste gehört nicht aufs Papier */
+  .pb-tabbar {
+    padding-bottom: 0;
   }
 }
 

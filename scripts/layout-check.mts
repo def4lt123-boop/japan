@@ -47,3 +47,147 @@ const high = placeMenu({ top: 90, bottom: 122, left: 250, right: 342 }, 1280, 90
 assert.ok(high.top > 122, 'Menü müsste nach unten aufgehen');
 
 console.log(`🎉 Menü-Position passt – ${checks} Kombinationen aus Gerät, Knopf und Menülänge ( Handy ↔ Desktop )`);
+
+/* ── 2 · untere Reiterleiste: jeder Reiter muss in eine Zeile passen ──────
+   jsdom kann kein Layout, also wird hier gerechnet: die Leiste ist ein Raster aus
+   gleich breiten, schrumpfbaren Spalten. Was nicht passt, fällt raus – deshalb wird
+   für jedes Gerät und jede Reiterzahl nachgemessen. Die Zahlen sind dieselben wie in
+   `.tabbar` (src/app/globals.css). */
+import { readdirSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const quelltext = (rel: string) => readFileSync(path.join(ROOT, rel), 'utf8');
+
+const LEISTE = {
+  rand: 3, // padding der Leiste oben/unten
+  spalt: 2, // Abstand zwischen zwei Reitern
+  polster: 1, // waagrechtes Innenpolster eines Reiters
+  polsterH: 4 + 3, // senkrechtes Innenpolster
+  zeilenabstand: 1,
+  icon: 17,
+  iconHoehe: 1.1,
+  schrift: 9.5,
+  zeile: 1.15,
+  zeichen: 0.56, // durchschnittliche Breite eines Zeichens bei dieser Schriftgröße
+};
+
+const layoutSrc = quelltext('src/app/t/[tripId]/layout.tsx');
+const tabsSrc = quelltext('src/app/t/[tripId]/tabs.tsx');
+const css = quelltext('src/app/globals.css');
+
+const reiter = [...layoutSrc.matchAll(/\{\s*href:\s*'\/[a-z]+',\s*label:\s*'([^']+)',\s*short:\s*'([^']+)',\s*icon:/g)].map((m) => ({ label: m[1], short: m[2] }));
+assert.ok(reiter.length >= 6, `erwartet mindestens 6 Reiter (fünf zu planen + unterwegs), gefunden: ${reiter.length}`);
+assert.ok(
+  reiter.every((r) => r.short.length <= r.label.length),
+  `ein kurzes Label muss kürzer sein als der volle Name: ${reiter.map((r) => `${r.short}/${r.label}`).join(', ')}`,
+);
+const kurzs = reiter.map((r) => r.short);
+
+const hoehe =
+  LEISTE.rand * 2 + LEISTE.polsterH + LEISTE.icon * LEISTE.iconHoehe + LEISTE.zeilenabstand + LEISTE.schrift * LEISTE.zeile;
+assert.ok(hoehe <= 46, `die Leiste ist ${hoehe.toFixed(1)}px hoch, reserviert sind 46px – Menü und «als nächstes» rutschen drunter`);
+
+const gerate: [string, number][] = [
+  ['kleines Android', 320],
+  ['Android', 360],
+  ['iPhone SE', 375],
+  ['iPhone 14', 390],
+  ['iPhone Max', 430],
+];
+let leser = 0;
+let engsteSpalte = Infinity;
+let engstesGerat = '';
+let breitestesWort = '';
+let breitestesZeile = 0;
+for (const [gerat, vw] of gerate) {
+  for (const anzahl of [5, 6]) {
+    const spalte = (vw - LEISTE.rand * 2 - (anzahl - 1) * LEISTE.spalt) / anzahl;
+    const platz = spalte - LEISTE.polster * 2;
+    for (const k of kurzs) {
+      const braucht = k.length * LEISTE.schrift * LEISTE.zeichen;
+      assert.ok(
+        braucht <= platz,
+        `${gerat} · ${anzahl} Reiter: „${k}" braucht ${braucht.toFixed(1)}px, die Spalte ist nur ${platz.toFixed(1)}px – ein Reiter fällt aus der Leiste`,
+      );
+      leser += 1;
+      if (platz < engsteSpalte) {
+        engsteSpalte = platz;
+        engstesGerat = `${gerat} · ${anzahl} Reiter`;
+      }
+      if (braucht > breitestesZeile) {
+        breitestesZeile = braucht;
+        breitestesWort = k;
+      }
+    }
+  }
+}
+console.log(`🎉 Reiterleiste – ${leser} Kurzlabels passen, engste Spalte ${engsteSpalte.toFixed(1)}px (${engstesGerat}), längstes Wort „${breitestesWort}" ${breitestesZeile.toFixed(1)}px`);
+
+// die Leiste muss unten feststehen, gleiche Spalten haben und auf dem Desktop wieder oben liegen
+assert.ok(/\.tabbar\s*\{[^}]*position:\s*fixed/.test(css), '.tabbar muss auf dem Handy unten feststehen');
+assert.ok(/grid-auto-columns:\s*minmax\(0,\s*1fr\)/.test(css), 'gleiche, schrumpfbare Spalten – sonst schiebt ein Reiter den nächsten raus');
+assert.ok(/\.tabbar > a\s*\{[^}]*white-space:\s*normal/.test(css), 'Reiterbeschriftung muss umbrechen können');
+assert.ok(/@media \(min-width: 768px\)[\s\S]*?\.tabbar\s*\{[^}]*position:\s*static/.test(css), 'ab Tabletgröße gehört die Leiste wieder nach oben');
+assert.ok(/\.pb-tabbar\s*\{[^}]*env\(safe-area-inset-bottom/.test(css), 'der Inhalt muss die Sicherheitszone unter der Leiste freihalten');
+assert.ok(/\.menu-sheet\s*\{[^}]*bottom:\s*calc\([^)]*var\(--dock/.test(css), 'das Menü muss über der Leiste aufgehen, nie dahinter');
+assert.ok(/\.sticky-next\s*\{[^}]*bottom:\s*var\(--dock/.test(css), 'die «als nächstes»-Leiste darf nicht unter der Reiterleiste liegen');
+assert.ok(/data-tabbar=\{tabs\.length\}/.test(layoutSrc), 'die Leiste muss ihre Reiterzahl mitteilen');
+assert.ok(/className="pb-tabbar"/.test(layoutSrc), 'den Inhalt unter der Leiste muss man erreichen können');
+assert.ok(tabsSrc.includes('tab-label-short') && tabsSrc.includes('tab-label-full'), 'Reiter brauchen kurzes (Handy) und volles (Desktop) Label');
+assert.ok(/\.tabbar > a > \[aria-hidden\]\s*\{[^}]*font-size:\s*17px/.test(css), 'auf der unteren Leiste gehört das Icon über das Wort');
+
+/* ── 3 · Quellenprüfung: die Muster, die seitlich rausgewachsen sind ──────
+   Kein Browser hier, also wird der Quelltext selbst gelesen. Die drei Muster sind
+   die, die auf dem Handy wirklich über den Rand gewachsen sind. */
+function quellen(ordner: string): string[] {
+  const out: string[] = [];
+  for (const eintrag of readdirSync(path.join(ROOT, ordner), { withFileTypes: true })) {
+    const rel = `${ordner}/${eintrag.name}`;
+    if (eintrag.isDirectory()) out.push(...quellen(rel));
+    else if (/\.(tsx|ts)$/.test(eintrag.name)) out.push(rel);
+  }
+  return out.sort();
+}
+
+const dateien = quellen('src');
+let geprüfteZeilen = 0;
+const ohneBasisSpalte: string[] = [];
+const tabelleOhneRahmen: string[] = [];
+const abgschnitten: string[] = [];
+const doppelt: string[] = [];
+
+for (const rel of dateien) {
+  const zeilen = quelltext(rel).split('\n');
+  geprüfteZeilen += zeilen.length;
+  zeilen.forEach((zeile, i) => {
+    // ein Raster, das seine Spalten erst ab dem Breakpoint setzt, lässt darunter eine
+    // implizite Auto-Spalte stehen – die wächst mit dem Inhalt über den Bildschirm
+    if (/(className=)(["'`])[^"'`]*(\s|^)grid(\s|$)/.test(zeile) && /(sm|md|lg|xl|2xl):grid-cols-/.test(zeile) && !/(\s|["'`])grid-cols-/.test(zeile)) {
+      ohneBasisSpalte.push(`${rel}:${i + 1}`);
+    }
+    // Tabellen mit nowrap-Zellen brauchen einen eigenen Scrollrahmen, sonst schieben
+    // sie die ganze Seite seitlich weg (auf dem Handy ist der Rahmen zu)
+    if (zeile.includes('<table') && !zeilen.slice(Math.max(0, i - 8), i).join(' ').includes('overflow-x-auto')) {
+      tabelleOhneRahmen.push(`${rel}:${i + 1}`);
+    }
+    // abgeschnittener Text braucht einen schrumpfbaren Eltern- oder sich selbst –
+    // ohne min-w-0 schiebt er den Nachbar-Knopf aus dem Bild
+    if (/className=\{?[cx]*\(?["'`][^"'`]*\btruncate\b/.test(zeile)) {
+      const umgebung = [zeile, ...zeilen.slice(Math.max(0, i - 4), i)];
+      if (!umgebung.some((z) => /min-w-0|max-w-|w-\[\d+px\]|overflow-hidden|grid-cols-\[|minmax\(0/.test(z))) abgschnitten.push(`${rel}:${i + 1}`);
+    }
+    // "{x.length} … {plural(x.length, …)" schreibt dieselbe Zahl zweimal hin
+    const d = /\{([^{}]+)\} \{plural\(([^,]+),/.exec(zeile);
+    if (d && d[1].trim() === d[2].trim()) doppelt.push(`${rel}:${i + 1} „${d[1].trim()}"`);
+  });
+}
+
+assert.ok(!ohneBasisSpalte.length, `Raster ohne Spaltenvorgabe für das Handy (wächst seitlich raus): ${ohneBasisSpalte.join(', ')}`);
+assert.ok(!tabelleOhneRahmen.length, `Tabelle ohne Scrollrahmen (schiebt die Seite seitlich weg): ${tabelleOhneRahmen.join(', ')}`);
+assert.ok(!abgschnitten.length, `abgeschnittener Text ohne min-w-0 (drückt den Nachbar-Knopf aus dem Bild): ${abgschnitten.join(', ')}`);
+assert.ok(!doppelt.length, `dieselbe Zahl zweimal im Satz: ${doppelt.join(', ')}`);
+console.log(
+  `🎉 Bildschirmbreite hält – ${dateien.length} Dateien (${geprüfteZeilen} Zeilen): jedes Raster mit Basis-Spalte, jede Tabelle im Scrollrahmen, kein abgeschnittener Text ohne min-w-0, keine Zahl doppelt`,
+);

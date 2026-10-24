@@ -358,7 +358,7 @@ export function PlaceForm({
           <Field label="Was ist es? *">
             <TextInput id="place-name-input" value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="z. B. Nara-Park" />
           </Field>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Field label="Stadt">
               <TextInput list="city-list" value={draft.city} onChange={(e) => set({ city: e.target.value })} placeholder="Nara" />
               <datalist id="city-list">
@@ -381,7 +381,7 @@ export function PlaceForm({
         </Group>
 
         <Group title="Wann">
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <DateField
               name="date"
               label="An welchem Tag?"
@@ -419,12 +419,12 @@ export function PlaceForm({
         </Group>
 
         <Group title="Ticket & Preis">
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div>
               <span className="label">Ticket</span>
               <TicketPicker value={draft.ticket_status} note={draft.ticket_note} onChange={(patch) => set(patch)} />
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Field label="Preis in € (gesamt)">
                 <TextInput type="number" step="0.01" min="0" value={draft.price_eur ?? ''} onChange={(e) => set({ price_eur: num(e.target.value) })} placeholder="16,00" />
               </Field>
@@ -441,7 +441,7 @@ export function PlaceForm({
               </Field>
             </div>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Field label="Preis-Hinweis">
               <TextInput value={draft.price_note ?? ''} onChange={(e) => set({ price_note: e.target.value })} placeholder="online günstiger / 2 Personen" />
             </Field>
@@ -458,7 +458,7 @@ export function PlaceForm({
         </Group>
 
         <Disclosure title="Noch optional" hint="Links für Buchung und Bild">
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Field label="Link (Buchung / Website)">
               <TextInput value={draft.booking_url ?? ''} onChange={(e) => set({ booking_url: e.target.value })} placeholder="https://…" />
             </Field>
@@ -593,7 +593,7 @@ export function HotelForm({
           tripBounds={bounds}
           hint="Nächte zählt sich automatisch"
         />
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Field label="Nächte" hint={draft.check_in && draft.check_out ? 'aus den Daten berechnet' : undefined}>
             <TextInput type="number" min="0" value={draft.nights ?? ''} onChange={(e) => set({ nights: num(e.target.value) })} />
           </Field>
@@ -604,7 +604,7 @@ export function HotelForm({
             <TextInput value={draft.city} onChange={(e) => set({ city: e.target.value })} placeholder="Tokio" />
           </Field>
         </div>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Field label="Preis gesamt (€)" hint="Zimmer, alle Personen, alle Nächte">
             <TextInput type="number" step="0.01" min="0" value={draft.price_total_eur ?? ''} onChange={(e) => set({ price_total_eur: num(e.target.value) })} />
           </Field>
@@ -723,7 +723,7 @@ export function JourneyForm({
           tripBounds={bounds}
           hint="ein Klick = Abflug, zweiter Klick = Ankunft oder Rückflug"
         />
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Field label="Von">
             <TextInput value={draft.from_city ?? ''} onChange={(e) => set({ from_city: e.target.value })} placeholder="Tokio" />
           </Field>
@@ -734,7 +734,7 @@ export function JourneyForm({
             <Select allowEmpty options={JOURNEY_MODES} value={draft.mode ?? ''} onChange={(e) => set({ mode: e.target.value || null })} emptyLabel="—" />
           </Field>
         </div>
-        <div className="grid gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
           <Field label="Abflug">
             <TextInput type="time" value={draft.departure_time ?? ''} onChange={(e) => set({ departure_time: e.target.value || null })} />
           </Field>
@@ -836,7 +836,7 @@ export function ExpenseForm({
             <TextInput type="number" step="0.01" value={draft.amount_eur ?? ''} onChange={(e) => set({ amount_eur: num(e.target.value) ?? 0 })} />
           </Field>
         </div>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Field label="Kategorie">
             <Select options={EXPENSE_CATEGORIES} value={draft.category} onChange={(e) => set({ category: e.target.value })} />
           </Field>
@@ -925,7 +925,7 @@ export function TripForm({ value, onSubmit, onCancel, onDelete }: { value?: Part
           unit="Nacht"
           hint="erster Klick = Anreise, zweiter Klick = Abreise"
         />
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Field label="Personen">
             <TextInput type="number" min="1" value={draft.travelers} onChange={(e) => set({ travelers: num(e.target.value) ?? 1 })} />
           </Field>

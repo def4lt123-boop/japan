@@ -235,7 +235,7 @@ export default function PrintPage() {
                   {plural(pool.length, 'Wunsch', 'Wünsche')} – zum Ankreuzen unterwegs
                 </span>
               </header>
-              <ul className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+              <ul className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
                 {pool.map((p) => (
                   <li key={p.id} className="flex items-baseline gap-2 text-[12px]">
                     <span aria-hidden className="inline-block h-3 w-3 shrink-0 translate-y-0.5 border border-neutral-400" />

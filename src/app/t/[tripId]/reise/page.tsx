@@ -80,7 +80,7 @@ export default function TripPage() {
 
       <Card id="export" className="scroll-mt-24 p-4">
         <SectionTitle title="Dateien" icon="⇩" hint="Zum Weitergeben, für Google Maps oder als Sicherung – die App bleibt das Original." />
-        <ul className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
           {files.map((f) => (
             <li key={f.label}>
               <button

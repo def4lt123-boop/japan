@@ -156,7 +156,7 @@ export default function DaysPage() {
         />
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
         {days.map((d) => {
           const night = coverage.get(d.date);
           const stops = dayStops(d.places);
@@ -176,7 +176,7 @@ export default function DaysPage() {
               }}
               onDragLeave={() => setDropTarget((cur) => (cur === d.date ? null : cur))}
               onDrop={drop(d.date)}
-              className={cx('print-block scroll-mt-16 p-0 transition', dropTarget === d.date && 'drop-live', d.date === now && 'ring-1 ring-white/20')}
+              className={cx('print-block min-w-0 scroll-mt-16 p-0 transition', dropTarget === d.date && 'drop-live', d.date === now && 'ring-1 ring-white/20')}
             >
               <header className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-white/[0.06] px-3 py-2">
                 <span className="text-[13.5px] font-semibold text-white">{fmtDate(d.date, { weekday: 'short', day: 'numeric', month: 'long' })}</span>
@@ -240,9 +240,9 @@ export default function DaysPage() {
                       </button>
                     </p>
                   ) : night?.covered ? (
-                    <p className="flex items-center gap-1.5 text-[12px] text-slate-400" title={`Nacht in ${night.hotel}`}>
+                    <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] text-slate-400" title={`Nacht in ${night.hotel}`}>
                       <span className="h-2 w-2 rounded-full" style={{ background: tintFor(night.hotelId).edge }} aria-hidden />
-                      <span className="truncate">{night.hotel}</span>
+                      <span className="min-w-0 flex-1 truncate">{night.hotel}</span>
                       <button className="ml-auto text-[11px] text-slate-500 underline-offset-2 hover:text-white hover:underline" onClick={() => night.hotelId && open({ kind: 'hotel', id: night.hotelId })}>
                         ✎ Bett
                       </button>

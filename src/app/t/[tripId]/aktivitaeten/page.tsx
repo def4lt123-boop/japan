@@ -78,7 +78,7 @@ export default function ActivitiesPage() {
 
       <p className="-mt-1 text-[11.5px] text-slate-500">
         {open_.length ? <>{open_.length} ohne Tag · warten oben auf ihren Platz · </> : 'jeder Punkt hat einen Tag · '}
-        {placed.length} platziert auf {byDay.length} {plural(byDay.length, 'Tag', 'Tagen')}
+        {placed.length} platziert auf {plural(byDay.length, 'Tag', 'Tagen')}
       </p>
 
       {!shown.length ? (

@@ -75,7 +75,7 @@ export function TripRibbon({ tripId, cells, stays }: { tripId: string; cells: Da
         <div className="grid gap-[3px]" style={{ gridTemplateColumns: `148px repeat(${n}, minmax(27px, 1fr))`, minWidth: 148 + n * 27 }}>
           {/* Kopf: Tage */}
           <div className="flex items-end gap-1 pb-1 pl-1 text-[10.5px] font-semibold uppercase tracking-wider text-slate-500" style={{ gridRow: 1, gridColumn: 1 }}>
-            <span className="truncate normal-case tracking-normal text-slate-400">
+            <span className="min-w-0 truncate normal-case tracking-normal text-slate-400">
               {fmtDate(cells[0].date, { day: '2-digit', month: '2-digit' })} – {fmtDate(cells[n - 1].date, { day: '2-digit', month: '2-digit', year: 'numeric' })}
             </span>
           </div>
@@ -254,7 +254,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
       ) : !shown.length ? (
         <Empty title="Kein Tag mit Lücken 🎉" hint="Jeder Tag hat ein Bett und Programm. Nimm die Ansicht raus, um alles zu sehen." action={<Button size="sm" onClick={() => setOnlyGaps(false)}>alle Tage zeigen</Button>} />
       ) : (
-        <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {shown.map((c) => {
             const hasRoom = c.empty || c.load < 0.75;
             const matching = pool.filter((p) => c.city && norm(p.city) === norm(c.city));
@@ -271,7 +271,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
                 onDragLeave={() => setDragOver((cur) => (cur === c.date ? null : cur))}
                 onDrop={drop(c.date)}
                 className={cx(
-                  'print-block scroll-mt-24 rounded-xl border bg-black/[0.18] p-2.5 transition',
+                  'print-block min-w-0 scroll-mt-24 rounded-xl border bg-black/[0.18] p-2.5 transition',
                   c.nightGap ? 'border-shu-400/40' : c.empty ? 'border-dashed border-white/[0.14]' : 'border-white/[0.08]',
                   dragOver === c.date && 'drop-live',
                 )}
@@ -316,7 +316,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
                 </div>
 
                 {/* Bett */}
-                <p className={cx('mt-1.5 flex items-center gap-1 truncate text-[11.5px]', c.nightGap ? 'text-shu-200' : 'text-slate-400')}>
+                <p className={cx('mt-1.5 flex min-w-0 items-center gap-1 truncate text-[11.5px]', c.nightGap ? 'text-shu-200' : 'text-slate-400')}>
                   {c.nightGap ? (
                     <>
                       <span aria-hidden>⚠️</span> Nacht ohne Unterkunft
@@ -324,7 +324,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
                   ) : c.hotel ? (
                     <>
                       <span aria-hidden>🛏</span>
-                      <span className="truncate">{c.hotel.name}</span>
+                      <span className="min-w-0 truncate">{c.hotel.name}</span>
                       {c.checkOut ? <span className="text-slate-600">· Check-out</span> : null}
                     </>
                   ) : (
@@ -583,7 +583,7 @@ export function CapacityPanel({
           </div>
         ) : null}
 
-        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
           <div>
             <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Wo noch Platz ist</p>
             <ul className="space-y-1">

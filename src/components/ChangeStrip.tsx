@@ -31,7 +31,7 @@ export function ChangeStrip({
       title={`Erkannt aus den Unterkünften: wer in der Nacht vom ${fmtDate(date, { day: '2-digit', month: '2-digit' })} wo schläft.`}
     >
       <span aria-hidden>🔀</span>
-      <span className="min-w-0">
+      <span className="min-w-0 flex-1 basis-[9rem] break-words">
         <span className="font-medium">
           {from} → {to}
         </span>
@@ -44,7 +44,7 @@ export function ChangeStrip({
         {nightsInOld ? <span className="text-slate-500"> · {plural(nightsInOld, 'Nacht', 'Nächte')} in {from}</span> : null}
         {journey ? <span className="text-slate-500"> · 🚄 {journey}</span> : null}
       </span>
-      <span className="ml-auto shrink-0 text-[10.5px] uppercase tracking-wide text-slate-500">aus den Betten</span>
+      <span className="ml-auto text-[10.5px] uppercase tracking-wide text-slate-500">aus den Betten</span>
     </div>
   );
 }

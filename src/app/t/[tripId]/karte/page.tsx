@@ -132,7 +132,7 @@ export default function MapPage() {
         }
       />
 
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
         <Card className="overflow-hidden p-0">
           <MapView
             places={visible}

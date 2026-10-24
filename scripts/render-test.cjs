@@ -138,6 +138,13 @@ async function render(name, Page, tripId) {
       console.log(`✅ ${page.name}  (${text.length} Zeichen Text)`);
     }
     errors.filter((e) => /Each child in a list|unique "key"/.test(e)).forEach((e) => warnings.push(`${page.name}: ${e.slice(0, 160)}`));
+    // dieselbe Zahl zweimal im Satz („platziert auf 2 2 Tagen“) – Lesefehler, kein Schmuck
+    const zweimal = /(\d+) \1 (Tag|Tage|Tagen|Nacht|N\u00e4chte|N\u00e4chten|Anteil|Anteile|Punkt|Punkte|Eintrag|Eintr\u00e4ge)\b/.exec(text);
+    if (zweimal) {
+      failures.push(`${page.name}: Zahl doppelt`);
+      console.log(`❌ ${page.name}: „${zweimal[0].trim()}“ – dieselbe Zahl zweimal hintereinander`);
+    }
+
     const tech = /NEXT_PUBLIC[A-Z_]*|https?:\/\/[a-z0-9]+\.supabase\.co|schema\.sql|seed\.sql|anon[- ]?key|google[- ]tabelle|google sheets|excel|spreadsheet|reiseplan/i.exec(text);
     if (tech) techLeaks.push(`${page.name}: „${tech[0]}“`);
 
@@ -194,6 +201,23 @@ async function render(name, Page, tripId) {
   });
   const layoutText = container.textContent || '';
   const tabsOk = /Übersicht/.test(layoutText) && /Aktivitäten/.test(layoutText) && /Reise/.test(layoutText) && /06\.03\./.test(layoutText) && /Anlegen/.test(layoutText) && /⋯/.test(layoutText);
+  // die untere Leiste: ein Fach pro Bereich, kurzes Label fürs Handy, volles fürs Desktop-Menü
+  const dockEl = container.querySelector('nav.tabbar');
+  const dockLinks = dockEl ? [...dockEl.querySelectorAll('a')] : [];
+  const kurz = dockLinks.map((a) => (a.querySelector('.tab-label-full') && (a.querySelector('.tab-label-short').textContent || '')).trim() || (a.textContent || '').trim());
+  const dockOk =
+    Boolean(dockEl) &&
+    dockLinks.length >= 5 &&
+    dockLinks.length <= 6 &&
+    Number(dockEl.getAttribute('data-tabbar')) === dockLinks.length &&
+    dockLinks.every((a) => a.querySelector('.tab-label-short') && a.querySelector('.tab-label-full')) &&
+    kurz.every((v) => v && v.length <= 9) &&
+    Boolean(container.querySelector('.pb-tabbar'));
+  console.log((dockOk ? '✅' : '❌') + ` Reiter als Leiste unten: ${kurz.join(' · ')}`);
+  if (!dockOk) {
+    failures.push('Reiterleiste');
+    console.log('   links=', dockLinks.length, 'labels=', JSON.stringify(kurz), 'pb-tabbar=', Boolean(container.querySelector('.pb-tabbar')));
+  }
   console.log((tabsOk ? '✅' : '❌') + ' Reise-Layout: Tabs + Tagesplan mit Daten');
   if (!tabsOk) {
     failures.push('Layout');

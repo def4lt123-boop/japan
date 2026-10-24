@@ -120,7 +120,7 @@ export default function HotelsPage() {
             }
           />
           <p className="-mt-1 mb-2 text-[11.5px] text-slate-500">
-            Reise {fmtRange(trip.start_date, trip.end_date)} · {coverage.length} {plural(coverage.length, 'Nacht', 'Nächten')} – die Nacht am Abreisetag {trip.end_date ? fmtDate(trip.end_date, { day: '2-digit', month: '2-digit' }) : ''} wird nicht mehr gezählt.
+            Reise {fmtRange(trip.start_date, trip.end_date)} · {plural(coverage.length, 'Nacht', 'Nächten')} – die Nacht am Abreisetag {trip.end_date ? fmtDate(trip.end_date, { day: '2-digit', month: '2-digit' }) : ''} wird nicht mehr gezählt.
           </p>
           <div className="flex flex-wrap gap-1" data-nights={coverage.length}>
             {coverage.map((c, i) => {
@@ -143,7 +143,7 @@ export default function HotelsPage() {
                 >
                   <div className="text-[9.5px] uppercase tracking-wide text-slate-400">{fmtDate(c.date, { weekday: 'narrow' })}</div>
                   <div className={cx('text-[12.5px] font-semibold tabular-nums', c.covered ? 'text-white' : 'text-shu-200')}>{fmtDate(c.date, { day: '2-digit', month: '2-digit' })}</div>
-                  <div className="mt-0.5 truncate text-[8.5px] leading-tight text-slate-400">{c.covered ? (c.hotel ?? '').split(' ')[0] : 'frei'}</div>
+                  <div className="mt-0.5 min-w-0 truncate text-[8.5px] leading-tight text-slate-400">{c.covered ? (c.hotel ?? '').split(' ')[0] : 'frei'}</div>
                 </button>
               );
             })}
@@ -191,7 +191,7 @@ export default function HotelsPage() {
           }
         />
       ) : (
-        <div className="grid gap-3 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {hotels.map((h) => {
             const coveredNights = coverage.filter((c) => c.hotelId === h.id).length;
             const tint = tintFor(h.id);

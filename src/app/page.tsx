@@ -104,7 +104,7 @@ export default function HomePage() {
             </Button>
           </Card>
         ) : (
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {bundles.map((bundle) => (
               <TripCard
                 key={bundle.trip.id}
@@ -172,7 +172,7 @@ export default function HomePage() {
             <Field label="Name der neuen Reise">
               <TextInput value={dupForm.name} onChange={(e) => setDupForm({ ...dupForm, name: e.target.value })} placeholder="Japan 2027" autoFocus />
             </Field>
-            <div className="grid gap-2 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <Field label="Startdatum" hint="Vorbelegt mit +371 Tagen (53 Wochen) → gleiche Wochentage">
                 <TextInput type="date" value={dupForm.start_date} onChange={(e) => setDupForm({ ...dupForm, start_date: e.target.value })} />
               </Field>

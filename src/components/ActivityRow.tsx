@@ -79,7 +79,7 @@ export function ActivityRow({
           <CategoryDot category={place.category} size={dense ? 18 : 21} />
         </span>
 
-        <div className="min-w-[190px] flex-1">
+        <div className="min-w-0 flex-1 basis-[12rem]">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <button
               onClick={() => open({ kind: 'place', id: place.id })}
@@ -125,11 +125,11 @@ export function ActivityRow({
           {!place.date ? <p className="mt-0.5 text-[11px] text-amber-200/80">noch an keinem Tag – rechts einen Tag wählen oder in der Tagesliste nach oben ziehen</p> : null}
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-black/20 px-2 py-1.5 ring-1 ring-inset ring-white/[0.06]">
-          <label className="flex items-center gap-1 text-[11px] text-slate-500">
+        <div className="flex max-w-full flex-wrap items-center justify-end gap-x-2 gap-y-1 rounded-xl bg-black/20 px-2 py-1.5 ring-1 ring-inset ring-white/[0.06]">
+          <label className="flex min-w-0 items-center gap-1 text-[11px] text-slate-500">
             <span aria-hidden>🗓</span>
             <Select
-              className="!w-auto !py-1 !text-[12px]"
+              className="!w-auto min-w-0 max-w-[46vw] !py-1 !text-[12px]"
               allowEmpty
               emptyLabel="kein Tag"
               options={dayOptions}
@@ -142,7 +142,7 @@ export function ActivityRow({
             <CategoryPicker size="sm" value={place.category} used={all.map((x) => x.category)} onChange={(v) => store.patch('places', place.id, { category: v })} />
           </label>
           {place.date ? (
-            <span className="flex items-center gap-0.5">
+            <span className="flex shrink-0 items-center gap-0.5">
               <button className="icon-btn !text-[11px]" title="eine Stelle höher" disabled={stelle <= 1} onClick={() => shiftWithin(store, all, place, -1)}>
                 ▲
               </button>

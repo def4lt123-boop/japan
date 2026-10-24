@@ -373,12 +373,12 @@ export function PlanChip({
         <b className="text-[13px] font-semibold text-white">{label}</b>
         <span className="text-[10.5px] text-slate-400">{fmtDate(date, { day: '2-digit', month: '2-digit' })}</span>
       </span>
-      <span className="mt-1 block truncate text-[11.5px] text-slate-300">{count ? plural(count, 'Punkt', 'Punkte') : 'frei'}</span>
+      <span className="mt-1 block min-w-0 truncate text-[11.5px] text-slate-300">{count ? plural(count, 'Punkt', 'Punkte') : 'frei'}</span>
       <span className="mt-1 flex items-center gap-1 text-[10.5px] text-slate-400">
         <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: color }} aria-hidden />
-        <span className="truncate">{city ?? 'ohne Ort'}</span>
+        <span className="min-w-0 truncate">{city ?? 'ohne Ort'}</span>
       </span>
-      {change ? <span className="mt-1 block truncate text-[10.5px] text-shu-200">🔀 {change.from} → {change.to}</span> : null}
+      {change ? <span className="mt-1 block min-w-0 truncate text-[10.5px] text-shu-200">🔀 {change.from} → {change.to}</span> : null}
       {noBed ? <span className="mt-1 block text-[10.5px] text-amber-200/80">🏨 ohne Bett</span> : null}
     </button>
   );

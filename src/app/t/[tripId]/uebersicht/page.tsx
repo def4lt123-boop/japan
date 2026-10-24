@@ -85,7 +85,7 @@ export default function OverviewPage() {
 
       <DayBoard tripId={tripId} cells={cells} pool={pool} />
 
-      <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <GapPanel tripId={tripId} items={gaps} />
 
         <div className="space-y-4">
@@ -102,7 +102,7 @@ export default function OverviewPage() {
                 }
               />
               <ProgressBar value={costs.total} max={trip.budget_eur} />
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {costs.byCategory.map((c) => (
                   <div key={c.label} className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2">
                     <div className="flex items-baseline justify-between gap-2">
