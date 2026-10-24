@@ -205,14 +205,14 @@ export default function DaysPage() {
                   {...Zone}
                   style={randFarbe(night)}
                   className={cx(
-                    'day-line flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 rounded-xl border border-white/[0.07] bg-white/[0.02] py-1 pr-1 pl-2.5 transition hover:bg-white/[0.05]',
+                    'day-line flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-0.5 transition hover:bg-white/[0.05]',
                     dropTarget === d.date && 'drop-live',
                     d.date === now && 'ring-1 ring-white/20',
                   )}
                   data-leer={d.date}
                 >
                   <button className="flex min-w-0 flex-1 items-center gap-x-1.5 text-left" onClick={() => setPick(d.date)} title={`${zettel(d.date)} – Ideen zeigen`} aria-label={`Ideen für ${zettel(d.date)}`}>
-                    <span className={cx('shrink-0 text-[13px] font-semibold', d.date === now ? 'text-amber-200' : 'text-slate-200')}>{fmtDay(d.date)}</span>
+                    <span className={cx('shrink-0 text-[13.5px] font-semibold tabular-nums', d.date === now ? 'text-amber-200' : 'text-slate-200')}>{fmtDay(d.date)}</span>
                     {stadt ? <span aria-hidden className="shrink-0 text-slate-400">·</span> : null}
                     {stadt ? <span className="min-w-0 truncate text-[13px] text-slate-400">{stadt}</span> : null}
                     {d.journeys.length ? (
@@ -334,7 +334,7 @@ export default function DaysPage() {
                   </div>
                 ) : null}
 
-                <div className="space-y-2 p-2.5">
+                <div className="space-y-2 pt-1 pb-2.5">
                   {geordnet.map((p, i) => (
                     <div
                       key={p.id}
