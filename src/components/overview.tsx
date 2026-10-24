@@ -13,6 +13,7 @@ import { useEditor } from './EditorProvider';
 import { Button, Card, Empty, LinkTag, Money, ProgressBar, SectionTitle, cx } from './ui';
 import { DAY_CAPACITY, type CityLoad, type DayCell, type GapItem, type Sample, type Stay, cityLoad, loadLabel, loadTone } from '../lib/overview';
 import { tintFor } from '../lib/palette';
+import { TouchDragProvider, useDrag, Grip } from './TouchDrag';
 import { STATUS_META, TICKET_META, categoryMeta } from '../lib/categories';
 import { assign } from '../lib/dayplan';
 import { fmtDate, fmtDuration, fmtMoney, plural } from '../lib/format';
@@ -206,6 +207,13 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
     assign(store, store.places, moved, { date });
   };
 
+  const applyDrop = (id: string, zone: { date: string | null }) => {
+    if (!zone.date) return;
+    const moved = store.places.find((x) => x.id === id);
+    if (!moved || moved.date === zone.date) return;
+    assign(store, store.places, moved, { date: zone.date });
+  };
+
   const shown = useMemo(() => (onlyGaps ? cells.filter((c) => c.empty || c.nightGap || c.issues.length) : cells), [cells, onlyGaps]);
   const noDates = !cells.length;
 
@@ -215,6 +223,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
   };
 
   return (
+    <TouchDragProvider onDrop={applyDrop}>
     <Card className="p-4">
       <SectionTitle
         title="Jeder Tag im Bild"
@@ -231,34 +240,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
           </>
         }
       />
-      {pool.length && !noDates ? (
-        <div className="no-print mb-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.05] p-2">
-          <p className="mb-1.5 px-1 text-[11.5px] text-amber-100/90">
-            <b>Ziehen &amp; fallen lassen:</b> {plural(pool.length, 'Punkt', 'Punkte')} noch ohne Tag – auf eine Tageskarte ablegen. Die komplette Liste ist unter „Aktivitäten“.
-          </p>
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
-            {pool.map((item) => {
-              const meta = categoryMeta(item.category);
-              return (
-                <button
-                  key={item.id}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('text/plain', item.id);
-                    e.dataTransfer.effectAllowed = 'move';
-                  }}
-                  title={`${meta.label}${item.city ? ` · ${item.city}` : ''} – auf einen Tag ziehen`}
-                  className="flex shrink-0 cursor-grab items-center gap-1.5 rounded-lg border border-white/10 bg-ink-800/80 px-2 py-1 text-[12px] text-slate-200 transition hover:border-amber-400/40 hover:bg-ink-700 active:cursor-grabbing"
-                >
-                  <span aria-hidden>{meta.icon}</span>
-                  <span className="max-w-[190px] truncate">{item.name}</span>
-                  {item.priority === 'muss' ? <span className="text-[10px] text-shu-300">★</span> : null}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
+      <PoolStrip tripId={tripId} pool={pool} />
       {noDates ? (
         <Empty
           title="Noch kein Reise-Zeitraum"
@@ -281,6 +263,7 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
               <div
                 key={c.date}
                 id={`day-${c.date}`}
+                data-dropzone={c.date}
                 onDragOver={(e) => {
                   e.preventDefault();
                   setDragOver(c.date);
@@ -397,6 +380,45 @@ export function DayBoard({ tripId, cells, pool }: { tripId: string; cells: DayCe
         </div>
       )}
     </Card>
+    </TouchDragProvider>
+  );
+}
+
+/** Die Streifen darüber: auf dem Desktop ziehen, auf dem Handy Greifpunkt – derselbe Weg */
+function PoolStrip({ tripId, pool }: { tripId: string; pool: Place[] }) {
+  const drag = useDrag();
+  if (!pool.length) return null;
+  return (
+    <div className="no-print mb-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.05] p-2">
+      <p className="mb-1.5 px-1 text-[11.5px] text-amber-100/90">
+        <b>Ziehen &amp; fallen lassen:</b> {plural(pool.length, 'Punkt', 'Punkte')} noch ohne Tag – auf eine Tageskarte ablegen (auf dem Handy am ⠿ ziehen). Die komplette Liste ist unter{' '}
+        <a href={`/t/${tripId}/aktivitaeten`} className="underline underline-offset-2 hover:text-white">
+          Aktivitäten
+        </a>
+        .
+      </p>
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
+        {pool.map((item) => {
+          const meta = categoryMeta(item.category);
+          return (
+            <span
+              key={item.id}
+              data-dropchip={item.id}
+              {...(drag?.grab(item.id, item.name) ?? {})}
+              title={`${meta.label}${item.city ? ` · ${item.city}` : ''} – auf einen Tag ziehen`}
+              className="flex shrink-0 touch-none cursor-grab items-center gap-1.5 rounded-lg border border-white/10 bg-ink-800/80 px-2 py-1.5 text-[12px] text-slate-200 transition hover:border-amber-400/40 hover:bg-ink-700 active:cursor-grabbing"
+            >
+              <span aria-hidden className="text-slate-500">
+                ⠿
+              </span>
+              <span aria-hidden>{meta.icon}</span>
+              <span className="max-w-[190px] truncate">{item.name}</span>
+              {item.priority === 'muss' ? <span className="text-[10px] text-shu-300">★</span> : null}
+            </span>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

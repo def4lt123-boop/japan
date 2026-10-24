@@ -9,6 +9,7 @@ import { fmtDate } from '../lib/format';
 import { Card, LinkTag, Menu, Money, Pill, cx } from './ui';
 import { MapPreview } from './MapPreview';
 import { CategoryDot } from './CategoryDot';
+import { Grip, useDrag } from './TouchDrag';
 
 /** Kleiner Chip mit dem Buchungsstand – wird auch in den Panels der Reise-Seite genutzt. */
 export function StatusPill({ status }: { status: Place['booking_status'] }) {
@@ -50,6 +51,7 @@ export function PlaceCard({
 }) {
   const store = useStore();
   const { open } = useEditor();
+  const drag = useDrag();
   const meta = categoryMeta(place.category);
   const prio = PRIORITY_META[place.priority] ?? PRIORITY_META.soll;
   const ticket = TICKET_META[place.ticket_status ?? 'unklar'] ?? TICKET_META.unklar;
@@ -68,7 +70,8 @@ export function PlaceCard({
       className={cx('print-block group relative overflow-hidden border-l-[3px] transition hover:border-white/25', dense && 'border-l-2', done && 'opacity-70')}
       style={{ borderLeftColor: meta.color }}
     >
-      <div className={cx('flex items-start gap-2.5', dense ? 'px-2.5 py-2' : 'px-3.5 py-3')}>
+      <div className={cx('flex items-start gap-2.5', dense && 'px-2.5 py-2', !dense && 'px-3.5 py-3')}>
+        {draggable && drag ? <Grip grab={drag.grab} id={place.id} label={place.name} className="mt-0.5" /> : null}
         {nr ? <span className="mt-0.5 w-4 shrink-0 text-right text-[11.5px] tabular-nums text-slate-500" title={`Stelle ${nr}`}>{nr}</span> : null}
         <CategoryDot category={place.category} size={dense ? 19 : 23} className="mt-px" />
         <div className="min-w-0 flex-1">

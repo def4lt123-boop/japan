@@ -149,6 +149,102 @@ body {
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
 }
 
+/* ── Ziehen mit dem Finger (Pointer-Schicht über dem HTML5-Drag) ───────────── */
+.grip {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 9px;
+  color: #64748b;
+  font-size: 15px;
+  line-height: 1;
+  cursor: grab;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+.grip:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.07);
+}
+.grip:active {
+  cursor: grabbing;
+  transform: scale(0.94);
+}
+/* auf dem Handy sind die kleinen Greifknöpfe zu klein – hier etwas größer */
+@media (hover: none) {
+  .icon-btn {
+    min-height: 32px;
+    min-width: 32px;
+  }
+  .day-arrow,
+  .btn-today {
+    height: 40px;
+  }
+}
+
+@media (hover: none) {
+  .grip {
+    width: 34px;
+    height: 34px;
+    font-size: 16px;
+  }
+}
+
+body.is-dragging {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grabbing;
+}
+
+.drag-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(72vw, 320px);
+  padding: 9px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(180deg, #232a39, #161b25);
+  box-shadow: 0 26px 50px -18px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: none;
+  animation: ghost-in 0.14s ease-out both;
+}
+@keyframes ghost-in {
+  from {
+    opacity: 0;
+  }
+}
+.drag-ghost-icon {
+  color: #ff7047;
+}
+.drag-ghost-label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* das Ziel leuchtet, solange der Finger daraufsteht */
+[data-dropzone][data-drag-over='true'] {
+  outline: 2px dashed rgba(255, 112, 71, 0.8);
+  outline-offset: -2px;
+  background: rgba(240, 78, 35, 0.09);
+  box-shadow: 0 20px 44px -28px rgba(240, 78, 35, 0.9);
+}
+[data-dropindex][data-drag-over='true'] {
+  border-radius: 12px;
+  background: rgba(79, 157, 91, 0.1);
+  box-shadow: inset 0 2px 0 0 #4f9d5b, 0 0 0 1px rgba(79, 157, 91, 0.4);
+}
+
 /* Drag & Drop */
 [data-dragging='true'] {
   opacity: 0.45;
