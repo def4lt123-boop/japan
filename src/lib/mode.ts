@@ -52,6 +52,19 @@ export function startHint(input: ModeInput): string {
   return 'die Reise läuft genau heute – der heutige Tag ist dran';
 }
 
+/** der Start-Knopf darf sich nur zeigen, wenn es wirklich bald losgeht */
+export const START_NAHE = 14;
+
+/**
+ * Steht der Reisebeginn vor der Tür? ▶️ als eigener Knopf nur dann – ein Start in
+ * vier Monaten ist keine Aktion, sondern eine Ansage. Im ⋯-Menü steht er immer.
+ * Liegen die Daten schon zurück, zählt das ebenfalls als „gleich geht's los".
+ */
+export function startIsNear(trip?: Trip, iso: string = today()): boolean {
+  if (!trip || trip.started || trip.archived || !trip.start_date) return false;
+  return dayDiff(iso, trip.start_date) < START_NAHE;
+}
+
 /** ▶️ Reise starten */
 export function startTrip(store: ModeStore, input: ModeInput): boolean {
   const trip = input.trip;

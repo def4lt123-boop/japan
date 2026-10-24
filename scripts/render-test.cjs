@@ -65,7 +65,7 @@ const PAGES = [
   { name: 'Reisen', path: '/', file: '../src/app/page.tsx', expect: [/Urlaubsplanung/, /Japan 2027/, /Japan 2025/] },
   { name: 'Übersicht', path: '/t/trip-2027/uebersicht', file: '../src/app/t/[tripId]/uebersicht/page.tsx', expect: [/Reisedauer/, /Reise auf einem Blick/, /Jeder Tag im Bild/, /Was noch fehlen würde/, /Was noch verfügbar ist/, /Bett pro Nacht/] },
   { name: 'Tage', path: '/t/trip-2027/tage', file: '../src/app/t/[tripId]/tage/page.tsx', expect: [/Tagesplan/, /Sa06\.03\./, /noch frei|Aktivitäten/] },
-  { name: 'Aktivitäten', path: '/t/trip-2027/aktivitaeten', file: '../src/app/t/[tripId]/aktivitaeten/page.tsx', expect: [/Noch ohne Tag/, /Aktivität/] },
+  { name: 'Aktivitäten', path: '/t/trip-2027/aktivitaeten', file: '../src/app/t/[tripId]/aktivitaeten/page.tsx', expect: [/Noch ohne Tag/, /Aktivität/, /Ticket offen/, /Ohne Karte/] },
   { name: 'Tabelle', path: '/t/trip-2027/tabelle', file: '../src/app/t/[tripId]/tabelle/page.tsx', expect: [/Reihe/, /Aktivität/] },
   { name: 'Karte', path: '/t/trip-2027/karte', file: '../src/app/t/[tripId]/karte/page.tsx', expect: [/Karte/, /Legende/, /Alle Kategorien/, /Kategorie/] },
   { name: 'Unterkünfte', path: '/t/trip-2027/unterkuenfte', file: '../src/app/t/[tripId]/unterkuenfte/page.tsx', expect: [/Nächte-Check/, /Hotel Tokio/] },
@@ -200,7 +200,7 @@ async function render(name, Page, tripId) {
     await new Promise((r) => setTimeout(r, 60));
   });
   const layoutText = container.textContent || '';
-  const tabsOk = /Übersicht/.test(layoutText) && /Aktivitäten/.test(layoutText) && /Reise/.test(layoutText) && /06\.03\./.test(layoutText) && /Anlegen/.test(layoutText) && /⋯/.test(layoutText);
+  const tabsOk = /Übersicht/.test(layoutText) && /Aktivitäten/.test(layoutText) && /Reise/.test(layoutText) && /06\.03\./.test(layoutText) && /Idee/.test(layoutText) && /⋯/.test(layoutText);
   // die untere Leiste: ein Fach pro Bereich, kurzes Label fürs Handy, volles fürs Desktop-Menü
   const dockEl = container.querySelector('nav.tabbar');
   const dockLinks = dockEl ? [...dockEl.querySelectorAll('a')] : [];
@@ -218,6 +218,16 @@ async function render(name, Page, tripId) {
     failures.push('Reiterleiste');
     console.log('   links=', dockLinks.length, 'labels=', JSON.stringify(kurz), 'pb-tabbar=', Boolean(container.querySelector('.pb-tabbar')));
   }
+  // der orange Hauptknopf legt an, der Start steht nur noch im ⋯ (Reise ist 4 Monate weg)
+  const knöpfe = [...container.querySelectorAll('button')].map((b) => (b.textContent || '').replace(/\s+/g, ' ').trim());
+  const idee = knöpfe.find((s) => /＋\s*Idee/.test(s));
+  const startWeg = !knöpfe.some((s) => /Reise starten|▶️\s*starten/.test(s));
+  const kopfOk = Boolean(idee) && startWeg;
+  console.log((kopfOk ? '✅' : '❌') + ' Kopf: ＋ Idee vorn, ▶️ Reise starten nur im ⋯-Menü (Start ist weit weg)');
+  if (!kopfOk) {
+    failures.push('Kopfknöpfe');
+    console.log('   knöpfe:', JSON.stringify(knöpfe.slice(0, 8)), 'idee=', Boolean(idee), 'startWeg=', startWeg);
+  }
   console.log((tabsOk ? '✅' : '❌') + ' Reise-Layout: Tabs + Tagesplan mit Daten');
   if (!tabsOk) {
     failures.push('Layout');
@@ -227,6 +237,70 @@ async function render(name, Page, tripId) {
   console.error = origError;
   await act(async () => root2.unmount());
 
+  // 🗂️ Aktivitäten vorn: eine Filterreihe, Suche und Stadt in einer Zeile, der Text hinter ⓘ
+  nav.setPath('/t/trip-2027/aktivitaeten');
+  const ActPage = require('../src/app/t/[tripId]/aktivitaeten/page.tsx').default;
+  const cAct = document.createElement('div');
+  document.body.appendChild(cAct);
+  const rAct = createRoot(cAct);
+  const actText = () => cAct.textContent || '';
+  const tipp = async (el) => {
+    if (!el) return false;
+    await act(async () => {
+      el.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 40));
+    });
+    return true;
+  };
+  await act(async () => {
+    rAct.render(React.createElement(StoreProvider, null, React.createElement(EditorProvider, { tripId: 'trip-2027' }, React.createElement(ActPage))));
+  });
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 80));
+  });
+  const reihe = [...cAct.querySelectorAll('.filter-row button')].map((b) => (b.textContent || '').replace(/\s+/g, ' ').trim().replace(/(\d+)$/, ' $1'));
+  const solo = ['Alle', 'Ohne Tag', 'Ticket offen', 'Muss', 'Ohne Karte'];
+  const eineReihe = reihe.length === 5 && solo.every((label, i) => reihe[i].indexOf(label) === 0);
+  const zu = !/Was noch keinen Tag hat/.test(actText());
+  await tipp([...cAct.querySelectorAll('button')].find((b) => (b.textContent || '').trim() === 'ⓘ'));
+  const auf = /Was noch keinen Tag hat/.test(actText());
+  await tipp([...cAct.querySelectorAll('button')].find((b) => (b.textContent || '').trim() === 'ⓘ'));
+  const feld = cAct.querySelector('input[placeholder^=\"Suchen\"]');
+  const zeile = feld ? feld.closest('div.flex') : null;
+  const stadtMit = Boolean(zeile && zeile.querySelector('select'));
+  const chromeOk = eineReihe && zu && auf && Boolean(feld) && stadtMit && !/zur\u00fccksetzen/.test(actText());
+  console.log((chromeOk ? '\u2705' : '\u274c') + ' \ud83d\udcc2 vorn wenig: eine Filterreihe (' + reihe.join(' \u00b7 ') + '), Suche + Stadt in einer Zeile, Erkl\u00e4rung hinter \u24d8');
+  if (!chromeOk) {
+    failures.push('Aktivit\u00e4ten-Chrome');
+    console.log('   reihe=', JSON.stringify(reihe), 'zu=', zu, 'auf=', auf, 'suche=', Boolean(feld), 'stadt=', stadtMit);
+  }
+  // und: was leer ist, wird nicht gezeigt – ein Kasten f\u00fcr null offene Punkte bleibt weg
+  const nameDer = (el) => {
+    const b = el.querySelector('button[title="Bearbeiten"]');
+    return b ? (b.textContent || '').trim() : '';
+  };
+  const offenNamen = new Set([...cAct.querySelectorAll('[data-offen]')].map(nameDer).filter(Boolean));
+  const ziel = [...cAct.querySelectorAll('[data-tag]')].map(nameDer).find((n) => n && !offenNamen.has(n));
+  let kastenWeg = false;
+  if (ziel && feld) {
+    const setter = Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set;
+    await act(async () => {
+      setter.call(feld, ziel);
+      feld.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 60));
+    });
+    kastenWeg = !/Noch ohne Tag/.test(actText()) && actText().indexOf(ziel.slice(0, 10)) >= 0;
+  }
+  console.log((kastenWeg ? '\u2705' : '\u274c') + ' \ud83d\udced „Noch ohne Tag" bei null offenen Punkten: Kasten ist gar nicht erst im Baum (gefiltert auf \u201e' + (ziel || '?') + '\u201c)');
+  if (!kastenWeg) {
+    failures.push('Leerkasten');
+    console.log('   ziel=', JSON.stringify(ziel), 'text=', actText().slice(0, 160));
+  }
+  await act(async () => rAct.unmount());
 
   // Alle Formulare rendern (Modal-Formulare direkt)
   const forms = require('../src/components/forms.tsx');

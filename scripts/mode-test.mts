@@ -2,7 +2,7 @@
  * Rechenprobe für die zwei Modi: 🗓️ Planung ↔ ▶️ Unterwegs.
  * Aufruf: npm run test:mode
  */
-import { endTrip, liveDay, liveDays, nextUp, startHint, startTrip, tripMode } from '../src/lib/mode.ts';
+import { endTrip, liveDay, liveDays, nextUp, startHint, startIsNear, startTrip, tripMode } from '../src/lib/mode.ts';
 import { addDays, today } from '../src/lib/format.ts';
 
 const errors: string[] = [];
@@ -162,6 +162,19 @@ step('Tagzähler zählt ab start_date', liveDays(trip({ started: true, started_a
   const frei = startHint({ trip: trip({ start_date: null, end_date: null }), places: [place({ id: 'a', date: T(10) }), place({ id: 'b', date: T(10) })], hotels: [], journeys: [], expenses: [] });
   step('ohne Zeitraum: Tage übernommen', /1 Tag übernommen/.test(frei), frei);
   step('ohne Reisebeginn ist der Hinweis trotzdem lesbar', /Reise|Tag/.test(frei), frei);
+}
+
+// ── ▶️ als eigener Knopf: nur, wenn der Anfang vor der Tür steht ─────────────
+{
+  step('in 3 Tagen: Knopf ist da', startIsNear(trip({ start_date: T(3), end_date: T(12) })) === true);
+  step('in 13 Tagen: noch knapp', startIsNear(trip({ start_date: T(13), end_date: T(20) })) === true);
+  step('in 14 Tagen: weg', startIsNear(trip({ start_date: T(14), end_date: T(30) })) === false);
+  step('in vier Monaten: weg', startIsNear(trip({ start_date: T(133), end_date: T(172) })) === false);
+  step('Daten vorbei, nicht gestartet: Knopf ist da', startIsNear(trip({ start_date: T(-4), end_date: T(-1) })) === true);
+  step('läuft schon: kein Start-Knopf', startIsNear(trip({ started: true, start_date: T(-1), end_date: T(30) })) === false);
+  step('Archiv bleibt ruhig', startIsNear(trip({ archived: true, start_date: T(2), end_date: T(9) })) === false);
+  step('ohne Zeitraum: nichts zu starten', startIsNear(trip({ start_date: null, end_date: null })) === false);
+  step('ganze Reise ohne Knopf', startIsNear(undefined) === false);
 }
 
 console.log(errors.length ? `\n❌ ${errors.length} Probleme: ${errors.join(', ')}` : '\n🎉 Modi-Rechnung passt');
