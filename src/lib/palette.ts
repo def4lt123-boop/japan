@@ -9,6 +9,8 @@ export interface Tint {
   soft: string;
   /** heller Rand für die Oberkante */
   edge: string;
+  /** kräftiger Schimmer für Verläufe (Unterwegs-Kopf) */
+  wash: string;
 }
 
 const shade = (key: string) => {
@@ -23,5 +25,6 @@ export function tintFor(key?: string | null, index?: number): Tint {
     base: `hsl(${hue} 58% 48%)`,
     soft: `hsl(${hue} 58% 48% / 0.16)`,
     edge: `hsl(${hue} 74% 66%)`,
+    wash: `hsl(${hue} 66% 52% / 0.34)`,
   };
 }

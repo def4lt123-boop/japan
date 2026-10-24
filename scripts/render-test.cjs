@@ -490,6 +490,44 @@ async function render(name, Page, tripId) {
   console.log((ticked ? '✅' : '❌') + ` ✓ Abhaken: ${doneBefore} → ${doneAfter} erledigt`);
   if (!ticked) failures.push('Abhaken unterwegs');
 
+  // Unterwegs für die Hosentasche: Ring, Reiseleiste, Blättern, eine Aktion
+  {
+    const ring = cToday.querySelector('[data-ring]');
+    const segs = [...cToday.querySelectorAll('[data-tripday]')];
+    const gefärbt = segs.filter((b) => /hsl\(|rgb\(/.test(b.getAttribute('style') || '')).length;
+    const today = segs.find((b) => b.getAttribute('aria-current') === 'date');
+    const ohneBett = segs.filter((b) => b.getAttribute('data-bed') === 'nein').length;
+    const abreise = segs.filter((b) => b.getAttribute('data-bed') === 'abreise').length;
+    const bar = segs.length === 40 && Boolean(ring) && Boolean(today) && gefärbt === 33 && ohneBett === 6 && abreise === 1;
+    console.log((bar ? '✅' : '❌') + ` 🚶 Kopf: Ring mit Tagesnummer, Reiseleiste mit ${segs.length} Feldern (${gefärbt} farbig, ${ohneBett} ohne Bett, ${abreise} Abreise)`);
+    if (!bar) failures.push('Reiseleiste unterwegs');
+
+    const vor = (cToday.textContent || '').match(/Tag (\d+) von/) || [];
+    await click([...cToday.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') || '') === 'einen Tag vor'));
+    const nach = (cToday.textContent || '').match(/Tag (\d+) von/) || [];
+    const geblaettert = nach[1] === String(Number(vor[1]) + 1) && /Morgen/.test(cToday.textContent || '');
+    await click([...cToday.querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') || '') === 'einen Tag zurück'));
+    const zurueck = (cToday.textContent || '').match(/Tag (\d+) von/) || [];
+    const wiederHeute = zurueck[1] === vor[1] && !/heute<\/button>/.test(cToday.innerHTML);
+    console.log((geblaettert && wiederHeute ? '✅' : '❌') + ` ◀ ▶ Tag blättern: ${vor[1]} → ${nach[1]} → ${zurueck[1]} (kein extra Reiter)`);
+    if (!(geblaettert && wiederHeute)) failures.push('Tag blättern');
+
+    // Zeile antippen → Details auf, Knöpfe zu
+    const zeile = cToday.querySelector('[data-row]');
+    const klapp = zeile ? [...zeile.querySelectorAll('button')].find((b) => b.getAttribute('aria-expanded') === 'false') : null;
+    await click(klapp);
+    const detail = cToday.querySelector('.row-detail');
+    const offenOk = Boolean(detail) && /Karte/.test(detail.textContent || '') && /✎/.test(detail.textContent || '');
+    console.log((offenOk ? '✅' : '❌') + ' ✎ Zeile antippen: Notiz, 🗺️ Karte und Bearbeiten erscheinen');
+    if (!offenOk) failures.push('Zeile aufklappen');
+
+    // doppelte Aktionen sind vermieden: die Daumen-Leiste hilft erst nach dem Rausrollen
+    const sticky = cToday.querySelector('[data-sticky]');
+    const stickyOk = sticky && sticky.getAttribute('data-sticky') === 'off';
+    console.log((stickyOk ? '✅' : '❌') + ' 🖐️ Daumen-Leiste: bleibt weg, solange „als nächstes“ im Blick ist');
+    if (!stickyOk) failures.push('Daumen-Leiste');
+  }
+
   // ✕ beenden → wieder Planung (abgehakt bleibt)
   await click([...cToday.querySelectorAll('button[aria-haspopup="menu"]')].find((b) => /⋯/.test(b.textContent || '')));
   const endBtn = await click(menuItem(/Reise beenden/));

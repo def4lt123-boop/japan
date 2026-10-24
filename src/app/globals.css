@@ -173,6 +173,451 @@ body {
   animation: pop-in 0.14s ease-out both;
 }
 
+/* ── Unterwegs – Farbe und Bewegung für die Hosentasche ─────────────────────
+   Eine Bewegung pro Klick, keine Dauerschleife, die vom Ablesen abhält.
+   Alles hier ist CSS: kein Layout-Framework, keine Library, nichts zu laden. */
+button,
+a {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: rise 0.38s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+@keyframes check-pop {
+  0% {
+    transform: scale(1);
+  }
+  38% {
+    transform: scale(1.32);
+  }
+  70% {
+    transform: scale(0.92);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.check-pop {
+  animation: check-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes sweep {
+  from {
+    transform: translateX(-115%);
+  }
+  to {
+    transform: translateX(135%);
+  }
+}
+.done-sweep::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(100deg, transparent 16%, rgba(167, 211, 160, 0.32) 46%, rgba(255, 255, 255, 0.12) 55%, transparent 82%);
+  animation: sweep 0.85s ease-out both;
+}
+
+.ring-fill,
+.bar-fill {
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 0.61, 0.36, 1), width 0.6s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* der Tageskopf: Farbe kommt vom Bett der Nacht */
+.live-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: radial-gradient(135% 120% at 6% -34%, var(--hc, rgba(240, 78, 35, 0.28)), transparent 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.015)), #12151d;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 20px 44px -28px rgba(0, 0, 0, 0.9);
+}
+.live-hero > * {
+  position: relative;
+}
+
+/* die Reise als Leiste: ein Feld pro Tag */
+.trip-seg {
+  flex: 1 1 0;
+  min-width: 3px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.055);
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.2s ease, background 0.3s ease;
+}
+.trip-seg[data-bed='nein'] {
+  background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0 3px, rgba(255, 255, 255, 0.02) 3px 6px);
+}
+.trip-seg:hover {
+  transform: scaleY(1.14);
+}
+.trip-seg.is-last {
+  background: repeating-linear-gradient(0deg, rgba(255, 210, 31, 0.42) 0 2px, rgba(255, 255, 255, 0.03) 2px 5px);
+}
+.trip-seg.is-today {
+  animation: today-pulse 3s ease-in-out infinite;
+}
+.trip-seg.is-viewed {
+  transform: scaleY(1.3);
+  box-shadow: 0 0 0 1.5px #fff, 0 8px 18px -10px rgba(0, 0, 0, 0.9);
+}
+@keyframes today-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8), 0 0 14px 1px rgba(255, 255, 255, 0.2);
+  }
+}
+
+.day-arrow,
+.btn-today {
+  display: grid;
+  place-items: center;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.045);
+  color: #e2e8f0;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.14s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.day-arrow:hover,
+.btn-today:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.day-arrow:active,
+.btn-today:active,
+.big-check:active,
+.tick:active,
+.plan-chip:active {
+  transform: scale(0.92);
+}
+.day-arrow:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+.btn-today {
+  color: #ffd21f;
+  background: rgba(255, 210, 31, 0.12);
+  border-color: rgba(255, 210, 31, 0.32);
+}
+
+/* als nächstes – die eine Karte, die zählt */
+.nextup {
+  position: relative;
+  overflow: hidden;
+  padding: 14px;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02) 58%), #151922;
+  box-shadow: 0 24px 48px -32px var(--nc, #f04e23), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.nextup-rail {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--nc, #f04e23), transparent);
+}
+.nextup::after {
+  content: '';
+  position: absolute;
+  right: -14%;
+  top: -55%;
+  width: 62%;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: radial-gradient(circle, var(--nc, #f04e23) 0%, transparent 62%);
+  opacity: 0.16;
+  filter: blur(8px);
+  pointer-events: none;
+  animation: breathe 5.4s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.26;
+    transform: scale(1.12);
+  }
+}
+.nextup-icon {
+  display: grid;
+  place-items: center;
+  height: 44px;
+  width: 44px;
+  flex: none;
+  border-radius: 14px;
+  font-size: 22px;
+  line-height: 1;
+}
+.big-check {
+  display: grid;
+  place-items: center;
+  height: 56px;
+  width: 56px;
+  flex: none;
+  border-radius: 999px;
+  border: 0;
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  background: linear-gradient(180deg, #ff7a4f, #e8451c);
+  box-shadow: 0 12px 28px -12px rgba(240, 78, 35, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: transform 0.14s ease, box-shadow 0.2s ease;
+}
+.big-check:hover {
+  box-shadow: 0 16px 34px -12px rgba(240, 78, 35, 1), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.tick {
+  display: grid;
+  place-items: center;
+  height: 38px;
+  width: 38px;
+  flex: none;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  background: transparent;
+  color: #a7d3a0;
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform 0.14s ease, border-color 0.2s ease, background 0.25s ease;
+}
+.tick span {
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 0.2s ease, transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.tick:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+.tick.is-on {
+  background: rgba(79, 157, 91, 0.22);
+  border-color: rgba(167, 211, 160, 0.62);
+}
+.tick.is-on span {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Liste: farbige Schiene pro Kategorie, Ende = grün */
+.live-row {
+  position: relative;
+  padding-left: 13px;
+  padding-right: 9px;
+  border-radius: 14px;
+  transition: background 0.25s ease, opacity 0.25s ease;
+}
+.live-row::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--rc, #8b93a1);
+  opacity: 0.55;
+  transition: opacity 0.25s ease, background 0.25s ease;
+}
+.live-row:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+.live-row.is-done {
+  opacity: 0.62;
+  background: linear-gradient(90deg, rgba(79, 157, 91, 0.16), transparent 62%);
+}
+.live-row.is-done::before {
+  background: #4f9d5b;
+  opacity: 1;
+}
+.row-detail {
+  margin: 2px 0 10px 46px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+
+/* der Daumen bekommt den Auftrag, wenn die Karte hochgerutscht ist */
+.sticky-next {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 30;
+  margin-inline: auto;
+  width: 100%;
+  max-width: 36rem;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  opacity: 0;
+  transform: translateY(130%);
+  pointer-events: none;
+  transition: transform 0.34s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.24s ease;
+}
+.sticky-next.is-on {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.sticky-next .card {
+  backdrop-filter: blur(9px);
+  box-shadow: 0 -12px 34px -14px rgba(0, 0, 0, 0.8);
+}
+
+.plan-chip {
+  position: relative;
+  overflow: hidden;
+  flex: 0 0 auto;
+  width: 47%;
+  max-width: 220px;
+  scroll-snap-align: start;
+  text-align: left;
+  padding: 10px 11px 11px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018));
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.plan-chip::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--cc, #8b93a1), transparent);
+  opacity: 0.85;
+}
+.plan-chip:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 18px 34px -24px var(--cc, #8b93a1);
+}
+
+/* ▶️ Reise starten – die eine Frage, die die Seite vorher stellt */
+.start-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: radial-gradient(120% 130% at 10% -22%, rgba(240, 78, 35, 0.36), transparent 58%), linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)), #12151d;
+}
+.start-hero > * {
+  position: relative;
+}
+.start-hero::after {
+  content: '';
+  position: absolute;
+  right: -16%;
+  bottom: -70%;
+  width: 240px;
+  height: 240px;
+  border-radius: 999px;
+  background: conic-gradient(from 0deg, rgba(240, 78, 35, 0.6), rgba(79, 157, 91, 0.4), rgba(255, 210, 31, 0.35), rgba(240, 78, 35, 0.6));
+  filter: blur(30px);
+  opacity: 0.42;
+  animation: spin 22s linear infinite;
+  pointer-events: none;
+}
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+.btn-go {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 16px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(180deg, #ff7a4f, #e8451c);
+  box-shadow: 0 16px 34px -14px rgba(240, 78, 35, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: transform 0.14s ease, box-shadow 0.22s ease;
+}
+.btn-go::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 32%, rgba(255, 255, 255, 0.38) 48%, transparent 64%);
+  animation: sweep 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+.btn-go:hover {
+  box-shadow: 0 20px 42px -14px rgba(240, 78, 35, 1), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.btn-go:active {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .check-pop,
+  .nextup::after,
+  .trip-seg.is-today,
+  .start-hero::after,
+  .btn-go::after,
+  .done-sweep::after {
+    animation: none !important;
+  }
+  .rise {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .ring-fill,
+  .bar-fill,
+  .trip-seg,
+  .sticky-next,
+  .plan-chip,
+  .tick,
+  .big-check,
+  .live-row {
+    transition: none !important;
+  }
+}
+
+@media print {
+  .sticky-next,
+  .trip-seg {
+    display: none !important;
+  }
+}
+
 /* Papier – der Tages-Ausdruck sieht aus wie das Blatt, das aus dem Drucker kommt */
 .paper {
   background: #fff;
