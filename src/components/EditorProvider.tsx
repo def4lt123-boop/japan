@@ -4,17 +4,15 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 import type { Expense, Hotel, Journey, Place, Trip } from '../lib/types';
 import { useStore } from '../lib/store';
 import { ExpenseForm, HotelForm, JourneyForm, PlaceForm, TripForm } from './forms';
-import { OrtswechselDialog } from './Ortswechsel';
 import { geocode, queryFor, sleep } from '../lib/geocode';
 import { fmtDate } from '../lib/format';
+import { cityOfDay, trimPreviousStay } from '../lib/locus';
 
 type Request =
   | { kind: 'place'; id?: string; defaults?: Partial<Place> }
   | { kind: 'hotel'; id?: string; defaults?: Partial<Hotel> }
   | { kind: 'journey'; id?: string; defaults?: Partial<Journey> }
   | { kind: 'expense'; id?: string; defaults?: Partial<Expense> }
-  /** Ortswechsel: Stadt, Betten und Fahrt an einem Tag umtragen */
-  | { kind: 'move'; date?: string | null }
   | { kind: 'trip'; id?: string };
 
 interface EditorApi {
@@ -38,6 +36,8 @@ export function useEditor(): EditorApi {
 export function EditorProvider({ tripId, children }: { tripId: string; children: React.ReactNode }) {
   const store = useStore();
   const [request, setRequest] = useState<Request | null>(null);
+  /** „✓ speichern & weiter“ baut das Formular neu – dieser Zähler ist der Schlüssel dazu */
+  const [stamp, setStamp] = useState(0);
   const trip = store.trips.find((t) => t.id === tripId);
 
   const open = useCallback((req: Request) => setRequest(req), []);
@@ -64,22 +64,51 @@ export function EditorProvider({ tripId, children }: { tripId: string; children:
       {children}
       {request?.kind === 'place' ? (
         <PlaceForm
+          key={`place-${stamp}`}
           tripId={tripId}
           cities={cities}
           jpyRate={trip?.jpy_rate ?? 175}
           tripStart={trip?.start_date}
           tripEnd={trip?.end_date}
-          value={{ ...(activePlace ?? {}), ...(request.defaults ?? {}) } as Partial<Place>}
+          value={(() => {
+            const v = { ...(activePlace ?? {}), ...(request.defaults ?? {}) } as Partial<Place>;
+            /** die Stadt des Tages steht schon im Bett – nicht noch einmal tippen */
+            if (!v.city && v.date) v.city = cityOfDay(store.hotels.filter((h) => h.trip_id === tripId), v.date) ?? undefined;
+            return v;
+          })()}
           onCancel={close}
-          onSubmit={async (place) => {
-            await store.upsert('places', place);
+          onSubmit={async (place, again) => {
+            let row = place;
+            if (!activePlace && row.date) {
+              /** neu auf einem Tag: immer hintendran, so bleibt die Tipp-Reihenfolge die Reihenfolge */
+              const taken = store.places.filter((p) => p.trip_id === tripId && p.date === row.date && p.id !== row.id).length;
+              row = { ...row, sort_order: taken };
+            }
+            await store.upsert('places', row);
+            if (again) {
+              setRequest({
+                kind: 'place',
+                defaults: {
+                  date: row.date ?? null,
+                  city: row.city ?? null,
+                  category: row.category,
+                  booking_status: row.booking_status,
+                  ticket_status: row.ticket_status,
+                  priority: row.priority,
+                  sort_order: (row.sort_order ?? 0) + 1,
+                },
+              });
+              setStamp((s) => s + 1);
+              store.say(`„${row.name}“ gespeichert – weiter geht’s am selben Tag.`);
+              return;
+            }
             close();
             store.say(
               activePlace
-                ? `„${place.name}“ aktualisiert${place.date ? ` – Tag ${place.date.split('-').reverse().join('.')}` : ''}`
-                : place.date
-                  ? `„${place.name}“ fest für ${fmtDate(place.date, { weekday: 'short', day: '2-digit', month: '2-digit' })} eingeplant.`
-                  : `„${place.name}“ angelegt – ohne Tag, er steht in der Liste unter Aktivitäten. Zieh ihn auf der Tages-Seite auf einen Tag.`,
+                ? `„${row.name}“ aktualisiert${row.date ? ` – Tag ${row.date.split('-').reverse().join('.')}` : ''}`
+                : row.date
+                  ? `„${row.name}“ fest für ${fmtDate(row.date, { weekday: 'short', day: '2-digit', month: '2-digit' })} eingeplant.`
+                  : `„${row.name}“ angelegt – ohne Tag, er steht in der Liste unter Aktivitäten. Zieh ihn auf der Tages-Seite auf einen Tag.`,
             );
           }}
           onDelete={
@@ -96,16 +125,29 @@ export function EditorProvider({ tripId, children }: { tripId: string; children:
 
       {request?.kind === 'hotel' ? (
         <HotelForm
+          key={`hotel-${stamp}`}
           tripId={tripId}
           cities={cities}
           tripStart={trip?.start_date}
           tripEnd={trip?.end_date}
           value={{ ...(activeHotel ?? {}), ...(request.defaults ?? {}) } as Partial<Hotel>}
           onCancel={close}
-          onSubmit={async (hotel) => {
+          onSubmit={async (hotel, again) => {
             await store.upsert('hotels', hotel);
+            /** der Umzug steht in den Betten: die vorherige Unterkunft endet an diesem Check-in */
+            const trim = trimPreviousStay(store.hotels.filter((h) => h.trip_id === tripId), hotel);
+            if (trim) await store.patch('hotels', trim.id, trim.patch);
+            const short = trim
+              ? ` 🔀 Die vorherige Unterkunft endet ab jetzt am ${fmtDate(hotel.check_in ?? '', { day: '2-digit', month: '2-digit' })}.`
+              : '';
+            if (again && hotel.check_out) {
+              setRequest({ kind: 'hotel', defaults: { city: hotel.city ?? null, check_in: hotel.check_out, booking_status: hotel.booking_status } });
+              setStamp((s) => s + 1);
+              store.say(`Unterkunft gespeichert – das nächste Bett fängt am ${fmtDate(hotel.check_out, { day: '2-digit', month: '2-digit' })} an.`);
+              return;
+            }
             close();
-            store.say(`Unterkunft „${hotel.name}“ gespeichert.`);
+            store.say(`Unterkunft „${hotel.name}“ gespeichert.${short}`);
           }}
           onDelete={
             activeHotel
@@ -143,14 +185,21 @@ export function EditorProvider({ tripId, children }: { tripId: string; children:
 
       {request?.kind === 'expense' ? (
         <ExpenseForm
+          key={`expense-${stamp}`}
           tripId={tripId}
           tripStart={trip?.start_date}
           tripEnd={trip?.end_date}
           jpyRate={trip?.jpy_rate ?? 175}
           value={{ ...(activeExpense ?? {}), ...(request.defaults ?? {}) } as Partial<Expense>}
           onCancel={close}
-          onSubmit={async (e) => {
+          onSubmit={async (e, again) => {
             await store.upsert('expenses', e);
+            if (again) {
+              setRequest({ kind: 'expense', defaults: { date: e.date, category: e.category, payer: e.payer ?? null } });
+              setStamp((s) => s + 1);
+              store.say('Ausgabe gespeichert – nächster Bon.');
+              return;
+            }
             close();
             store.say('Ausgabe gespeichert.');
           }}
@@ -182,16 +231,6 @@ export function EditorProvider({ tripId, children }: { tripId: string; children:
                 }
               : undefined
           }
-        />
-      ) : null}
-      {request?.kind === 'move' ? (
-        <OrtswechselDialog
-          trip={trip}
-          places={store.places.filter((p) => p.trip_id === tripId)}
-          hotels={store.hotels.filter((h) => h.trip_id === tripId)}
-          journeys={store.journeys.filter((j) => j.trip_id === tripId)}
-          initialDate={request.date ?? trip?.start_date ?? null}
-          onClose={close}
         />
       ) : null}
 

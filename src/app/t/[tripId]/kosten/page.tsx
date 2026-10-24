@@ -8,6 +8,7 @@ import { Button, Card, Empty, Money, ProgressBar, SectionTitle, Stat, cx } from 
 import { fmtDate, fmtMoney, plural } from '../../../../lib/format';
 import { costsOf } from '../../../../lib/stats';
 import { STATUS_META } from '../../../../lib/categories';
+import { settleUp, splitShares } from '../../../../lib/shares';
 
 interface CostRow {
   id: string;
@@ -46,14 +47,9 @@ export default function CostsPage() {
   const yen = bundle.trip?.jpy_rate ? total * bundle.trip.jpy_rate : null;
   const tripDays = bundle.trip?.start_date && bundle.trip?.end_date ? Math.max(1, daysInclusive(bundle.trip.start_date, bundle.trip.end_date)) : null;
 
-  const payerTotals = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const e of bundle.expenses) {
-      const key = (e.payer ?? '—').trim() || '—';
-      map.set(key, (map.get(key) ?? 0) + (e.amount_eur || 0));
-    }
-    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
-  }, [bundle.expenses]);
+  /** Vorleistung pro Kopf: `Satzi / Satzi / Anna` sind zwei Anteile für Satzi */
+  const split = useMemo(() => splitShares(bundle.expenses), [bundle.expenses]);
+  const maxShares = split.rows.reduce((m, r) => Math.max(m, r.shares), 0);
 
   const byStatus = useMemo(() => {
     const map = new Map<string, { value: number; count: number }>();
@@ -213,23 +209,24 @@ export default function CostsPage() {
 
           <Card className="p-3">
             <h3 className="mb-1 text-[13px] font-semibold text-white">Wer hat vorgestreckt?</h3>
-            {!payerTotals.length ? (
+            {!split.rows.length ? (
               <p className="text-[12.5px] text-slate-500">Noch keine Ausgaben mit Zahler. Trage bei Ausgaben „Wer war in Vorleistung?“ ein – dann rechne ich den Ausgleich aus.</p>
             ) : (
               <ul className="space-y-1 text-[12.5px]">
-                {payerTotals.map(([who, value]) => (
-                  <li key={who} className="flex items-center gap-2">
-                    <span className="flex-1 text-slate-300">{who}</span>
-                    <Money value={value} className="tabular-nums" />
+                {split.rows.map((r) => (
+                  <li key={r.who} className="flex items-center gap-2">
+                    <span className="flex-1 text-slate-300">{r.who}</span>
+                    {maxShares > 1 ? <span className="text-[11px] tabular-nums text-slate-500">{r.shares} {plural(r.shares, 'Anteil', 'Anteile')}</span> : null}
+                    <Money value={r.paid} className="tabular-nums" />
                   </li>
                 ))}
-                <li className="mt-2 border-t border-white/10 pt-2 text-[12px] text-slate-400">
+                <li className="flex items-center gap-2 border-t border-white/10 pt-1.5 text-[11.5px] text-slate-500">
+                  <span className="flex-1">zu je {fmtMoney(split.pool / Math.max(1, split.heads))} bei {plural(split.heads, 'Kopf', 'Köpfen')}</span>
+                  <span className="tabular-nums">{fmtMoney(split.pool)}</span>
+                </li>
+                <li className="pt-1 text-[12px] text-slate-400">
                   {(() => {
-                    const fair = payerTotals.reduce((a, [, v]) => a + v, 0) / payerTotals.length;
-                    const lines = payerTotals
-                      .map(([who, v]) => ({ who, diff: v - fair }))
-                      .filter((l) => Math.abs(l.diff) > 0.5)
-                      .sort((a, b) => b.diff - a.diff);
+                    const lines = settleUp(split);
                     const outgoers = lines.filter((l) => l.diff > 0);
                     const incomers = lines.filter((l) => l.diff < 0);
                     const notes: string[] = [];
@@ -240,7 +237,7 @@ export default function CostsPage() {
                         const pay = Math.min(left, -i.diff);
                         notes.push(`${i.who} → ${o.who}: ${fmtMoney(pay)}`);
                         left -= pay;
-                        i.diff += pay;
+                        incomers[incomers.indexOf(i)].diff += pay;
                       }
                     }
                     return notes.length ? (
@@ -257,19 +254,13 @@ export default function CostsPage() {
                     );
                   })()}
                 </li>
+                {split.unsplit.count ? (
+                  <li className="pt-1 text-[11.5px] text-amber-200/70">
+                    {plural(split.unsplit.count, 'Ausgabe', 'Ausgaben')} ohne Zahler ({fmtMoney(split.unsplit.amount)}) bleiben in der Rechnung außen vor.
+                  </li>
+                ) : null}
               </ul>
             )}
-          </Card>
-
-          <Card className="p-3">
-            <h3 className="mb-1 text-[13px] font-semibold text-white">Preise ohne Angabe</h3>
-            <p className="text-[12.5px] leading-relaxed text-slate-400">
-              {bundle.places.filter((p) => !p.price_eur).length} von {bundle.places.length} Orten haben noch keinen Preis. {bundle.hotels.filter((h) => !h.price_total_eur).length} Unterkünfte ohne Preis.{' '}
-              {bundle.journeys.filter((j) => !j.price_eur).length} Fahrten ohne Preis.
-            </p>
-            <Button size="sm" variant="ghost" className="mt-2" onClick={() => open({ kind: 'place' })}>
-              ＋ Preis nachtragen
-            </Button>
           </Card>
         </div>
       </div>
