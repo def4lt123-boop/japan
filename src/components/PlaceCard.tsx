@@ -69,7 +69,7 @@ export function PlaceCard({
       className={cx('print-block group relative overflow-hidden border-l-[3px] transition hover:border-white/25', dense && 'border-l-2', done && 'opacity-70')}
       style={{ borderLeftColor: meta.color }}
     >
-      <div className={cx('flex items-start gap-2.5 px-3', dense ? 'py-2' : 'py-3')}>
+      <div className={cx('flex flex-wrap items-start gap-x-2.5 gap-y-1 px-3', dense ? 'py-2' : 'py-3')}>
         {draggable && drag ? <Grip grab={drag.grab} id={place.id} label={place.name} className="mt-0.5" /> : null}
         {nr ? <span className="mt-0.5 w-4 shrink-0 text-right text-[13px] tabular-nums text-slate-400" title={`Stelle ${nr}`}>{nr}</span> : null}
         <CategoryDot category={place.category} size={dense ? 19 : 23} className="mt-px" />
@@ -132,9 +132,9 @@ export function PlaceCard({
           </div>
         </div>
 
-        <div className="no-print flex shrink-0 items-start gap-0.5 opacity-70 transition group-hover:opacity-100 [@media(hover:none)]:opacity-100">
+        <div className="no-print flex w-full shrink-0 flex-wrap items-center justify-end gap-1 opacity-70 transition group-hover:opacity-100 [@media(hover:none)]:opacity-100 md:w-auto md:flex-nowrap md:items-start md:gap-0.5">
           {onUp || onDown ? (
-            <span className="mr-0.5 flex flex-col gap-0.5">
+            <span className="flex flex-row gap-1 md:mr-0.5 md:flex-col md:gap-0.5">
               <button className="icon-btn" title="eine Stelle höher" onClick={onUp} disabled={!onUp}>
                 ▲
               </button>
@@ -144,7 +144,7 @@ export function PlaceCard({
             </span>
           ) : null}
           {onMove ? (
-            <span className="mr-0.5 flex gap-0.5">
+            <span className="flex gap-1 md:mr-0.5 md:gap-0.5">
               <button className="icon-btn" title="einen Tag zurück" onClick={() => onMove(-1)}>
                 ◀
               </button>
