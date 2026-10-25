@@ -238,6 +238,12 @@ assert.ok(!zuGrau.length, `Grautext unter 4,5:1 Kontrast (slate-500 und dunkler)
 assert.ok(!datumEigen.length, `Kurzdatum von Hand gebaut statt fmtDay: ${datumEigen.join(', ')}`);
 assert.ok(!stufeEigen.length, `Priorität von Hand geschrieben: ${stufeEigen.join(', ')}`);
 assert.ok(!eingerueckt.length, `Liste rückt gegenüber dem Kopf ein (gleicher Rand statt eigener Einrückung): ${eingerueckt.join(', ')}`);
+// eine Zeile, neben deren Text sechs 44er-Knöpfe stehen, verliert bei 320px jede Breite:
+// 6 × 44 + Greifpunkt + Nummer + Punkt sind die Zeile – also muss die Gruppe darunter
+assert.ok(/no-print flex w-full[^\n]*md:w-auto/.test(quelltext('src/components/PlaceCard.tsx')), 'die Aktionsgruppe einer Aktivitätszeile muss auf dem Handy unter den Text rücken – sonst bleibt vom Namen nichts übrig');
+assert.ok(/@media \(hover: none\)[\s\S]*?\.icon-btn,[\s\S]*?min-width:\s*44px/.test(css), '44px Breite gilt den Flächen, die nur ein Zeichen tragen');
+const flechenBlock = css.match(/button,\s*\n\s*\.btn,[\s\S]*?textarea\s*\{[^}]*\}/);
+assert.ok(flechenBlock && !/min-width/.test(flechenBlock[0]), 'die Mindestbreite steht nur bei den Zeichen-Knöpfen – pauschal quetscht sie Liste und Chips zusammen');
 // …und was die Quelle nicht zeigen kann: die Regeln in der CSS
 assert.ok(/@media \(hover: none\)[\s\S]*?button,[\s\S]*?min-height:\s*44px/.test(css), 'auf dem Handy muss jede Tippfläche 44px hoch sein');
 assert.ok(/@media \(hover: none\)[\s\S]*?\.icon-btn\s*\{[^}]*width:\s*44px/.test(css), 'auch die kleinen Knöpfe in einer Zeile sind 44px breit');

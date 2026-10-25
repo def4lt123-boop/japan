@@ -320,12 +320,24 @@ body {
   .btn,
   .tab,
   summary,
+  .menu-pop a,
   .menu-sheet a,
   .day-nav a,
   input:not([type='checkbox']):not([type='radio']),
   select,
   textarea {
     min-height: 44px;
+  }
+  /* 44 × 44 gilt für Flächen, die nur ein Zeichen tragen – ein Knopf mit Wort
+     breiter zu machen ändert nichts am Treffen, nimmt aber dem Text daneben die Breite */
+  .icon-btn,
+  .grip,
+  .tab,
+  .day-nav a,
+  .menu-pop a,
+  .menu-sheet a,
+  .menu-sheet button,
+  .seg > button {
     min-width: 44px;
   }
   .icon-btn {
@@ -342,12 +354,6 @@ body {
     width: 44px;
     height: 44px;
     font-size: 17px;
-  }
-  /* Tabellen- und Chip-Knöpfe in engen Zeilen: Höhe ja, Breite dem Text überlassen */
-  td button,
-  th button,
-  button.chip {
-    min-width: 0;
   }
 }
 
