@@ -69,7 +69,7 @@ export function PendingList({
         </Link>
       </div>
 
-      <div className="p-2.5">
+      <div className="px-3 py-2.5">
         {pool.length > 5 ? (
           <TextInput className="mb-2 !py-1 !text-[13px]" value={q} onChange={(e) => setQ(e.target.value)} placeholder="in der Liste suchen …" />
         ) : null}

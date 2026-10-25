@@ -47,8 +47,7 @@ export function PriorityTag({ priority, title, className }: { priority?: Priorit
   const meta = PRIORITY_META[(priority ?? 'soll') as Priority] ?? PRIORITY_META.soll;
   return (
     <span className={cx('prio', meta.tone, className)} title={title ?? `Priorität: ${meta.label}`}>
-      <span aria-hidden>{meta.icon}</span>
-      {meta.label}
+      <span aria-hidden>{meta.icon}</span> {meta.label}
     </span>
   );
 }

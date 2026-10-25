@@ -87,7 +87,7 @@ export default function ActivitiesPage() {
         <div className="space-y-3">
           {open_.length ? (
             <Card className="p-0" data-offen={open_.length}>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-t-lg border-b border-white/[0.07] bg-amber-500/[0.07] px-2.5 py-1.5">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-t-lg border-b border-white/[0.07] bg-amber-500/[0.07] px-3 py-1.5">
                 <h3 className="text-[13px] font-semibold text-amber-100">✨ Noch ohne Tag</h3>
                 <span className="text-[13px] text-amber-100/70">{plural(open_.length, 'Punkt', 'Punkte')}</span>
                 {open_.length > 6 ? (
@@ -96,7 +96,7 @@ export default function ActivitiesPage() {
                   </button>
                 ) : null}
               </div>
-              <div className="space-y-1.5 p-2">
+              <div className="space-y-1.5 px-0 py-2">
                 {(folded.offen ? open_.slice(0, 6) : open_).map((p) => (
                   <ActivityRow key={p.id} place={p} all={bundle.places} dayOptions={dayOptions} tripStart={bundle.trip?.start_date} tripEnd={bundle.trip?.end_date} />
                 ))}
@@ -128,7 +128,7 @@ export default function ActivitiesPage() {
                     ) : null
                   }
                 />
-                <div className="space-y-1.5 p-2">
+                <div className="space-y-1.5 px-0 py-2">
                   {dayPlaces(bundle.places, date).map((p, i, arr) => (
                     <ActivityRow
                       key={p.id}

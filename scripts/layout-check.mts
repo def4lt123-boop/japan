@@ -205,6 +205,7 @@ const zuKlein: string[] = [];
 const zuGrau: string[] = [];
 const datumEigen: string[] = [];
 const stufeEigen: string[] = [];
+const eingerueckt: string[] = [];
 let unter13 = 0;
 for (const rel of dateien) {
   const zeilen = quelltext(rel).split('\n');
@@ -217,6 +218,10 @@ for (const rel of dateien) {
         if (zeile.includes('mikro')) unter13 += 1;
         else zuKlein.push(`${rel}:${i + 1} ${klein[0]}`);
       }
+      // Listen in einer Karte mit Kopf dürfen nicht seitlich einrücken: Kopf (px-3) und Zeile
+      // müssen am selben Rand stehen, sonst steht die Liste im Treppenabsatz
+      if (/className="space-y-[\d.]+ p-2(?:\.5)?"/.test(zeile)) eingerueckt.push(`${rel}:${i + 1}`);
+
       // Grautext über der dunklen Karte: slate-400 sind 7:1, slate-500 nur 3,8:1 – das zweite ist zu wenig
       if (/text-slate-[5-9]00\b/.test(zeile) && !/print:text-slate-[3-4]00/.test(zeile)) zuGrau.push(`${rel}:${i + 1} ${/text-slate-\d00/.exec(zeile)?.[0]}`);
     }
@@ -232,6 +237,7 @@ assert.ok(!zuKlein.length, `Schrift unter 13px ohne „mikro“: ${zuKlein.slice
 assert.ok(!zuGrau.length, `Grautext unter 4,5:1 Kontrast (slate-500 und dunkler): ${zuGrau.slice(0, 6).join(', ')}`);
 assert.ok(!datumEigen.length, `Kurzdatum von Hand gebaut statt fmtDay: ${datumEigen.join(', ')}`);
 assert.ok(!stufeEigen.length, `Priorität von Hand geschrieben: ${stufeEigen.join(', ')}`);
+assert.ok(!eingerueckt.length, `Liste rückt gegenüber dem Kopf ein (gleicher Rand statt eigener Einrückung): ${eingerueckt.join(', ')}`);
 // …und was die Quelle nicht zeigen kann: die Regeln in der CSS
 assert.ok(/@media \(hover: none\)[\s\S]*?button,[\s\S]*?min-height:\s*44px/.test(css), 'auf dem Handy muss jede Tippfläche 44px hoch sein');
 assert.ok(/@media \(hover: none\)[\s\S]*?\.icon-btn\s*\{[^}]*width:\s*44px/.test(css), 'auch die kleinen Knöpfe in einer Zeile sind 44px breit');
@@ -240,5 +246,5 @@ assert.ok(/\.prio\s*\{[^}]*text-\[13px\]/.test(css), 'das Stufen-Etikett hat üb
 assert.ok(/\.label\s*\{[^}]*text-\[13px\]/.test(css) && /\.chip\s*\{[^}]*text-\[13px\]/.test(css), 'Formularbeschriftung und Chips sind mindestens 13px');
 assert.ok(!/\.label\s*\{[^}]*text-slate-[5-9]00/.test(css), 'Beschriftungen bleiben hell genug');
 console.log(
-  `🎉 Lesen und Tippen hält – ${unter13} gemeldete Mikro-Ausnahmen in Grafiken, sonst nichts unter 13px, kein Grautext unter 4,5:1, Kurzdatum und Priorität aus einer Hand, 44×44 auf Touch`,
+  `🎉 Lesen und Tippen hält – ${unter13} gemeldete Mikro-Ausnahmen in Grafiken, sonst nichts unter 13px, kein Grautext unter 4,5:1, Kurzdatum und Priorität aus einer Hand, Kopf und Liste am selben Rand, 44×44 auf Touch`,
 );

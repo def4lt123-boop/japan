@@ -72,7 +72,7 @@ export function ActivityRow({
 
   return (
     <div className={cx('group rounded-lg border bg-white/[0.02] transition hover:border-white/20', place.date ? 'border-white/[0.07]' : 'border-dashed border-amber-400/25', done && 'opacity-60')}>
-      <div className={cx('flex flex-wrap items-start gap-x-2 gap-y-1.5', dense ? 'px-2 py-1.5' : 'px-2.5 py-2')}>
+      <div className={cx('flex flex-wrap items-start gap-x-2 gap-y-1.5 px-3', dense ? 'py-1.5' : 'py-2')}>
         <span className="flex shrink-0 items-center gap-1.5">
           {stelle ? <span className="w-4 text-right text-[13px] tabular-nums text-slate-400" title={gesamt ? `Stelle ${stelle} von ${gesamt}` : 'Reihenfolge am Tag'}>{stelle}</span> : null}
           <CategoryDot category={place.category} size={dense ? 18 : 21} />

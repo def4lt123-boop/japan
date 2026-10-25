@@ -58,7 +58,7 @@ body {
       placeholder:text-slate-400 focus:border-shu-400/60 focus:ring-2 focus:ring-shu-500/20;
   }
   .chip {
-    @apply inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2 py-1 text-[13px] font-medium;
+    @apply inline-flex items-center gap-1 self-center rounded-full bg-white/[0.06] px-2 py-1 text-[13px] font-medium align-middle;
   }
   .btn {
     @apply inline-flex select-none items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-[13px] font-semibold transition
@@ -180,9 +180,11 @@ body {
   .menu-pop {
     @apply pop-in absolute right-0 z-50 mt-1 w-60 rounded-xl border border-white/10 bg-ink-800/95 p-1 text-left shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] backdrop-blur;
   }
-  /* die Prioritätsstufe – dasselbe Etikett in Liste, Blech, Karte und Formular */
+  /* die Prioritätsstufe – dasselbe Etikett in Liste, Blech, Karte und Formular.
+     bewusst Inline-Text (kein Kästchen): so sitzt es in Zeilen mit Basenlinien-Ausrichtung
+     auf derselben Linie wie Name und Datum */
   .prio {
-    @apply inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[13px] font-medium;
+    @apply inline shrink-0 whitespace-nowrap text-[13px] font-medium;
   }
   /* winzige Schrift gibt es nur noch in Grafiken (Hitzefeld, Nacht-Streifen, Kalender,
      Kartenrand) – `mikro` kennzeichnet die Ausnahme, alles andere ist mindestens 13px */
@@ -190,10 +192,11 @@ body {
     line-height: 1.15;
     letter-spacing: 0.02em;
   }
-  /* ein leerer Tag ist eine Zeile: gleiche Höhe wie die Tages navigation daneben,
-     derselbe Farbrand links wie die Karte, die daraus wird, sobald ein Punkt drinliegt */
+  /* ein leerer Tag ist eine Zeile: so hoch wie der Kopf einer Karte (44px), gleicher
+     linker Rand, derselbe Farbrand links wie die Karte, die daraus wird, sobald ein
+     Punkt drinliegt – in der Liste stehen Datum und ＋ deshalb untereinander */
   .day-line {
-    min-height: 38px;
+    min-height: 44px;
   }
   .day-warn {
     @apply rounded-md bg-shu-500/15 px-2 py-1 text-[13px] font-medium text-shu-50 ring-1 ring-inset ring-shu-400/40 transition hover:bg-shu-500/30;
@@ -339,10 +342,6 @@ body {
     width: 44px;
     height: 44px;
     font-size: 17px;
-  }
-  /* eine Zeile pro leerem Tag bleibt auch mit 44px Knopf eine Zeile */
-  .day-line {
-    min-height: 44px;
   }
   /* Tabellen- und Chip-Knöpfe in engen Zeilen: Höhe ja, Breite dem Text überlassen */
   td button,

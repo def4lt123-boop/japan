@@ -106,7 +106,7 @@ export function DayPickerSheet({
         </div>
 
         {shown.length ? (
-          <ul className="space-y-1.5 p-2">
+          <ul className="space-y-1.5 px-3 pt-2 pb-2.5">
             {shown.map((p) => {
               const meta = categoryMeta(p.category);
               return (

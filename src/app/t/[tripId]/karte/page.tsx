@@ -151,7 +151,7 @@ export default function MapPage() {
 
         <div className="space-y-3">
           {anchor ? (
-            <Card className="p-2.5">
+            <Card className="p-3">
               <div className="mb-1.5 flex items-center justify-between gap-2">
                 <h3 className="text-[13px] font-semibold text-white">{selected ? 'Auswahl bei Google Maps' : 'Gegend bei Google Maps'}</h3>
                 <button className="text-[13px] text-slate-400 hover:text-white" onClick={() => setSelected(null)} title="Auswahl aufheben">
