@@ -29,6 +29,60 @@
   --randseiten: 16px;
   --schatten: 0 1px 2px rgb(16 24 40 / 0.05), 0 10px 26px -14px rgb(16 24 40 / 0.22);
   --radius: 18px;
+
+  /* was das dunkel umfärben soll: text auf akzent, felder, der vorhang über
+     dem bild, die meldezeile. alles andre folgt --karte und --text. */
+  --auf-akzent: #ffffff;
+  --feld-fläche: #ffffff;
+  --skelett: #e9edf4;
+  --chip-fläche: #eef1f6;
+  --bett-fläche: #efeafe;
+  --randglas: rgb(255 255 255 / 0.94);
+  --vorhang-schwer: rgb(255 255 255 / 0.86);
+  --vorhang-mittel: rgb(255 255 255 / 0.76);
+  --vorhang-leicht: rgb(255 255 255 / 0.5);
+  --bild-deckkraft: 0.62;
+  --meldung-fläche: #10151d;
+  --meldung-text: #ffffff;
+  --nadel-ring: #ffffff;
+  --siegel-fläche: #ffffff;
+  --auf-gut: #ffffff;
+}
+
+/* Dunkel: dieselben namen, andere tiefe. Die Kartenkacheln in der Mitte
+   bleiben hell, und darauf gehört der Nadelring weiß – er bleibt daher in
+   beiden Lichtern, wie er ist. */
+[data-thema='dunkel'] {
+  --fläche: #0e1218;
+  --karte: #171d26;
+  --text: #e9eef6;
+  --text2: #aebccd;
+  --text3: #8fa0b5;
+  --rand: #263141;
+  --rand-stark: #3a4860;
+  --akzent: #14b8a6;
+  --akzent-text: #5eead4;
+  --akzent-fläche: #102a2e;
+  --warnt: #fcd34d;
+  --warnt-fläche: #2b2213;
+  --gefahr: #fda4a4;
+  --gefahr-fläche: #2e1b1b;
+  --gut: #6ee7a8;
+  --gut-fläche: #16281e;
+  --schatten: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 28px -16px rgb(0 0 0 / 0.75);
+  --auf-akzent: #04211f;
+  --feld-fläche: #1d2530;
+  --skelett: #222c3a;
+  --chip-fläche: #222d3c;
+  --bett-fläche: #241f3d;
+  --randglas: rgb(23 29 38 / 0.92);
+  --vorhang-schwer: rgb(23 29 38 / 0.9);
+  --vorhang-mittel: rgb(23 29 38 / 0.78);
+  --vorhang-leicht: rgb(23 29 38 / 0.46);
+  --bild-deckkraft: 0.5;
+  --meldung-fläche: #e9eef6;
+  --meldung-text: #10151d;
+  --auf-gut: #06231a;
 }
 
 @layer base {
@@ -182,21 +236,22 @@
     z-index: 0;
     overflow: hidden;
     border-radius: 12px;
-    background: #e9edf4;
+    background: var(--skelett);
   }
   .zeile-bild img {
     height: 100%;
     width: 100%;
     object-fit: cover;
     object-position: 50% 42%;
-    opacity: 0.5;
+    opacity: var(--bild-deckkraft);
   }
-  /* Vorhang von links: wo Text steht, bleibt der Grund hell genug zum Lesen */
+  /* Vorhang von links: wo Text steht, bleibt der Grund hell genug zum Lesen,
+     nach rechts darf das Bild atmen – es soll zu sehn sein, nicht zu ahnen */
   .zeile-bild::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(100deg, rgb(255 255 255 / 0.95) 0%, rgb(255 255 255 / 0.9) 42%, rgb(255 255 255 / 0.68) 100%);
+    background: linear-gradient(100deg, var(--vorhang-schwer) 0%, var(--vorhang-mittel) 44%, var(--vorhang-leicht) 100%);
   }
   .zeile > :not(.zeile-bild) {
     position: relative;
@@ -217,7 +272,7 @@
     border-radius: 12px;
     border: 1px solid var(--akzent);
     background: var(--akzent);
-    color: #fff;
+    color: var(--auf-akzent);
     font: inherit;
     font-size: 15px;
     font-weight: 600;
@@ -249,7 +304,7 @@
   }
   .knopf-gefahr {
     background: var(--karte);
-    border-color: #eecfcb;
+    border-color: color-mix(in srgb, var(--gefahr) 45%, var(--karte));
     color: var(--gefahr);
   }
   .knopf-klein {
@@ -276,7 +331,7 @@
   .icon-knopf:hover:not(:disabled) {
     background: var(--akzent-fläche);
     color: var(--akzent-text);
-    border-color: #bfded9;
+    border-color: color-mix(in srgb, var(--akzent) 45%, var(--karte));
   }
   .icon-knopf:disabled {
     opacity: 0.35;
@@ -295,7 +350,7 @@
     border-radius: 999px;
     border: 0;
     background: var(--akzent);
-    color: #fff;
+    color: var(--auf-akzent);
     font: inherit;
     font-size: 15px;
     font-weight: 650;
@@ -312,7 +367,7 @@
     vertical-align: middle;
     padding: 4px 9px;
     border-radius: 999px;
-    background: #eef1f6;
+    background: var(--chip-fläche);
     color: var(--text2);
     font-size: 13px;
     font-weight: 550;
@@ -320,7 +375,7 @@
   }
   .chip-aktiv {
     background: var(--akzent);
-    color: #fff;
+    color: var(--auf-akzent);
   }
   .chip-warnt {
     background: var(--warnt-fläche);
@@ -349,13 +404,13 @@
     padding: 9px 12px;
     border-radius: 12px;
     border: 1px solid var(--rand-stark);
-    background: #fff;
+    background: var(--feld-fläche);
     color: var(--text);
     font: inherit;
     font-size: 16px;
   }
   .eingabe::placeholder {
-    color: #7b8798;
+    color: var(--text3);
   }
   .eingabe:focus {
     border-color: var(--akzent);
@@ -393,7 +448,7 @@
     min-height: 46px;
     padding: 5px 6px;
     border-radius: 12px;
-    background: #f8fafc;
+    background: var(--skelett);
     border: 1px solid transparent;
     color: var(--text);
     font: inherit;
@@ -407,7 +462,7 @@
   }
   .zelle-reise {
     background: var(--akzent-fläche);
-    border-color: #cfe6e2;
+    border-color: color-mix(in srgb, var(--akzent) 40%, var(--karte));
   }
   .zelle-heute {
     border-color: var(--akzent);
@@ -449,7 +504,7 @@
     width: 100%;
     overflow: hidden;
     border-radius: 999px;
-    background: #e9edf4;
+    background: var(--skelett);
   }
   .fortschritt > span {
     display: block;
@@ -481,7 +536,7 @@
     align-items: stretch;
     height: var(--dokhoehe);
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    background: rgb(255 255 255 / 0.94);
+    background: var(--randglas);
     backdrop-filter: blur(12px);
     border-top: 1px solid var(--rand);
   }
@@ -553,8 +608,8 @@
     max-width: min(92vw, 460px);
     padding: 10px 14px;
     border-radius: 12px;
-    background: #10151d;
-    color: #fff;
+    background: var(--meldung-fläche);
+    color: var(--meldung-text);
     font-size: 13.5px;
     box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.5);
     animation: hochfahren 0.16s ease-out;
@@ -596,7 +651,7 @@
     transform: rotate(-45deg);
     background: var(--nadel, #0f766e);
     background: linear-gradient(158deg, color-mix(in srgb, var(--nadel, #0f766e) 78%, #fff) 0%, var(--nadel, #0f766e) 60%);
-    border: 2px solid #fff;
+    border: 2px solid var(--nadel-ring);
     box-shadow: 0 7px 14px -7px rgb(16 21 29 / 0.55), 0 0 0 1px rgb(16 21 29 / 0.08);
   }
   .nadel-koerper i {
@@ -626,7 +681,7 @@
     width: 19px;
     height: 19px;
     border-radius: 999px;
-    background: #fff;
+    background: var(--siegel-fläche);
     border: 1px solid var(--rand);
     font-weight: 400;
     font-size: 12px;

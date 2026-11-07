@@ -44,7 +44,7 @@ export function ReiseKarte({
           </span>
         )}
         {aktiv ? (
-          <span className="absolute left-2.5 top-2.5 rounded-full bg-[var(--akzent)] px-2.5 py-1 text-[13px] font-semibold text-white">läuft gerade</span>
+          <span className="absolute left-2.5 top-2.5 rounded-full bg-[var(--akzent)] px-2.5 py-1 text-[13px] font-semibold" style={{ color: 'var(--auf-akzent)' }}>läuft gerade</span>
         ) : bald !== null && bald >= 0 && bald <= 30 ? (
           <span className="absolute left-2.5 top-2.5 rounded-full bg-white/92 px-2.5 py-1 text-[13px] font-semibold" style={{ color: 'var(--akzent-text)' }}>
             in {plural(bald, 'Tag', 'Tagen')}

@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { aendern, laden, loeschen, online as dbOnline, speichern, type TabellenName } from './supabase';
 import { plural, uid } from './format';
 import { heuteIso } from './dates';
+import { wendeAn } from './thema';
 import type { Einstellungen, Eintrag, Reise, Schnappschuss } from './types';
 
 /**
@@ -20,7 +21,7 @@ const LEER: Schnappschuss = { reisen: [], eintraege: [] };
 /** Die eine leere Liste: wer keine Treffer hat, bekommt dieselbe wie beim letzten Mal. */
 const OHNE_EINTRAEGE: Eintrag[] = [];
 
-const EINSTELLUNGS_LEER: Einstellungen = { name: null, waehrung: 'EUR', personen: 2, bilder: true, aktive_reise: null };
+const EINSTELLUNGS_LEER: Einstellungen = { name: null, waehrung: 'EUR', personen: 2, bilder: true, thema: 'auto', aktive_reise: null };
 
 function lies<T>(schluessel: string, fallback: T): T {
   try {
@@ -188,6 +189,8 @@ export function DatenProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     schreibeLokal(EINSTELLUNGS_SCHLUESSEL, einstellungen);
+    // das licht hängt am dokument, nicht an einem blatt – ein setter, zwei wirkungen
+    wendeAn(einstellungen.thema);
   }, [einstellungen]);
 
   const taetigen = useCallback(async (tabelle: TabellenName, aktion: 'speichern' | 'aendern' | 'loeschen', payload: unknown, id?: string) => {

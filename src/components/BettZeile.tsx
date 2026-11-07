@@ -6,7 +6,7 @@ import { preisText } from '../lib/plan';
 import { uhrzeitText } from '../lib/format';
 import type { Eintrag, Reise } from '../lib/types';
 import { Chip, IconKnopf, Karten, cx } from './ui';
-import { ReihenBild, ReihenNachweis, useOrtsbild } from './ReihenBild';
+import { ReihenBild, useOrtsbild } from './ReihenBild';
 
 /**
  * Die Übernachtung am Reisetag: dasselbe Bild hinter dem Text wie an den
@@ -38,7 +38,6 @@ export function BettZeile({ eintrag, reise, bearbeiten }: { eintrag: Eintrag; re
             </span>
           </p>
           {eintrag.preis ? <Chip className="mt-1">{preisText(eintrag, reise)}</Chip> : null}
-          {bild ? <ReihenNachweis nachweis={bild.nachweis} /> : null}
         </div>
         <div className="taten">
           <a href={kartenLink(eintrag)} target="_blank" rel="noreferrer" className="icon-knopf no-underline" title="Hotel auf der Karte" aria-label="Hotel auf der Karte">

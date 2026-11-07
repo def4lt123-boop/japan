@@ -92,9 +92,11 @@ assert.ok(!/<IconKnopf[^>]*>[\s\S]{0,40}<Link/.test(eng.map((e) => e.inhalt).joi
 
 const huelle = text('src/components/Huelle.tsx');
 const kurz = [...huelle.matchAll(/kurz:\s*'([^']+)'/g)].map((m) => m[1]!);
-assert.equal(kurz.length, 5, 'fünf Bereiche in der Leiste');
+assert.equal(kurz.length, 4, 'vier Bereiche in der Leiste – das profil ist ein blatt, kein bereich');
+assert.ok(!/href:\s*'\/profil'|label:\s*'Profil'/.test(huelle), 'der Profil-Reiter ist weg, nicht nur ausgeblendet');
+assert.match(huelle, /<Einstellungen variante="zeile" \/>/, 'die seitenleiste öffnet dasselbe blatt wie das dashboard');
 assert.ok(kurz.every((k) => k.length <= 10), `Kurze Namen für die Leiste (${kurz.join(', ')})`);
-for (const weg of ['src/app/page.tsx', 'src/app/reisen/page.tsx', 'src/app/kalender/page.tsx', 'src/app/karte/page.tsx', 'src/app/profil/page.tsx', 'src/app/reisen/neu/page.tsx', 'src/app/t/[tripId]/layout.tsx']) {
+for (const weg of ['src/app/page.tsx', 'src/app/reisen/page.tsx', 'src/app/kalender/page.tsx', 'src/app/karte/page.tsx', 'src/app/reisen/neu/page.tsx', 'src/app/t/[tripId]/layout.tsx']) {
   assert.ok(existsSync(join(WURZEL, weg)), `${weg} fehlt`);
 }
 const grund = 'src/app/t/[tripId]';
@@ -165,7 +167,10 @@ assert.match(pruefer, /cache: 'no-store'/, 'der Status wird nicht zwischengespei
 const stores = text('src/lib/daten.tsx');
 assert.match(stores, /window\.addEventListener\('focus'/, 'wer zurückkommt, sieht einen frischen Status');
 assert.match(text('src/components/Huelle.tsx'), /<StatusAnzeige variant="zeile" pruefen \/>/, 'auf dem Rechner steht der Status in der Spalte');
-assert.match(text('src/app/profil/page.tsx'), /<StatusAnzeige pruefen \/>/, 'auf dem Handy steht er im Profil');
+assert.match(text('src/components/Einstellungen.tsx'), /<StatusAnzeige pruefen \/>/, 'auf dem Handy steht er im Einstellungsblatt');
+assert.match(text('src/app/page.tsx'), /<Einstellungen \/>/, 'das Blatt geht vom dashboard auf – von zwei stellen aus');
+const seitenAlles = texte(seiten).join('\n');
+assert.ok(!/'\/profil/.test(seitenAlles), 'kein Weg führt noch nach /profil');
 
 /* ── 7 · Listen und Zustände, die dieselben bleiben ───────────────────── */
 
@@ -212,7 +217,8 @@ assert.match(bildreihe, /aria-hidden="true"/, 'die Bildebene sagt niemandem etwa
 assert.ok(!/eintragAendern|speichern\(/.test(bildreihe), 'ein gefunden Bild wird nicht von sich geschrieben');
 assert.match(text('src/lib/ortsbild.ts'), /const vorrat = new Map/, 'dieselbe Frage sucht nur einmal');
 assert.match(text('src/lib/ortsbild.ts'), /HÖCHSTENS = 2/, 'nicht acht Reihen, acht Suchen auf einmal');
-assert.match(text('src/components/EintragZeile.tsx'), /ReihenNachweis/, 'der Nachweis des Bilddienstes steht an der Reihe');
+assert.ok(!/ReihenNachweis/.test(text('src/components/EintragZeile.tsx') + text('src/components/BettZeile.tsx')), 'die reihen tragen keine nachweiszeile – das bild soll luft behalten');
+assert.match(text('src/components/EintragFormular.tsx'), /foto_nachweis/, 'der nachweis bleibt am eintrag und ist im formular zu sehn');
 assert.match(text('src/components/EintragZeile.tsx'), /Bild übernehmen/, 'behalten wird ein Fund erst nach dem Zuruf');
 assert.ok(!/<li[\s>]/.test(text('src/components/EintragZeile.tsx')), 'eine Reihe ist ein div – die Liste trägt das li');
 assert.match(css, /\.zeile\s*\{[^}]*isolation:\s*isolate/, 'die Bildebene bleibt in der Reihe');
@@ -269,7 +275,8 @@ assert.match(kartenBlatt, /popupAnchor: \[0, -42\]/, 'das blatt öffnet über de
 const nadel = nadelAbschnitt(text('src/app/globals.css'));
 assert.match(nadel, /border-radius: 50% 50% 50% 6px/, 'ein körper mit zugespitzter ecke, kein kreis');
 assert.match(nadel, /transform: rotate\(-45deg\)/, 'und er steht auf der spitze');
-assert.match(nadel, /border: 2px solid #fff/, 'ein weißer ring hebt ihn von jeder kachel ab');
+assert.match(nadel, /border: 2px solid var\(--nadel-ring\)/, 'ein ring hebt ihn von jeder kachel ab');
+assert.match(text('src/app/globals.css'), /--nadel-ring: #ffffff;[\s\S]{0,1400}\[data-thema='dunkel'\]/, 'der ring bleibt weiß – die kacheln in der mitte sind es im dunkeln auch');
 assert.match(nadel, /box-shadow:/, 'ein schatten setzt ihn darauf');
 assert.ok(nadel.includes('rotate(45deg)'), 'zahl und zeichen stehen gegen die neigung des körpers');
 assert.ok(/\.nadel-koerper b \{[\s\S]{0,320}border-radius: 999px/.test(nadel), 'das zeichen sitzt in einem siegel, nicht auf dem kopf');
@@ -289,6 +296,31 @@ assert.match(karte, /ohnePunktListe\.slice\(0, 5\)/, 'höchstens fünf auf einma
 assert.match(karte, /window\.setTimeout\(r, 240\)/, 'zwischen zwei anfragen liegt eine pause – die offene suche wird nicht gemäht');
 assert.match(karte, /ohne Punkt steht nichts auf der Karte/, 'die lücke ist am bild erklärt, nicht unterm knick');
 assert.ok(!/p\.titel/.test(text('src/lib/karten.ts').split('nadelHtml')[1] ?? ''), 'fremder text wird nicht in die nadel gehoben');
+
+
+/* ── 12 · das licht und das bild im hintergrund ───────────────────────── */
+
+const grundblatt = text('src/app/layout.tsx');
+assert.match(grundblatt, /dangerouslySetInnerHTML/, 'das licht wird vor dem ersten bild entschieden – nichts blitzt weiß auf');
+assert.match(grundblatt, /reiseplan\.einstellungen\.v1/, 'das skript liest denselben zettel wie das speicherblatt');
+assert.match(grundblatt, /suppressHydrationWarning/, 'und das dokument darf beim start schon gefärbt sein');
+assert.match(text('src/lib/types.ts'), /thema: 'hell' \| 'dunkel' \| 'auto'/, 'das licht gehört zu den einstellungen, nicht zu einem blatt');
+assert.match(stores, /wendeAn\(einstellungen\.thema\)/, 'ein setter, zwei wirkungen: gespeichert und umgefärbt');
+const licht = text('src/app/globals.css');
+assert.match(licht, /\[data-thema='dunkel'\] \{[\s\S]{0,700}--fläche: #0e1218/, 'im dunkeln gilt eine eigene palette, nicht ein filter');
+assert.match(licht, /\[data-thema='dunkel'\][\s\S]{0,1200}--auf-akzent: #04211f/, 'auf dem hellen akzent steht dunkle schrift – sonst liest niemand was');
+assert.ok(!/color: '#fff'/.test(text('src/components/Huelle.tsx') + text('src/components/Kalender.tsx')), 'kein weiß mehr auf akzentflächen');
+assert.match(text('src/components/Einstellungen.tsx'), /LICHT_OPTIONEN/, 'das licht steht im blatt, nicht in einem eigenen bereich');
+
+const suche = text('src/components/ReihenBild.tsx');
+assert.match(suche, /bildFragen\(/, 'die reihe fragt die staffel, nicht ein einzelnes feld');
+assert.match(suche, /amEintrag \?\? fund/, 'was übernommen ist, gilt – sonst sucht die reihe für sich');
+assert.match(text('src/lib/ortsbild.ts'), /return fragen\.slice\(0, 3\)/, 'höchstens drei fragen pro reihe');
+assert.match(text('src/lib/ortsbild.ts'), /const HÖCHSTENS = 2/, 'und höchstens zwei anfragen gleichzeitig');
+assert.match(text('src/lib/anbieter.ts'), /SIEHBT_GOOGLE \? await beiGoogleFoto|if \(SIEHBT_GOOGLE\)/, 'wer einen schlüssel hat, kriegt die fotos von google');
+assert.match(text('src/app/api/bild/route.ts'), /googleBild\(foto\)/, 'gereicht wird durch unsere eigene tür, der schlüssel bleibt im server');
+assert.ok(/export const Fotopfad = \/.*places/.test(text('src/lib/anbieter.ts')), 'nur ein google-fotopfad – die tür bleibt kein offener verteiler');
+assert.match(text('src/components/EintragZeile.tsx'), /eintrag\.foto_url \?\? bild\?\.url/, 'auch die dichte reihe zeigt das bild, als vorschnitt');
 
 
 console.log(`🎉 Neues Fundament hält – ${dateien.length} Dateien (${dateien.reduce((s, d) => s + text(d).split('\n').length, 0)} Zeilen), ${seiten.length} Seiten, ${blätter.length} Reiseblätter, kein Rest von früher`);

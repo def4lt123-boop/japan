@@ -1,10 +1,15 @@
 'use client';
 
+import { stadtAusAdresse } from './orte';
+
 /**
  * Das Bild zum Ort. Geholt wird über den Bilddienst der App, höchstens zwei
  * Anfragen auf einmal – ein Tag mit acht Punkten soll nicht acht Suchen
  * gleichzeitig lostreten. Gefunden heißt nicht gespeichert: wer das Bild
  * behalten will, übernimmt es an der Reihe.
+ *
+ * Bild und Nachweis werden mitgenommen; der Nachweis steht am Eintrag und ist
+ * im Formular zu sehn, die Reihen selbst bleiben frei davon.
  */
 
 export type Ortsbild = { url: string; nachweis: string | null; gefunden: boolean };
@@ -45,15 +50,40 @@ async function holen(frage: string): Promise<Ortsbild | null> {
   }
 }
 
-/** Zwei bis drei Stücke genügen einer Bildersuche; mehr macht sie ungenau. */
-export function ortsfrage(...teile: (string | null | undefined)[]): string {
-  const stücke: string[] = [];
-  for (const teil of teile) {
-    const wort = (teil ?? '').trim();
-    if (wort && !stücke.includes(wort)) stücke.push(wort);
-    if (stücke.length >= 2) break;
-  }
-  return stücke.join(', ');
+/**
+ * Die Fragen, die nacheinander gestellt werden – höchstens drei, und die erste
+ * ist immer das, was den Ort wirklich meint. Ein Land ist keine Bildersuche:
+ * „Vereinigtes Königreich, Flughafen" findet nichts, „London Luton Airport"
+ * findet genau den. Findet der Name nichts, bleibt der Ortsblick als Grund.
+ */
+export function bildFragen(
+  e: { titel?: string | null; ort?: string | null; adresse?: string | null },
+  reise: { stationen?: string | null; land?: string | null }
+): string[] {
+  const glatt = (t: string | null | undefined) => (t ?? '').replace(/\s+/g, ' ').trim();
+  const land = glatt(reise.land).toLowerCase();
+  const titel = glatt(e.titel);
+  const ortsangabe = glatt(e.ort);
+  const stationen = glatt(reise.stationen)
+    .split(/[·,;]/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+  const ausAdresse = glatt(stadtAusAdresse(e.adresse ?? null, reise.land));
+  // ein land ist keine bildersuche: „vereinigtes königreich" als ortsangabe zählt nicht
+  const stadt = ortsangabe && ortsangabe.toLowerCase() !== land ? ortsangabe : ausAdresse || stationen[0] || '';
+  // und wenn auch das nichts findet, die reise selbst: ein land aus der adresse
+  // („England") malt eine strandkulisse, „London" immerhin den richtigen ort
+  const blick = stationen[0] || stadt;
+  const fragen: string[] = [];
+  const nimm = (f: string) => {
+    const frage = f.replace(/\s+/g, ' ').trim();
+    if (frage.length >= 4 && !fragen.includes(frage)) fragen.push(frage);
+  };
+  nimm(titel);
+  if (stadt) nimm(`${titel}, ${stadt}`);
+  nimm(blick);
+  if (stadt && blick !== stadt) nimm(stadt);
+  return fragen.slice(0, 3);
 }
 
 /** Beim zweiten Mal dieselbe Antwort – aus dem Vorrat, ohne neue Suche. */

@@ -10,7 +10,7 @@ import { useStore } from '../lib/daten';
 import type { RoutenInfo } from '../lib/routen';
 import type { Eintrag, Reise } from '../lib/types';
 import { Ablage, Chip, Foto, IconKnopf, Menue, cx } from './ui';
-import { ReihenBild, ReihenNachweis, useOrtsbild } from './ReihenBild';
+import { ReihenBild, useOrtsbild } from './ReihenBild';
 
 /**
  * Eine Zeile im Kalender: Zeit links, Bild, Name, darunter was dazugehört.
@@ -40,9 +40,11 @@ export function EintragZeile({
   const katz = kategorie(eintrag.kategorie);
   const metadaten = artMeta(eintrag.art);
   const istBett = eintrag.art === 'unterkunft';
-  /* dichte Listen zeigen das Bild als Vorschnitt, die volle Reihe als Hintergrund */
-  const bild = useOrtsbild(eintrag, reise, !kompakt);
+  /* dichte Listen zeigen das Bild als Vorschnitt neben dem Text, die volle
+     reihe dahinter – gesucht wird in beiden, der weg zum bild ist gleich */
+  const bild = useOrtsbild(eintrag, reise, true);
   const hintergrund = kompakt ? null : bild;
+  const vorschau = kompakt ? eintrag.foto_url ?? bild?.url ?? null : null;
   const zeiten = [eintrag.zeit ? uhrzeitText(eintrag.zeit) : null, eintrag.bis_zeit ? `bis ${uhrzeitText(eintrag.bis_zeit)}` : null].filter(Boolean).join(' · ');
   const nacht = istBett && gilt(eintrag.date) && gilt(eintrag.bis_date) ? abstandTage(eintrag.date, eintrag.bis_date) : 0;
 
@@ -71,7 +73,7 @@ export function EintragZeile({
         <span className="zeitangabe" style={{ color: eintrag.zeit ? 'var(--text)' : undefined }}>
           {istBett ? '🛏️' : eintrag.zeit ? eintrag.zeit : <span style={{ color: 'var(--text3)' }}>—</span>}
         </span>
-        {kompakt && eintrag.foto_url ? <Foto url={eintrag.foto_url} nachweis={eintrag.foto_nachweis} alt={eintrag.titel} zeichen={katz.icon} hoehe={44} /> : null}
+        {vorschau ? <Foto url={vorschau} alt={eintrag.titel} zeichen={katz.icon} hoehe={44} /> : null}
         <div className="text min-w-0">
           <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <button type="button" onClick={bearbeiten} className="min-w-0 max-w-full truncate rounded text-left text-[16px] font-semibold leading-snug hover:underline">
@@ -97,7 +99,6 @@ export function EintragZeile({
           </p>
           {eintrag.notiz ? <p className="mt-1 line-clamp-2 text-[13.5px] leading-snug text-[var(--text2)]">{eintrag.notiz}</p> : null}
           {eintrag.adresse && !kompakt ? <p className="mikro mt-0.5 truncate">{eintrag.adresse}</p> : null}
-          {hintergrund ? <ReihenNachweis nachweis={hintergrund.nachweis} /> : null}
         </div>
         <div className="taten">
           {oben || unten ? (

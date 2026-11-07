@@ -4,6 +4,7 @@ import { chronologisch, eintragVersetzen, kartenEintraege, preisText, reiseTage,
 import { ANDERE_KATEGORIEN, KATEGORIEN, kategorie, kategorieVorschlag, artMeta } from '../src/lib/kategorien';
 import { geld, plural, sauber, uid, zaehlen, minutenText } from '../src/lib/format';
 import { MODI, entfernungKm, kartenLink, kartenVorschau, nadelHtml, schaetzungKm, schaetzungMinuten } from '../src/lib/karten';
+import { lichtWert, LICHT_OPTIONEN } from '../src/lib/thema';
 import type { Eintrag, Reise } from '../src/lib/types';
 
 /** Rechenblatt der App: Datum, Kalender, Betten, Sortierung, Budget. */
@@ -180,6 +181,13 @@ assert.equal(new Set(alleLabels).size, alleLabels.length, 'kein Label doppelt');
 assert.equal(new Set(alleFarben).size, alleFarben.length, 'jede Kategorie hat ihre eigene Farbe');
 assert.ok(alleLabels.includes('Unterkunft'));
 assert.equal(unterkuenfte(alle).length, 1);
+
+/* ── das licht der app ───────────────────────────────────────────────── */
+assert.equal(lichtWert('hell', true), 'hell', 'wer hell sagt, bekommt hell – auch um drei uhr nachts');
+assert.equal(lichtWert('dunkel', false), 'dunkel');
+assert.equal(lichtWert('auto', true), 'dunkel', 'automatisch folgt dem gerät');
+assert.equal(lichtWert(undefined, true), 'dunkel', 'ein alter stand ohneangabe ist kein befehl');
+assert.equal(LICHT_OPTIONEN.length, 3, 'drei worte reichen: hell, dunkel, wie gerät');
 
 console.log(
   `🎉 Rechenblatt passt – ${reiseTage(reise).length} Reisetage, 4 Betten-Regeln, ${kartenEintraege(alle, null).length} von ${alle.length} Einträgen auf der Karte, ${ANDERE_KATEGORIEN.length} Kategorien`,

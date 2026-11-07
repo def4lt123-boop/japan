@@ -191,7 +191,7 @@ export default function ReiseKarte() {
                       {p.nr}
                     </span>
                   ) : (
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#efeafe] text-[13px]" style={{ border: `1px solid ${p.farbe}` }} aria-hidden>
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[13px]" style={{ border: `1px solid ${p.farbe}`, background: 'var(--bett-fläche)' }} aria-hidden>
                       🛏️
                     </span>
                   )}
