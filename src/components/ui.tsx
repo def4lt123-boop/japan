@@ -209,7 +209,7 @@ export function Segment({
             role="tab"
             aria-selected={aktiv}
             onClick={() => beimAendern(o.id)}
-            className={cx('chip !text-[13.5px] !px-3 !py-2', aktiv ? 'chip-aktiv' : 'bg-white')}
+            className={cx('chip !text-[13.5px] !px-3 !py-2', aktiv ? 'chip-aktiv' : '')}
             style={{ borderColor: aktiv ? 'var(--akzent)' : 'var(--rand)', borderWidth: 1, borderStyle: 'solid' }}
           >
             {o.zeichen ? <span aria-hidden>{o.zeichen} </span> : null}

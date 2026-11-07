@@ -80,6 +80,8 @@ export interface Einstellungen {
   personen: number;
   /** Bilder beim Anlegen automatisch suchen */
   bilder: boolean;
+  /** das licht der App – 'auto' folgt dem gerät */
+  thema: 'hell' | 'dunkel' | 'auto';
   /** zuletzt geöffnete Reise – davon handeln „Kalender" und „Karte" in der Leiste */
   aktive_reise: string | null;
 }

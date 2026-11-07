@@ -46,7 +46,7 @@ export default function Reisedaten() {
             <ul className="space-y-1.5 p-3">
               {fort.punkte.map((p) => (
                 <li key={p.label} className="pruefpunkt">
-                  <span aria-hidden className={cx('grid h-5 w-5 shrink-0 place-items-center rounded-full text-[13px] font-bold', p.ok ? 'text-white' : '')} style={{ background: p.ok ? 'var(--gut)' : '#e6ebf2', color: p.ok ? undefined : 'var(--text3)' }}>
+                  <span aria-hidden className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-[13px] font-bold" style={{ background: p.ok ? 'var(--gut)' : 'var(--skelett)', color: p.ok ? 'var(--auf-gut)' : 'var(--text3)' }}>
                     {p.ok ? '✓' : '○'}
                   </span>
                   <span className={cx('min-w-0 flex-1', p.ok && 'line-through decoration-[var(--rand-stark)]')}>{p.label}</span>

@@ -16,7 +16,11 @@ for (const name of ['window', 'document', 'navigator', 'HTMLElement', 'Element',
   Object.defineProperty(global, name, { value: wert, writable: true, configurable: true });
 }
 global.IS_REACT_ACT_ENVIRONMENT = true;
-global.fetch = async () => ({ ok: true, status: 204, json: async () => ({ speicher: 'aus', erreichbar: false }) });
+/** die bildersuche antwortet, der datenbestand nicht – ein fund soll zu sehn sein */
+global.fetch = async (url) =>
+  String(url ?? '').includes('/api/bild')
+    ? { ok: true, status: 200, json: async () => ({ url: 'https://beispiel.org/gefunden.jpg', nachweis: 'Foto: Mia Gurt / Wikimedia Commons' }) }
+    : { ok: true, status: 204, json: async () => ({ speicher: 'aus', erreichbar: false }) };
 
 const REISE = {
   id: 'r-test',
@@ -135,7 +139,7 @@ async function reihenPrüfen() {
             { className: 'liste' },
             React.createElement('li', { className: 'karte overflow-hidden' }, reihe(EintragZeile, { eintrag: PUNKT2 })),
             React.createElement('li', { className: 'karte overflow-hidden' }, reihe(EintragZeile, { eintrag: PUNKT1, kompakt: true })),
-            React.createElement('li', { className: 'karte overflow-hidden' }, reihe(EintragZeile, { eintrag: PUNKT3 }))
+            React.createElement('li', { className: 'karte overflow-hidden' }, reihe(EintragZeile, { eintrag: PUNKT3, kompakt: true }))
           ),
           reihe(BettZeile, { eintrag: BETT })
         )
@@ -151,11 +155,12 @@ async function reihenPrüfen() {
   assert.ok(hintergrund, 'das Bild des Ortes liegt hinter der vollen Reihe');
   assert.equal(hintergrund.getAttribute('alt'), '', 'das Bild ist Schmuck, der Name steht im Text');
   assert.equal(hintergrund.getAttribute('loading'), 'lazy', 'es lädt nach, nicht vor dem Text');
-  assert.equal(behälter.querySelectorAll('.zeile-bild').length, 2, 'ein Punkt und das Bett, die dichte Reihe bleibt weiß');
+  assert.equal(behälter.querySelectorAll('.zeile-bild').length, 2, 'die vollen reihen tragen das bild hinten, die dichte nicht');
   assert.equal(behälter.querySelectorAll('img[alt="Markt"]').length, 1, 'die dichte Liste behält ihren Vorschnitt');
-  assert.ok(behälter.textContent.includes('Foto: Jem Kell / Unsplash'), 'der Nachweis steht sichtbar an der Reihe');
+  assert.equal(behälter.querySelectorAll('img[src="https://beispiel.org/gefunden.jpg"]').length, 1, 'auch die dichte reihe zeigt das gesuchte bild – als vorschnitt');
+  assert.ok(!behälter.textContent.includes('Foto: Jem Kell'), 'die reihen tragen keinen nachweis, das bild soll luft haben');
   assert.ok(behälter.querySelector('.zeile-bett .zeile-bild'), 'auch das Bett zeigt sein Bild');
-  assert.ok(!behälter.querySelector('li:nth-child(3) .zeile-bild'), 'wo nichts zu finden ist, bleibt die Reihe leer');
+  assert.ok(!behälter.querySelector('li:nth-child(3) .zeile-bild'), 'die dichte reihe sucht nicht den hintergrund, sie zeigt den vorschnitt');
   assert.ok(!behälter.querySelector('.zeile li'), 'eine Reihe verschachtelt kein li in ein li');
 
   const stand = JSON.parse(window.localStorage.getItem('reiseplan.v1'));

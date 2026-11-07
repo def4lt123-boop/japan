@@ -97,9 +97,48 @@ async function beiWikimedia(q: string): Promise<Bildvorschlag | null> {
 }
 
 /** Erst die Dienste mit Schlüssel, dann das freie Commons-Bild. */
+/**
+ * Das Foto eines Ortes von Google: die places-api kennt es zu beinahe jedem
+ * Hotel und jeder Sehenswürdigkeit. Der Schlüssel bleibt im Server – das Bild
+ * wird durch unsere eigene tür gereicht (see /api/bild?foto=…), damit er nie
+ * im blatt oder im eintrag landet.
+ */
+async function beiGoogleFoto(q: string): Promise<Bildvorschlag | null> {
+  const key = process.env.GOOGLE_MAPS_API_KEY || process.env.PLACES_API_KEY;
+  if (!key) return null;
+  const antwort = await hole('https://places.googleapis.com/v1/places:searchText', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': key,
+      'X-Goog-FieldMask': 'places.displayName,places.photos',
+    },
+    body: JSON.stringify({ textQuery: q, languageCode: 'de', maxResultCount: 3 }),
+  });
+  if (!antwort) return null;
+  const roh = (await antwort.json()) as { places?: { photos?: { name?: string }[] }[] };
+  const name = (roh.places ?? []).flatMap((p) => p.photos ?? []).map((f) => f.name).find((n) => typeof n === 'string' && Fotopfad.test(n));
+  if (!name) return null;
+  return { url: `/api/bild?foto=${encodeURIComponent(name)}`, nachweis: 'Foto: Google Places', quelle: 'Google' };
+}
+
+/** nur ein google-fotopfad, nie ein beliebiges ziel – die tür bleibt kein offener verteiler */
+export const Fotopfad = /^places\/[\w.\-]{8,180}\/photos\/[\w.\-]{8,180}$/;
+
+export async function googleBild(name: string): Promise<Response | null> {
+  const key = process.env.GOOGLE_MAPS_API_KEY || process.env.PLACES_API_KEY;
+  if (!key || !Fotopfad.test(name)) return null;
+  const antwort = await hole(`https://places.googleapis.com/v1/${name}/media?maxWidthPx=900&key=${key}`, undefined, 8000);
+  return antwort && antwort.body ? antwort : null;
+}
+
 export async function bildFinden(q: string): Promise<Bildvorschlag | null> {
   const suchwort = q.trim();
   if (suchwort.length < 3) return null;
+  if (SIEHBT_GOOGLE) {
+    const vonGoogle = await beiGoogleFoto(suchwort);
+    if (vonGoogle) return vonGoogle;
+  }
   const bezahlt = process.env.UNSPLASH_ACCESS_KEY ? await beiUnsplash(suchwort) : await beiPexels(suchwort);
   if (bezahlt) return bezahlt;
   return beiWikimedia(suchwort);

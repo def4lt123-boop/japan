@@ -5,6 +5,7 @@ import { bestenPunkt, punktFuer, suchkandidaten } from '../src/lib/punktfindung'
 import type { Ortsvorschlag } from '../src/lib/types';
 import { SIEHBT_BILDDIENST, SIEHBT_GOOGLE } from '../src/lib/anbieter';
 import { kacheln } from '../src/lib/kacheln';
+import { bildFragen } from '../src/lib/ortsbild';
 import { kartenVorschau } from '../src/lib/karten';
 
 /** Was die Anbieter liefern, muss sauber in Name, Punkt, Adresse und Bildnachweis enden. */
@@ -147,4 +148,24 @@ assert.equal(
 );
 
 console.log('🎉 Karte ohne Schlüssel – ' + quellen.length + ' offene Quellen, Vorschau offen eingebettet');
+/* ── das bild des ortes: Fragen in der richtigen reihenfolge ─────────── */
+
+assert.deepEqual(
+  bildFragen({ titel: 'London Luton Airport', ort: 'Vereinigtes Königreich', adresse: null }, { stationen: 'London', land: 'Vereinigtes Königreich' }),
+  ['London Luton Airport', 'London Luton Airport, London', 'London'],
+  'der name zuerst, das land als suchwort nie – die stadt kommt aus der ersten station',
+);
+assert.deepEqual(
+  bildFragen({ titel: 'F4 Glasshouse Studio Flat', ort: null, adresse: '14 High Street, Luton, England' }, { stationen: 'London', land: 'Großbritannien' }),
+  ['F4 Glasshouse Studio Flat', 'F4 Glasshouse Studio Flat, England', 'London'],
+  'findet der name nichts, bleibt der blick auf die reise – höchstens drei fragen',
+);
+assert.deepEqual(
+  bildFragen({ titel: 'Alcázar', ort: 'Sevilla', adresse: null }, { stationen: 'Sevilla', land: 'Spanien' }),
+  ['Alcázar', 'Alcázar, Sevilla', 'Sevilla'],
+  'eine echte stadt wird benutzt, ein land nicht',
+);
+assert.deepEqual(bildFragen({ titel: '', ort: null, adresse: null }, { stationen: null, land: null }), [], 'ohne angabe wird nicht gesucht');
+
 console.log('🎉 Punkte, die sich selbst finden – Stadt muss passen, Nachweis bleibt dran');
+console.log('🎉 Bilder folgen der richtigen frage – name zuerst, land nie');

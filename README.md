@@ -15,9 +15,9 @@ Ein universeller Reiseplaner fürs Handy: Reisen anlegen, Tage füllen, Unterkü
 | Unterkünfte | `/t/<reise>/hotels` | Betten mit Check-in und Check-out – die Nächte dazwischen füllen sich von selbst |
 | Karte | `/t/<reise>/karte` | nummerierte Nadeln in Kategoriefarbe, Weg des Tages, Punkt antippen öffnet das Blatt |
 | Reisedaten | `/t/<reise>/daten` | die Reise selbst ändern, Prüfliste, Archiv und Löschen |
-| Profil | `/profil` | Ansprache, Standardwährung, Personen, Bilder an oder aus, Sicherung als Datei |
+| Einstellungen | ⚙️ (Blatt, keine Seite) | Licht, Anrede, Standardwährung, Personen, Bilder an oder aus, Sicherung als Datei, alles löschen |
 
-Die untere Leiste führt auf dem Handy durch Dashboard, Reisen, Kalender, Karte und Profil; ab dem Rechner steht sie als Spalte links. „Kalender" und „Karte" öffnen dabei die Reise, die zuletzt offen war.
+Die untere Leiste führt auf dem Handy durch Dashboard, Reisen, Kalender und Karte; ab dem Rechner steht dasselbe als Spalte links. „Kalender" und „Karte" öffnen dabei die Reise, die zuletzt offen war. Was früher ein Profil-Reiter war, ist ein Blatt geworden: ⚙️ oben rechts auf dem Dashboard und in der Seitenleiste – vier Entscheidungen füllen keine eigene Seite.
 
 ## Datenmodell
 
@@ -34,7 +34,7 @@ Preis und Währung gehören zusammen, stehen aber je Eintrag: ein Ryokan in ¥ n
 
 Ohne jeden Schlüssel: Suche über OpenStreetMap (Nominatim), Bilder über Wikimedia Commons, Fahrtzeiten über den offenen OSRM-Dienst. Der Code merkt sich, wenn eine Quelle nicht antwortet, und schätzt die Zeit dann aus der Luftlinie – die Anzeige sagt dann „geschätzt".
 
-Mit Schlüsseln in der Umgebung werden dieselben Stellen besser: `GOOGLE_MAPS_API_KEY` (oder `PLACES_API_KEY`) für die Ortssuche, `UNSPLASH_ACCESS_KEY` oder `PEXELS_API_KEY` für Bilder. Die Schlüssel bleiben auf dem Server, die Route `/api/orte` und `/api/bild` geben nur Namen, Punkt, Adresse und Bild weiter. Ein eigenes Foto lädt ins Blatt und wird klein gerechnet (900 px Kante), damit es nicht den Speicher sprengt.
+Mit Schlüsseln in der Umgebung werden dieselben Stellen besser: `GOOGLE_MAPS_API_KEY` (oder `PLACES_API_KEY`) für die Ortssuche **und für die Fotos von Google Places** – die laufen dann über `/api/bild?foto=…`, damit der Schlüssel im Server bleibt und nie in einem Eintrag; `UNSPLASH_ACCESS_KEY` oder `PEXELS_API_KEY` für Bilder. Die Schlüssel bleiben auf dem Server, die Route `/api/orte` und `/api/bild` geben nur Namen, Punkt, Adresse und Bild weiter. Ein eigenes Foto lädt ins Blatt und wird klein gerechnet (900 px Kante), damit es nicht den Speicher sprengt.
 
 Lizenzpflichtige Bilder behalten ihren Nachweis am Bild (`foto_nachweis`, `cover_credit`).
 
@@ -48,7 +48,7 @@ Stehen `NEXT_PUBLIC_SUPABASE_URL` und `NEXT_PUBLIC_SUPABASE_ANON_KEY`, liegt all
 
 `supabase/schema.sql` (oder `supabase/migrations/…`) einspielen, fertig.
 
-Verdacht auf einen halben Stand in Supabase – eine Spalte fehlt, eine Richtlinie steht nicht, der Zwischenspeicher von PostgREST kennt die neue Tabelle nicht: `supabase/neu-aufbau.sql` im SQL-Editor ausführen. Der Durchgang wirft alles in `public` fort, legt die zwei Blätter neu an, stellt die Rechte zu und prüft am Ende nach, dass Spalten, Kaskade, Index und Richtlinien wirklich dastehen – passt etwas nicht, bricht er ab, statt ein halbes Blatt zurückzulassen. Vorher in der App unter Profil „als Datei sichern“ drücken, danach wieder laden; das Gerät wird beim nächsten Öffnen vom leeren Online-Stand ersetzt. Abgespielt wird die Datei nie von sich aus (der Workflow sieht nur `supabase/migrations/` vor). Ein GitHub-Workflow überträgt Änderungen an `supabase/migrations/` automatisch, wenn `SUPABASE_ACCESS_TOKEN` und `SUPABASE_PROJECT_REF` als Secrets gesetzt sind.
+Verdacht auf einen halben Stand in Supabase – eine Spalte fehlt, eine Richtlinie steht nicht, der Zwischenspeicher von PostgREST kennt die neue Tabelle nicht: `supabase/neu-aufbau.sql` im SQL-Editor ausführen. Der Durchgang wirft alles in `public` fort, legt die zwei Blätter neu an, stellt die Rechte zu und prüft am Ende nach, dass Spalten, Kaskade, Index und Richtlinien wirklich dastehen – passt etwas nicht, bricht er ab, statt ein halbes Blatt zurückzulassen. Vorher in der App unter ⚙️ „als Datei sichern“ drücken, danach wieder laden; das Gerät wird beim nächsten Öffnen vom leeren Online-Stand ersetzt. Abgespielt wird die Datei nie von sich aus (der Workflow sieht nur `supabase/migrations/` vor). Ein GitHub-Workflow überträgt Änderungen an `supabase/migrations/` automatisch, wenn `SUPABASE_ACCESS_TOKEN` und `SUPABASE_PROJECT_REF` als Secrets gesetzt sind.
 
 ## Betreiben
 
@@ -63,7 +63,7 @@ Auf Vercel reicht das Projekt verbinden; die vier Umgebungswerte sind optional. 
 
 ## Status
 
-Unten in der Seitenspalte (und auf dem Handy im Profil) steht ein Satz: **Datenbank verbunden**. Er kommt nicht aus einer Annahme – `/api/status` tut eine echte winzige Abfrage und meldet die Antwortzeit. Ist der Speicher nicht erreichbar, heißt es „Datenbank nicht erreichbar“ mit einem Knopf zur erneuten Prüfung; ohne angebundenen Speicher „Auf diesem Gerät“. Beim Prüfen selbst sagt die App nichts.
+Unten in der Seitenspalte (und auf dem Handy im Einstellungsblatt) steht ein Satz: **Datenbank verbunden**. Er kommt nicht aus einer Annahme – `/api/status` tut eine echte winzige Abfrage und meldet die Antwortzeit. Ist der Speicher nicht erreichbar, heißt es „Datenbank nicht erreichbar“ mit einem Knopf zur erneuten Prüfung; ohne angebundenen Speicher „Auf diesem Gerät“. Beim Prüfen selbst sagt die App nichts.
 
 ## Regeln, nach denen gebaut wird
 
@@ -73,5 +73,6 @@ Unten in der Seitenspalte (und auf dem Handy im Profil) steht ein Satz: **Datenb
 - **Lesen:** mindestens 13 px, Grautöne mit genug Kontrast, Namen in Reinschrift.
 - **Tippen:** jede Fläche mindestens 44 px hoch; 44 px breit nur bei Knöpfen, die ein einzelnes Zeichen tragen – sonst zerdrücken sie den Text daneben. In einer Zeile stehen die Knöpfe auf dem Handy unter dem Text.
 - **Menüs und Formulare** laufen als Ablage unten und werden nie abgeschnitten.
-- **Das Bild des Ortes steht hinter der Reihe**, nicht daneben: hell überfangen, damit der Text ruhig bleibt, mit Nachweis des Bilddienstes darunter. Gefunden wird für den Reisetag und die Unterkünfte; übernommen (oder entfernt) wird nur, wenn jemand es im Menü sagt.
+- **Das Bild des Ortes steht hinter der Reihe**: leise überfangen, damit der Text ruhig bleibt, und in dichten Listen als Vorschnitt daneben. Gefunden wird der Reihe nach – Name, dann Name und Ort, dann die Reise selbst; ein Land wird nie gesucht. Der Nachweis bleibt am Eintrag (und ist im Formular zu sehn), die Reihen selbst bleiben frei davon. Übernommen oder entfernt wird nur, wenn jemand es im Menü sagt.
+- **Zwei Lichter, eine Palette.** Hell und dunkel stehen an einer Stelle in `src/app/globals.css` (`[data-thema='dunkel']` über dieselben Variablennamen), und ein kurzes Skript in `layout.tsx` entscheidet sie vor dem ersten Bild. Gefärbt wird nur über `var(--…)`, damit ein drittes Licht eine Zeile wäre.
 - **Nichts wird ungefragt verändert.** Vorschläge (Kategorie, Bild, Stadt aus der Adresse) stehen da, weil sie beim Tippen helfen, und lassen sich überdecken.

@@ -118,7 +118,7 @@ export function KalenderRaster({
           const inhalt = (
             <>
               <span className="flex items-baseline justify-between gap-1">
-                <span className={cx('tabular-nums', heute && 'grid h-5 w-5 place-items-center rounded-full text-white')} style={heute ? { background: 'var(--akzent)' } : undefined}>
+                <span className={cx('tabular-nums', heute && 'grid h-5 w-5 place-items-center rounded-full')} style={heute ? { background: 'var(--akzent)', color: 'var(--auf-akzent)' } : undefined}>
                   {Number(d.slice(8))}
                 </span>
                 {liste.length ? <span className="mikro !text-[12px] tabular-nums">{liste.length}</span> : null}

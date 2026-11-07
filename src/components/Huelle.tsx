@@ -4,10 +4,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useStore } from '../lib/daten';
 import { StatusAnzeige } from './StatusAnzeige';
+import { Einstellungen } from './Einstellungen';
 
 /**
  * Die eine Hülle für Handy und Rechner: auf dem Smartphone die Leiste unten,
- * auf dem Rechner die Spalte links. Beide zeigen auf dieselben fünf Bereiche.
+ * auf dem Rechner die Spalte links. Beide zeigen auf dieselben vier Bereiche –
+ * das Profil ist kein Bereich mehr, sondern ein Blatt (⚙️), das dashboard und
+ * seitenleiste aufmachen.
  */
 
 const BEREICHE = [
@@ -15,15 +18,13 @@ const BEREICHE = [
   { id: 'reisen', href: '/reisen', label: 'Meine Reisen', kurz: 'Reisen', zeichen: '🧳' },
   { id: 'kalender', href: '/kalender', label: 'Kalender', kurz: 'Kalender', zeichen: '🗓️' },
   { id: 'karte', href: '/karte', label: 'Karte', kurz: 'Karte', zeichen: '🗺️' },
-  { id: 'profil', href: '/profil', label: 'Profil', kurz: 'Profil', zeichen: '👤' },
 ];
 
 function aktiv(beim: string, pfad: string): boolean {
   if (beim === '/') return pfad === '/' || pfad === '';
   if (beim === '/reisen') return pfad === '/reisen' || pfad.startsWith('/reisen/');
   if (beim === '/kalender') return pfad === '/kalender' || pfad.endsWith('/kalender') || /\/t\/[^/]+\/(tag\/.*)?$/.test(pfad);
-  if (beim === '/karte') return pfad === '/karte' || pfad.endsWith('/karte');
-  return pfad.startsWith('/profil');
+  return pfad === '/karte' || pfad.endsWith('/karte');
 }
 
 export function Huelle({ children }: { children: React.ReactNode }) {
@@ -39,7 +40,7 @@ export function Huelle({ children }: { children: React.ReactNode }) {
       {/* Rechner: Spalte links */}
       <nav className="hidden shrink-0 md:sticky md:top-0 md:flex md:h-screen md:w-[236px] md:flex-col md:gap-1 md:border-r md:p-4" style={{ borderColor: 'var(--rand)' }} aria-label="Bereiche">
         <Link href="/" className="mb-3 flex items-center gap-2 px-1 text-[17px] font-bold tracking-tight no-underline" style={{ color: 'var(--text)' }}>
-          <span aria-hidden className="grid h-8 w-8 place-items-center rounded-lg text-[17px] text-white" style={{ background: 'var(--akzent)' }}>
+          <span aria-hidden className="grid h-8 w-8 place-items-center rounded-lg text-[17px]" style={{ background: 'var(--akzent)', color: 'var(--auf-akzent)' }}>
             ✈
           </span>
           Reiseplan
@@ -75,9 +76,10 @@ export function Huelle({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         ) : null}
-        <div className="mt-auto pt-3">
+        <div className="mt-auto space-y-1 pt-3">
+          <Einstellungen variante="zeile" />
           <StatusAnzeige variant="zeile" pruefen />
-          <Link href="/reisen/neu" className="knopf mt-1 w-full no-underline" style={{ color: '#fff' }}>
+          <Link href="/reisen/neu" className="knopf w-full no-underline">
           + Neue Reise
         </Link>
         </div>
