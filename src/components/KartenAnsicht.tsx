@@ -1,0 +1,105 @@
+'use client';
+
+import { useEffect, useMemo } from 'react';
+import L from 'leaflet';
+import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+
+/**
+ * Die Karte der Reise: nummerierte Nadeln in Kategoriefarbe, antippen öffnet
+ * das Blatt mit Bild, Zeit und dem Weg nach Google Maps.
+ */
+
+export interface KartenPunkt {
+  id: string;
+  nr: number;
+  lat: number;
+  lng: number;
+  titel: string;
+  farbe: string;
+  ort?: string | null;
+  zeit?: string | null;
+  foto?: string | null;
+  nachweis?: string | null;
+  href: string;
+  karten?: string;
+}
+
+function nadel(p: KartenPunkt) {
+  return L.divIcon({
+    className: 'kartennadel',
+    html: `<span style="background:${p.farbe}">${p.nr}</span>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14],
+  });
+}
+
+function Einpassen({ punkte }: { punkte: KartenPunkt[] }) {
+  const karte = useMap();
+  const schluessel = useMemo(() => punkte.map((p) => p.id).join('|'), [punkte]);
+  useEffect(() => {
+    if (!punkte.length) return;
+    if (punkte.length === 1) {
+      karte.setView([punkte[0]!.lat, punkte[0]!.lng], 14, { animate: true });
+      return;
+    }
+    const ecken = punkte.map((p) => [p.lat, p.lng] as [number, number]);
+    karte.fitBounds(L.latLngBounds(ecken), { paddingTopLeft: [30, 40], paddingBottomRight: [30, 40], maxZoom: 14 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schluessel, karte]);
+  return null;
+}
+
+export function KartenAnsicht({
+  punkte,
+  strecke,
+  klasse,
+}: {
+  punkte: KartenPunkt[];
+  strecke?: [number, number][] | null;
+  klasse?: string;
+}) {
+  const mittelpunkt = useMemo<[number, number]>(() => {
+    if (!punkte.length) {
+      const teile = (punkte[0]?.lat ?? 0) === 0 ? [48.2082, 16.3738] : [0, 0];
+      return teile as [number, number];
+    }
+    const lat = punkte.reduce((s, p) => s + p.lat, 0) / punkte.length;
+    const lng = punkte.reduce((s, p) => s + p.lng, 0) / punkte.length;
+    return [lat, lng];
+  }, [punkte]);
+
+  return (
+    <div className={klasse}>
+      <MapContainer center={mittelpunkt} zoom={12} scrollWheelZoom={false} className="h-full w-full" style={{ background: '#e9eef4' }} attributionControl>
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          attribution='&copy; OpenStreetMap-Mitwirkende &copy; CARTO'
+          maxZoom={19}
+        />
+        {strecke && strecke.length > 1 ? <Polyline positions={strecke} pathOptions={{ color: '#0f766e', weight: 4, opacity: 0.75 }} /> : null}
+        {punkte.map((p) => (
+          <Marker key={p.id} position={[p.lat, p.lng]} icon={nadel(p)}>
+            <Popup>
+              <div className="min-w-[10rem] max-w-[15rem]">
+                {p.foto ? <img src={p.foto} alt="" className="mb-1.5 h-20 w-full rounded-lg object-cover" loading="lazy" /> : null}
+                <p className="text-[14px] font-semibold leading-snug">{p.titel}</p>
+                <p className="mikro">{[p.zeit, p.ort].filter(Boolean).join(' · ')}</p>
+                <p className="mt-1.5 flex flex-wrap gap-2 text-[13.5px]">
+                  <a href={p.href}>in der Reise</a>
+                  {p.karten ? (
+                    <a href={p.karten} target="_blank" rel="noreferrer">
+                      Google Maps ↗
+                    </a>
+                  ) : null}
+                </p>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+        <Einpassen punkte={punkte} />
+      </MapContainer>
+    </div>
+  );
+}

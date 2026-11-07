@@ -1,156 +1,99 @@
 /**
- * Zentrale Datentypen. Die Feldnamen sind absichtlich identisch zu den
- * Spaltennamen in Supabase (snake_case) – so braucht es keine Mapping-Schicht.
- * Siehe auch: supabase/schema.sql
+ * Die zwei Tabellen der App – bewusst klein gehalten, damit sich alles daran
+ * hängen lässt. Feldnamen sind identisch zu den Spalten in supabase/schema.sql,
+ * dadurch braucht es keine Mapping-Schicht.
+ *
+ * Ein Eintrag ist alles, was in einem Kalender steht: eine Aktivität, eine
+ * Unterkunft (mehrere Tage) oder eine Fahrt. Die Art entscheidet, wie sie
+ * angezeigt wird – nicht drei Tabellen, die zusammengehalten werden müssen.
  */
 
-export type BookingStatus = 'offen' | 'reserviert' | 'gebucht' | 'erledigt';
-export type Priority = 'muss' | 'soll' | 'kann';
-export type TimeSlot = 'Vormittag' | 'Mittag' | 'Nachmittag' | 'Abend' | 'Nachts' | 'Ganzer Tag';
-/** Ticket-Frage an einem Ort: unklar → braucht Ticket → gekauft, oder gar keins */
-export type TicketStatus = 'unklar' | 'noetig' | 'gekauft' | 'keins';
+export type EintragArt = 'aktivitaet' | 'unterkunft' | 'fahrt';
 
-export interface Trip {
+export interface Reise {
   id: string;
+  /** „Herbst in Andalusien" */
   name: string;
-  destination: string;
+  land: string | null;
+  /** Reiseziele der Reihe nach, mit „ · " getrennt – „Sevilla · Granada" */
+  stationen: string | null;
   start_date: string | null;
   end_date: string | null;
-  travelers: number;
-  budget_eur: number | null;
-  jpy_rate: number | null; // 1 EUR = x JPY
-  notes: string | null;
+  /** Titelbild, automatisch gefunden oder eigenen Links */
+  cover_url: string | null;
+  cover_credit: string | null;
+  beschreibung: string | null;
+  budget: number | null;
+  /** ISO-Code, „EUR" */
+  waehrung: string;
+  personen: number;
   archived: boolean;
-  /** ▶️ Unterwegs-Modus: an = die Reise läuft gerade, die ☀️-Seite wird zur Tages-App */
-  started: boolean;
-  /** seit wann sie läuft (Datum) */
-  started_at: string | null;
-  /** der Planungszeitraum vor dem Start – „Start zurücknehmen" stellt ihn wieder her */
-  planned_start: string | null;
-  planned_end: string | null;
+  erstellt_am?: string;
 }
 
-export interface Place {
+export interface Eintrag {
   id: string;
-  trip_id: string;
-  name: string;
-  city: string;
-  district: string | null;
-  category: string | null;
-  /** Tag, an dem die Aktivität geplant ist – null = noch ohne Tag in der Liste */
+  reise_id: string;
+  art: EintragArt;
+  /** Schlüssel aus src/lib/kategorien.ts */
+  kategorie: string | null;
+  /** Name des Ortes bzw. der Unterkunft oder Fahrt */
+  titel: string;
+  /** Aktivität/Fahrt: der Tag · Unterkunft: der Check-in */
   date: string | null;
-  /** bis zu diesem Tag (Mehrtages-Ausflug) – null = ein Tag */
-  end_date: string | null;
-  time_slot: TimeSlot | string | null;
-  start_time: string | null; // "13:00"
-  /** Dauer in Minuten */
-  duration_min: number | null;
-  travel_time: string | null; // Fahrzeit vom Hotel, z. B. "Ca 30 Min"
-  notes: string | null;
-  price_eur: number | null;
-  price_note: string | null;
-  booking_status: BookingStatus;
-  booking_url: string | null;
-  /** Ticket needing / bought / not needed – getrennt vom Buchungsstatus */
-  ticket_status: TicketStatus;
-  /** z. B. „Timed Entry 10:00, 2 Personen“ */
-  ticket_note: string | null;
-  priority: Priority;
-  /** Suchbegriff für Google Maps, falls keine Koordinaten */
-  maps_query: string | null;
+  /** Aktivität/Fahrt: Beginn · Unterkunft: Check-in-Zeit */
+  zeit: string | null;
+  /** Aktivität: Ende · Unterkunft: Check-out-Zeit */
+  bis_zeit: string | null;
+  dauer_min: number | null;
+  /** Nur Unterkunft: der Check-out-Tag – bis dahin gilt sie für jede Nacht */
+  bis_date: string | null;
+  ort: string | null;
+  adresse: string | null;
   lat: number | null;
   lng: number | null;
-  image_url: string | null;
-  /** Sortierung innerhalb eines Tages */
-  sort_order: number;
-  created_at?: string;
+  /** Suchbegriff für Google Maps, solange kein Punkt gesetzt ist */
+  karten_stichwort: string | null;
+  notiz: string | null;
+  preis: number | null;
+  /** Buchungsnummer oder Referenz */
+  buchung_nr: string | null;
+  buchung_url: string | null;
+  foto_url: string | null;
+  /** Lizenzpflichtige Bilder (Wikimedia) brauchen den Nachweis am Bild */
+  foto_nachweis: string | null;
+  sortierung: number;
+  erstellt_am?: string;
 }
 
-export interface Hotel {
-  id: string;
-  trip_id: string;
+export interface Schnappschuss {
+  reisen: Reise[];
+  eintraege: Eintrag[];
+}
+
+export interface Einstellungen {
+  /** wie die App den Nutzer anspricht */
+  name: string | null;
+  waehrung: string;
+  personen: number;
+  /** Bilder beim Anlegen automatisch suchen */
+  bilder: boolean;
+  /** zuletzt geöffnete Reise – davon handeln „Kalender" und „Karte" in der Leiste */
+  aktive_reise: string | null;
+}
+
+/** Was ein Ortssucher zurückgibt – Punkt und Name wandern together in den Eintrag */
+export interface Ortsvorschlag {
   name: string;
-  city: string;
-  check_in: string | null;
-  check_out: string | null;
-  nights: number | null;
-  price_total_eur: number | null;
-  price_per_night_eur: number | null;
-  address: string | null;
-  lat: number | null;
-  lng: number | null;
-  booking_url: string | null;
-  booking_status: BookingStatus;
-  notes: string | null;
-  created_at?: string;
+  adresse: string | null;
+  lat: number;
+  lng: number;
+  stichwort: string | null;
+  quelle: 'google' | 'openstreetmap';
 }
 
-export interface Journey {
-  id: string;
-  trip_id: string;
-  date: string | null;
-  /** Ankunft / Rückflug – null = selben Tages */
-  end_date: string | null;
-  title: string;
-  from_city: string | null;
-  to_city: string | null;
-  mode: string | null; // Flug, Shinkansen, Zug, Bus, Fähre, Auto ...
-  departure_time: string | null;
-  duration_min: number | null;
-  price_eur: number | null;
-  hotel_name: string | null;
-  nights: number | null;
-  booking_status: BookingStatus;
-  notes: string | null;
-  created_at?: string;
+export interface Bildvorschlag {
+  url: string;
+  nachweis: string | null;
+  quelle: string;
 }
-
-export interface Expense {
-  id: string;
-  trip_id: string;
-  date: string | null;
-  category: string;
-  description: string | null;
-  amount_eur: number;
-  payer: string | null;
-  created_at?: string;
-}
-
-export interface Snapshot {
-  trips: Trip[];
-  places: Place[];
-  hotels: Hotel[];
-  journeys: Journey[];
-  expenses: Expense[];
-}
-
-export interface TripBundle {
-  trip: Trip;
-  places: Place[];
-  hotels: Hotel[];
-  journeys: Journey[];
-  expenses: Expense[];
-}
-
-export const BOOKING_STATUSES: BookingStatus[] = ['offen', 'reserviert', 'gebucht', 'erledigt'];
-export const PRIORITIES: Priority[] = ['muss', 'soll', 'kann'];
-export const TICKET_STATUSES: TicketStatus[] = ['unklar', 'noetig', 'gekauft', 'keins'];
-export const JOURNEY_MODES = [
-  'Flug',
-  'Shinkansen',
-  'Zug',
-  'Bus',
-  'Fähre',
-  'U-Bahn',
-  'Auto',
-  'zu Fuß',
-];
-export const EXPENSE_CATEGORIES = [
-  'Transport',
-  'Essen & Trinken',
-  'Eintritt & Touren',
-  'Shopping',
-  'Aktivität',
-  'Nebenkosten',
-  'Sonstiges',
-];

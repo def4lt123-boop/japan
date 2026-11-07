@@ -1,300 +1,156 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useStore, useTrip } from '../../../../lib/store';
-import { useBatchGeocode, useEditor } from '../../../../components/EditorProvider';
-import { Button, Card, Empty, SectionTitle, Select, cx } from '../../../../components/ui';
-import { eachDate, fmtDay, plural } from '../../../../lib/format';
-import { CATEGORY_LABELS, categoryMeta, mapsUrl, needsCategory } from '../../../../lib/categories';
-import { applyCategories } from '../../../../lib/categorize';
-import { dayStops, hotelForDay, routeUrl } from '../../../../lib/maps';
-import { MapPreview, RoutePreview } from '../../../../components/MapPreview';
-import { geocode, queryFor } from '../../../../lib/geocode';
+import { useStore } from '../../../../lib/daten';
+import { tagKurz } from '../../../../lib/dates';
+import { chronologisch, reiseTage, tagEintraege } from '../../../../lib/plan';
+import { kategorie } from '../../../../lib/kategorien';
+import { kartenLink, punktVorhanden } from '../../../../lib/karten';
+import { routeZwischen } from '../../../../lib/routen';
+import { Chip, Karten, KartenKopf, Punkt, Segment, cx } from '../../../../components/ui';
+import type { KartenPunkt } from '../../../../components/KartenAnsicht';
 
-const MapView = dynamic(() => import('../../../../components/MapView'), { ssr: false, loading: () => <Card className="grid h-[74vh] place-items-center text-sm text-slate-400">Karte wird geladen …</Card> });
+const KartenBrett = dynamic(() => import('../../../../components/KartenAnsicht').then((m) => m.KartenAnsicht), {
+  ssr: false,
+  loading: () => <Ladekarte />,
+});
 
-export default function MapPage() {
-  const params = useParams<{ tripId: string }>();
-  const tripId = String(params?.tripId ?? '');
-  const store = useStore();
-  const bundle = useTrip(tripId);
-  const { open } = useEditor();
-  const geocodeAll = useBatchGeocode(tripId);
-  const [day, setDay] = useState('');
-  const [city, setCity] = useState('');
-  const [cat, setCat] = useState('');
-  const [showHotels, setShowHotels] = useState(true);
-  const [selected, setSelected] = useState<string | null>(null);
-
-  const dayOptions = useMemo(() => {
-    const dates = eachDate(bundle.trip?.start_date, bundle.trip?.end_date);
-    const placeDates = Array.from(new Set(bundle.places.map((p) => p.date).filter((d): d is string => Boolean(d))));
-    return [...dates, ...placeDates.filter((d) => !dates.includes(d)).sort()].map((d) => ({ value: d, label: fmtDay(d) }));
-  }, [bundle.trip?.start_date, bundle.trip?.end_date, bundle.places]);
-
-  const cities = useMemo(() => Array.from(new Set(bundle.places.map((p) => p.city).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'de')), [bundle.places]);
-
-  const visible = useMemo(
-    () =>
-      bundle.places.filter(
-        (p) =>
-          (!day || p.date === day) &&
-          (!city || p.city === city) &&
-          (!cat || (cat === '—' ? needsCategory(p) : categoryMeta(p.category).label === cat)),
-      ),
-    [bundle.places, day, city, cat],
+function Ladekarte() {
+  return (
+    <div className="grid min-h-[320px] w-full place-items-center" style={{ background: '#e9eef4' }}>
+      <p className="mikro">Karte wird geladen …</p>
+    </div>
   );
-  const routed = day ? visible : [];
-  const stops = dayStops(visible);
-  const anchor = visible.find((p) => p.id === selected) ?? stops[0] ?? null;
-  const hotel = hotelForDay(bundle.hotels, day || null, city || stops[0]?.city || null);
-  const routeReady = stops.length > 1;
-  const missing = visible.filter((p) => p.lat === null || p.lng === null);
-  const uncategorized = bundle.places.filter((p) => needsCategory(p));
-  const onMap = visible.filter((p) => p.lat !== null && p.lng !== null);
+}
 
-  /** Kategorien, die in dieser Reise wirklich vorkommen – mit Zähler fürs Dropdown */
-  const catCounts = CATEGORY_LABELS.map((label) => ({
-    label,
-    n: bundle.places.filter((p) => categoryMeta(p.category).label === label).length,
-  })).filter((x) => x.n > 0);
+/** Die Reise als Punkte: Nummer in Kategoriefarbe, antippen öffnet das Blatt. */
+export default function ReiseKarte() {
+  const params = useParams<{ tripId: string }>();
+  const store = useStore();
+  const reise = store.reisen.find((r) => r.id === params.tripId);
+  const [tag, setTag] = useState<string>('alle');
+  const [route, setRoute] = useState<[number, number][] | null>(null);
 
-  const legend = useMemo(() => {
-    const map = new Map<string, { color: string; icon: string; count: number }>();
-    for (const p of onMap) {
-      const meta = categoryMeta(p.category);
-      const cur = map.get(meta.label) ?? { color: meta.color, icon: meta.icon, count: 0 };
-      map.set(meta.label, { ...cur, count: cur.count + 1 });
+  const eintraege = reise ? store.eintraegeVon(reise.id) : [];
+  const tage = useMemo(() => (reise ? reiseTage(reise) : []), [reise]);
+
+  const punkte = useMemo<KartenPunkt[]>(() => {
+    if (!reise) return [];
+    const quelltext = tag === 'alle' ? eintraege.filter((e) => e.art !== 'unterkunft' && e.date).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '') || chronologisch(a, b)) : tagEintraege(eintraege, tag);
+    const zahlbar = quelltext.filter(punktVorhanden);
+    return zahlbar.map((e, i) => {
+      const k = kategorie(e.kategorie);
+      return {
+        id: e.id,
+        nr: i + 1,
+        lat: e.lat as number,
+        lng: e.lng as number,
+        titel: e.titel,
+        farbe: e.art === 'unterkunft' ? kategorie('unterschlupf').farbe : k.farbe,
+        ort: e.ort,
+        zeit: e.zeit,
+        foto: e.foto_url,
+        nachweis: e.foto_nachweis,
+        href: e.date ? `/t/${reise.id}/tag/${e.date}` : `/t/${reise.id}/liste`,
+        karten: kartenLink(e),
+      };
+    });
+  }, [eintraege, reise, tag]);
+
+  useEffect(() => {
+    let abbruch = false;
+    if (tag === 'alle' || punkte.length < 2) {
+      setRoute(null);
+      return;
     }
-    return Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count);
-  }, [onMap]);
+    void (async () => {
+      const schnur: [number, number][] = [];
+      for (let i = 0; i + 1 < punkte.length; i += 1) {
+        const info = await routeZwischen(punkte[i]!, punkte[i + 1]!, 'zu fuss', true);
+        if (info?.strecke?.length) schnur.push(...info.strecke);
+        else {
+          schnur.push([punkte[i]!.lat, punkte[i]!.lng], [punkte[i + 1]!.lat, punkte[i + 1]!.lng]);
+        }
+      }
+      if (!abbruch) setRoute(schnur);
+    })();
+    return () => {
+      abbruch = true;
+    };
+  }, [punkte, tag]);
 
-  if (!bundle.trip) return null;
+  if (!store.bereit || !reise) return null;
 
   return (
-    <div className="space-y-3">
-      <SectionTitle
-        title="Karte"
-        icon="🗺️"
-        hint={`${plural(onMap.length, 'Marker', 'Marker')} auf der Karte · gefüllt = mit Tag, hohl = noch ohne Tag · Linie = Route des gewählten Tages`}
-        right={
-          <>
-            <Select
-              className="!w-auto"
-              allowEmpty
-              emptyLabel="Alle Tage"
-              options={dayOptions}
-              value={day}
-              onChange={(e) => {
-                setDay(e.target.value);
-                setSelected(null);
-              }}
-            />
-            <Select className="!w-auto" allowEmpty emptyLabel="Alle Städte" options={cities} value={city} onChange={(e) => setCity(e.target.value)} />
-            <Select
-              className="!w-auto"
-              allowEmpty
-              emptyLabel="Alle Kategorien"
-              options={[
-                ...catCounts.map((x) => ({ value: x.label, label: `${categoryMeta(x.label).icon}  ${x.label} (${x.n})` })),
-                ...(uncategorized.length ? [{ value: '—', label: `ohne klare Kategorie (${uncategorized.length})` }] : []),
-              ]}
-              value={cat}
-              onChange={(e) => setCat(e.target.value)}
-            />
-            <Button size="sm" variant={showHotels ? 'primary' : 'ghost'} onClick={() => setShowHotels((v) => !v)}>
-              🏨 Unterkünfte
-            </Button>
-            {routeReady ? (
-              <a
-                className="btn-quiet"
-                href={routeUrl({
-                  origin: hotel ?? stops[0],
-                  destination: stops[stops.length - 1],
-                  stops: stops.slice(1, -1),
-                  mode: 'transit',
-                })}
-                target="_blank"
-                rel="noreferrer"
-                title={`${stops.length} Punkte als Route – mit Fahrplan und Umstiegen`}
-              >
-                🧭 Route ({stops.length})
-              </a>
-            ) : null}
-            {day ? (
-              <Button size="sm" variant="ghost" onClick={() => setDay('')}>
-                Tag zurücksetzen
-              </Button>
-            ) : null}
-          </>
-        }
-      />
-
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
-        <Card className="overflow-hidden p-0">
-          <MapView
-            places={visible}
-            hotels={bundle.hotels}
-            showHotels={showHotels}
-            routePlaces={routed}
-            selectedId={selected}
-            onSelect={setSelected}
-            onEditPlace={(id) => open({ kind: 'place', id })}
-            onEditHotel={(id) => open({ kind: 'hotel', id })}
-            onCategory={(id, category) => store.patch('places', id, { category })}
-            allCategories={bundle.places.map((x) => x.category)}
-            dayLabel={day || null}
-          />
-        </Card>
-
-        <div className="space-y-3">
-          {anchor ? (
-            <Card className="p-3">
-              <div className="mb-1.5 flex items-center justify-between gap-2">
-                <h3 className="text-[13px] font-semibold text-white">{selected ? 'Auswahl bei Google Maps' : 'Gegend bei Google Maps'}</h3>
-                <button className="text-[13px] text-slate-400 hover:text-white" onClick={() => setSelected(null)} title="Auswahl aufheben">
-                  ×
-                </button>
-              </div>
-              {selected && stops.length > 1 ? (
-                <RoutePreview
-                  origin={hotel ?? stops[0]}
-                  destination={stops[stops.length - 1]}
-                  stops={stops.slice(1, -1)}
-                  mode="transit"
-                  height={200}
-                  heading={anchor.name}
-                />
-              ) : (
-                <MapPreview
-                  place={anchor}
-                  query={`${anchor.name} ${anchor.district ?? ''} ${anchor.city ?? ''}`.replace(/\s+/g, ' ').trim()}
-                  height={210}
-                  zoom={anchor.lat !== null ? 16 : 12}
-                  heading={anchor.name}
-                />
-              )}
-              <p className="mt-1 text-[13px] leading-snug text-slate-400">
-                Marker in der Liste antippen – die Karte folgt. {routeReady ? 'Der Route-Knopf oben verbindet alle Punkte des gewählten Tages in Google Maps.' : 'Sobald ein Tag gewählt ist, erscheint hier der Weg über die Punkte.'}
-              </p>
-            </Card>
-          ) : null}
-          <Card className="p-3">
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-[13px] font-semibold text-white">Legende</h3>
-              <span className="text-[13px] text-slate-400">{legend.length} Kategorien</span>
-            </div>
-            {cat ? (
-              <p className="mb-2 -mt-1 text-[13px] text-slate-400">
-                gefiltert auf {categoryMeta(cat === '—' ? '' : cat).icon} {cat === '—' ? 'ohne klare Kategorie' : cat} ·{' '}
-                <button className="underline-offset-2 hover:text-white hover:underline" onClick={() => setCat('')}>
-                  alle zeigen
-                </button>
-              </p>
-            ) : null}
-            <ul className="grid grid-cols-2 gap-x-2 gap-y-1 text-[13px] text-slate-300">
-              {legend.map(([label, v]) => (
-                <li key={label} className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: v.color }} />
-                  <span aria-hidden>{v.icon}</span>
-                  <span className="min-w-0 flex-1 truncate" title={label}>
-                    {label}
-                  </span>
-                  <span className="tabular-nums text-slate-400">{v.count}</span>
-                </li>
-              ))}
-              {!legend.length ? <li className="col-span-2 text-slate-400">Keine Marker im Filter.</li> : null}
-            </ul>
-            {uncategorized.length ? (
-              <button
-                className="btn-quiet mt-2 w-full justify-center !text-[13px]"
-                onClick={() => {
-                  applyCategories(store, bundle.places);
-                }}
-                title="Weist allen Punkten, deren Kategorie noch kein Symbol hat, die passende zu – aus Name und Notiz"
-              >
-                🏷️ {uncategorized.length} {uncategorized.length === 1 ? 'Aktivität' : 'Aktivitäten'} automatisch kategorisieren
-              </button>
-            ) : (
-              <p className="mt-2 text-[13px] text-emerald-200/80">✓ Alle Aktivitäten haben eine Kategorie, die wir kennen.</p>
-            )}
-          </Card>
-
-          <Card className="max-h-[40vh] overflow-y-auto p-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <h3 className="text-[13px] font-semibold text-white">Sichtbare Aktivitäten</h3>
-            </div>
-            <ul className="space-y-1">
-              {onMap.map((p) => (
-                <li key={p.id}>
-                  <button
-                    onClick={() => setSelected(p.id)}
-                    className={cx('flex w-full items-start gap-1.5 rounded-lg px-2 py-1 text-left text-[13px] transition', selected === p.id ? 'bg-shu-500/15 ring-1 ring-inset ring-shu-400/40' : 'hover:bg-white/[0.05]')}
-                  >
-                    <span aria-hidden>{categoryMeta(p.category).icon}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-slate-100">{p.name}</span>
-                      <span className="block text-[13px] text-slate-400">
-                        {p.city}
-                        {p.date ? ` · ${fmtDay(p.date)}` : ' · Pool'}
-                      </span>
-                    </span>
-                    <a
-                      href={mapsUrl(p)}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-[13px] text-sky-200/80 hover:text-sky-100"
-                      title="In Google Maps öffnen"
-                    >
-                      ↗
-                    </a>
-                  </button>
-                </li>
-              ))}
-            </ul>
-
-            {missing.length ? (
-              <div className="mt-3 border-t border-white/10 pt-2">
-                <p className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wide text-amber-200/80">
-                  ohne Punkt ({missing.length})
-                  <button className="btn-quiet ml-auto !px-1.5 normal-case tracking-normal" onClick={() => void geocodeAll()} title="Die Lage für alle Punkte ohne Ort über die Kartensuche holen">
-                    🌍 alle nachziehen
-                  </button>
-                </p>
-                <ul className="space-y-1">
-                  {missing.map((p) => (
-                    <li key={p.id} className="flex items-center gap-1.5 text-[13px] text-slate-400">
-                      <span className="min-w-0 flex-1 truncate">{p.name}</span>
-                      <button
-                        className="btn-quiet !px-1.5 !py-0.5 !text-[13px]"
-                        title="Punkt in der Kartensuche holen"
-                        onClick={async () => {
-                          const hit = await geocode(queryFor(p));
-                          if (hit) {
-                            store.patch('places', p.id, { lat: Math.round(hit.lat * 1e6) / 1e6, lng: Math.round(hit.lng * 1e6) / 1e6 });
-                            store.say(`${p.name}: ${hit.label.slice(0, 60)}`);
-                          } else {
-                            store.say(`Nichts gefunden für „${queryFor(p)}“ – im Formular den Punkt selbst in Google Maps auswählen.`);
-                          }
-                        }}
-                      >
-                        🌍
-                      </button>
-                      <button className="btn-quiet !px-1.5 !py-0.5 !text-[13px]" title="Bearbeiten" onClick={() => open({ kind: 'place', id: p.id })}>
-                        ✎
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-            {!visible.length ? <Empty title="Keine Aktivitäten im Filter" hint="Tag oder Stadt zurücksetzen." /> : null}
-          </Card>
+    <main className="pb-4">
+      <div className="mb-2.5 space-y-2">
+        <Segment
+          wert={tag}
+          beimAendern={setTag}
+          optionen={[{ id: 'alle', label: 'Ganze Reise', zeichen: '🧭' }, ...tage.map((d) => ({ id: d, label: tagKurz(d), zeichen: '' }))]}
+        />
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+          <span className="mikro">
+            {punkte.length ? `${punkte.length} ${punkte.length === 1 ? 'Punkt' : 'Punkte'}` : 'keine Punkte'}
+          </span>
+          {tag !== 'alle' && punkte.length > 1 ? <Chip>🚶 Weg an diesem Tag</Chip> : null}
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="mikro ml-auto no-underline hover:underline">
+            Kartenmaterial © OpenStreetMap
+          </a>
         </div>
       </div>
-    </div>
+
+      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_336px]">
+        <Karten className="overflow-hidden">
+          {punkte.length ? (
+            <div className="h-[56dvh] min-h-[320px] w-full lg:h-[calc(100dvh-190px)]">
+              <KartenBrett punkte={punkte} strecke={route} klasse="h-full w-full" />
+            </div>
+          ) : (
+            <div className="p-4 text-center">
+              <p className="text-[15px] font-semibold">Noch kein Punkt</p>
+              <p className="mikro mt-1">Einen Ort anlegen und in der Suche einen Vorschlag antippen – dann steht er hier.</p>
+              <Link href={`/t/${reise.id}/liste`} className="knopf knopf-klein mt-2.5 no-underline">
+                Ort anlegen
+              </Link>
+            </div>
+          )}
+        </Karten>
+
+        <Karten className="overflow-hidden">
+          <KartenKopf titel={tag === 'alle' ? 'Alle Punkte' : tagKurz(tag)} untertitel="in der Reihenfolge" />
+          <ul className="liste list-none m-0 max-h-[46dvh] overflow-y-auto p-0">
+            {punkte.map((p) => (
+              <li key={p.id} className="border-b last:border-0" style={{ borderColor: 'var(--rand)' }}>
+                <Link href={p.href} className="flex min-w-0 items-center gap-2.5 px-3 py-2 no-underline hover:bg-[var(--akzent-fläche)]">
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[13px] font-bold text-white tabular-nums" style={{ background: p.farbe }}>
+                    {p.nr}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14.5px] font-medium">{p.titel}</span>
+                    <span className="mikro block truncate">{[p.zeit, p.ort].filter(Boolean).join(' · ')}</span>
+                  </span>
+                  <span aria-hidden className="mikro shrink-0">⌄</span>
+                </Link>
+              </li>
+            ))}
+            {!punkte.length ? <li className="p-3 mikro">Nichts zu zeigen – Punkte entstehen mit Datum und Ort.</li> : null}
+          </ul>
+          {punkte.length ? (
+            <div className="flex flex-wrap items-center gap-2 border-t p-2.5" style={{ borderColor: 'var(--rand)' }}>
+              <span className="mikro">Legende</span>
+              {Array.from(new Map(punkte.map((p) => [p.farbe, p])).values()).slice(0, 6).map((p) => (
+                <span key={p.id} className="mikro flex items-center gap-1">
+                  <Punkt farbe={p.farbe} groesse={8} /> {p.titel.length > 14 ? `${p.titel.slice(0, 13)}…` : p.titel}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </Karten>
+      </div>
+    </main>
   );
 }

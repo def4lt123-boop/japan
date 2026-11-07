@@ -1,7 +1,7 @@
 name: Supabase – Migrationen einspielen
 
 # Spielt supabase/migrations/ automatisch in dein Supabase-Projekt, sobald sich
-# etwas daran ändert. Dafür `schema.sql` + `seed.sql` NICHT mehr von Hand ausführen.
+# etwas daran ändert. Dafür `schema.sql` NICHT mehr von Hand ausführen.
 #
 # Nötige Secrets (GitHub → Settings → Secrets and variables → Actions):
 #   SUPABASE_ACCESS_TOKEN  – Personal Access Token aus dem Supabase-Dashboard

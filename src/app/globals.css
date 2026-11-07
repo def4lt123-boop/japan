@@ -2,960 +2,626 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Ein Designsystem für Handy und Rechner. Mobile zuerst: alles ist für die
+ * Daumenzone gebaut, der Rechner bekommt dasselbe in breiter.
+ */
+
 :root {
-  --bg: #0b0e14;
-  --line: rgba(255, 255, 255, 0.07);
-  /* Höhe des unteren Reiters auf dem Handy – Desktop: kein Dock */
-  --dock: 0px;
+  --fläche: #f4f6f9;
+  --karte: #ffffff;
+  --text: #10151d;
+  --text2: #4d5a6b;
+  --text3: #6b7a8d;
+  --rand: #e3e8f0;
+  --rand-stark: #cfd7e4;
+  --akzent: #0f766e;
+  --akzent-text: #0b5c56;
+  --akzent-fläche: #e7f3f1;
+  --warnt: #a8560c;
+  --warnt-fläche: #fdf1e3;
+  --gefahr: #a4322a;
+  --gefahr-fläche: #fdecea;
+  --gut: #1f6f43;
+  --gut-fläche: #e8f4ec;
+  --dock: 60px;
+  --dokhoehe: calc(var(--dock) + env(safe-area-inset-bottom, 0px));
+  --randseiten: 16px;
+  --schatten: 0 1px 2px rgb(16 24 40 / 0.05), 0 10px 26px -14px rgb(16 24 40 / 0.22);
+  --radius: 18px;
 }
 
-@media (max-width: 767.98px) {
-  :root {
-    /* 44px Tippfläche + 3px Atmung oben und unten – die Leiste ist so hoch wie ihr Inhalt */
-    --dock: calc(50px + env(safe-area-inset-bottom, 0px));
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
   }
-}
-
-html,
-body {
-  background: var(--bg);
-  color: #e8ecf4;
-  -webkit-text-size-adjust: 100%;
-  /* auf dem Handy darf die Seite nicht über den Bildschirm hinausragen:
-     seitliches Wischen gibt es hier höchstens innerhalb einer Karte oder Tabelle */
-  max-width: 100%;
-  overflow-x: hidden; /* ältere Safari-Versionen */
-  overflow-x: clip;
-}
-
-body {
-  background-image: radial-gradient(1100px 540px at 10% -14%, rgba(240, 78, 35, 0.13), transparent 62%),
-    radial-gradient(950px 500px at 94% -8%, rgba(63, 95, 150, 0.2), transparent 62%);
-  background-attachment: fixed;
-}
-
-* {
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
-}
-*::-webkit-scrollbar {
-  height: 10px;
-  width: 10px;
-}
-*::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
-  border-radius: 999px;
+  html {
+    color-scheme: light;
+    background: var(--fläche);
+    overflow-x: clip;
+  }
+  body {
+    margin: 0;
+    background: var(--fläche);
+    color: var(--text);
+    font-size: 15.5px;
+    line-height: 1.45;
+    overflow-x: clip;
+    padding-bottom: var(--dokhoehe);
+    -webkit-text-size-adjust: 100%;
+  }
+  h1,
+  h2,
+  h3,
+  p {
+    margin: 0;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  h2 {
+    font-size: 17px;
+    font-weight: 650;
+  }
+  a {
+    color: var(--akzent-text);
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+  :focus-visible {
+    outline: 2px solid var(--akzent);
+    outline-offset: 2px;
+  }
+  img {
+    display: block;
+  }
 }
 
 @layer components {
-  .card {
-    @apply rounded-2xl border border-white/[0.07] bg-white/[0.035] shadow-card backdrop-blur-[2px];
+  /* ── Rahmen ─────────────────────────────────────────────────────────── */
+  .seite {
+    width: 100%;
+    max-width: 1080px;
+    margin-inline: auto;
+    padding-inline: var(--randseiten);
   }
-  .label {
-    @apply mb-1 block text-[13px] font-medium text-slate-400;
+  .seitenkopf {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 0 10px;
   }
-  .input {
-    @apply w-full rounded-xl border border-white/[0.09] bg-black/20 px-3 py-2 text-[13.5px] text-slate-100 outline-none transition
-      placeholder:text-slate-400 focus:border-shu-400/60 focus:ring-2 focus:ring-shu-500/20;
+  .seitenkopf .titel {
+    min-width: 0;
+    flex: 1 1 auto;
   }
-  .chip {
-    @apply inline-flex items-center gap-1 self-center rounded-full bg-white/[0.06] px-2 py-1 text-[13px] font-medium align-middle;
+  .seitenkopf .neben {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    width: 100%;
   }
-  .btn {
-    @apply inline-flex select-none items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-[13px] font-semibold transition
-      disabled:cursor-not-allowed disabled:opacity-45;
+  .karte {
+    background: var(--karte);
+    border: 1px solid var(--rand);
+    border-radius: var(--radius);
+    box-shadow: var(--schatten);
   }
-  .btn-primary {
-    @apply btn bg-shu-500 text-white shadow-[0_8px_22px_-10px_rgba(240,78,35,0.9)] hover:bg-shu-400 active:translate-y-px;
+  .karte-flach {
+    background: var(--karte);
+    border: 1px solid var(--rand);
+    border-radius: 14px;
   }
-  .btn-ghost {
-    @apply btn border border-white/[0.09] bg-white/[0.04] text-slate-200 hover:border-white/20 hover:bg-white/[0.07];
+  .kopf {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    border-bottom: 1px solid var(--rand);
+    min-height: 44px;
   }
-  .btn-quiet {
-    @apply btn text-slate-400 hover:bg-white/[0.06] hover:text-slate-100;
+  .kopf > .titel {
+    min-width: 0;
+    flex: 1 1 auto;
   }
-  .icon-btn {
-    @apply grid h-7 w-7 shrink-0 cursor-pointer place-items-center rounded-lg text-[13px] text-slate-400 transition
-      hover:bg-white/[0.08] hover:text-white disabled:opacity-40;
-  }
-  .tab {
-    @apply whitespace-nowrap rounded-xl px-3 py-2 text-[13px] font-medium text-slate-400 transition hover:bg-white/[0.05] hover:text-slate-100;
-  }
-  .tab-active {
-    @apply bg-shu-500/15 text-white ring-1 ring-inset ring-shu-400/30;
+  .liste {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
 
-  /* Reiter: auf dem Handy eine feste Leiste unten (der Daumen liegt ohnehin dort),
-     auf dem Desktop der Streifen oben. Ein Element, zwei Zustände – damit die
-     Reihenfolge der Bereiche dieselbe bleibt. */
-  .tabbar {
+  /* ── Zeile: Text volle Breite, Knöpfe darunter ─────────────────────── */
+  .zeile {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px 10px;
+    padding: 12px;
+  }
+  .zeile > .text {
+    min-width: 0;
+    flex: 1 1 12rem;
+  }
+  .zeile > .taten {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    width: 100%;
+  }
+
+  /* ── Knöpfe ─────────────────────────────────────────────────────────── */
+  .knopf {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 12px;
+    border: 1px solid var(--akzent);
+    background: var(--akzent);
+    color: #fff;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.05s;
+    white-space: nowrap;
+  }
+  .knopf:hover {
+    filter: brightness(1.06);
+  }
+  .knopf:active {
+    transform: translateY(1px);
+  }
+  .knopf:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .knopf-ghost {
+    background: var(--karte);
+    color: var(--text);
+    border-color: var(--rand-stark);
+  }
+  .knopf-dezent {
+    background: transparent;
+    border-color: transparent;
+    color: var(--akzent-text);
+    padding-inline: 10px;
+    font-weight: 600;
+  }
+  .knopf-gefahr {
+    background: var(--karte);
+    border-color: #eecfcb;
+    color: var(--gefahr);
+  }
+  .knopf-klein {
+    min-height: 36px;
+    padding: 0 12px;
+    font-size: 13.5px;
+  }
+  .icon-knopf {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border-radius: 12px;
+    border: 1px solid var(--rand);
+    background: var(--karte);
+    color: var(--text2);
+    font: inherit;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .icon-knopf:hover:not(:disabled) {
+    background: var(--akzent-fläche);
+    color: var(--akzent-text);
+    border-color: #bfded9;
+  }
+  .icon-knopf:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  .fab {
     position: fixed;
-    inset: auto 0 0 0;
-    z-index: 45;
+    right: max(16px, env(safe-area-inset-right, 0px));
+    bottom: calc(var(--dokhoehe) + 14px);
+    z-index: 30;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 0;
+    background: var(--akzent);
+    color: #fff;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 650;
+    box-shadow: 0 8px 22px -8px rgb(15 118 110 / 0.6);
+    cursor: pointer;
+  }
+
+  /* ── Beschriftetes ──────────────────────────────────────────────────── */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    align-self: center;
+    vertical-align: middle;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: #eef1f6;
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 550;
+    white-space: nowrap;
+  }
+  .chip-aktiv {
+    background: var(--akzent);
+    color: #fff;
+  }
+  .chip-warnt {
+    background: var(--warnt-fläche);
+    color: var(--warnt);
+  }
+  .chip-gut {
+    background: var(--gut-fläche);
+    color: var(--gut);
+  }
+  .mikro {
+    font-size: 13px;
+    line-height: 1.3;
+    color: var(--text3);
+  }
+  .label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--text2);
+    margin-bottom: 4px;
+  }
+  .eingabe {
+    width: 100%;
+    min-height: 44px;
+    padding: 9px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--rand-stark);
+    background: #fff;
+    color: var(--text);
+    font: inherit;
+    font-size: 16px;
+  }
+  .eingabe::placeholder {
+    color: #7b8798;
+  }
+  .eingabe:focus {
+    border-color: var(--akzent);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--akzent-fläche);
+  }
+  textarea.eingabe {
+    min-height: 74px;
+    resize: vertical;
+    line-height: 1.45;
+  }
+  .selekt {
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--text2) 50%), linear-gradient(135deg, var(--text2) 50%, transparent 50%);
+    background-position: calc(100% - 17px) 20px, calc(100% - 12px) 20px;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 34px;
+  }
+  .feld {
+    min-width: 0;
+  }
+
+  /* ── Kalender ───────────────────────────────────────────────────────── */
+  .raster {
     display: grid;
-    /* jede Spalte gleich breit und schrumpfbar – so passen alle Reiter nebeneinander,
-       ohne seitliches Scrollen und ohne dass einer den andern aus dem Bild schiebt */
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .zelle {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-height: 46px;
+    padding: 5px 6px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 13.5px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .zelle-leer {
+    background: transparent;
+    cursor: default;
+  }
+  .zelle-reise {
+    background: var(--akzent-fläche);
+    border-color: #cfe6e2;
+  }
+  .zelle-heute {
+    border-color: var(--akzent);
+    font-weight: 700;
+  }
+  .zelle-punkte {
+    display: flex;
+    gap: 3px;
+    margin-top: auto;
+  }
+  .zeitangabe {
+    flex: none;
+    width: 52px;
+    font-size: 13.5px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    color: var(--text2);
+    padding-top: 2px;
+  }
+  .fuellung {
+    display: inline-flex;
+    gap: 3px;
+    align-self: center;
+  }
+  .fuellung i {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--rand-stark);
+  }
+  .fuellung i[data_an='1'] {
+    background: var(--akzent);
+  }
+
+  /* ── Fortschritt ────────────────────────────────────────────────────── */
+  .fortschritt {
+    display: flex;
+    height: 6px;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e9edf4;
+  }
+  .fortschritt > span {
+    display: block;
+    background: var(--akzent);
+    border-radius: 999px;
+  }
+  .pruefpunkt {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13.5px;
+    color: var(--text2);
+  }
+  .pruefpunkt b {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* ── Blattleiste und Ablage unten ───────────────────────────────────── */
+  .dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    display: grid;
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
-    gap: 2px;
-    padding: 3px 3px calc(3px + env(safe-area-inset-bottom, 0px));
-    background: rgba(11, 13, 18, 0.97);
-    border-top: 1px solid rgba(255, 255, 255, 0.09);
-    box-shadow: 0 -14px 34px -20px rgba(0, 0, 0, 0.9);
-    backdrop-filter: blur(10px);
+    align-items: stretch;
+    height: var(--dokhoehe);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: rgb(255 255 255 / 0.94);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--rand);
   }
-  .tabbar > a {
+  .dock a {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 1px;
+    gap: 2px;
     min-width: 0;
-    min-height: 44px;
-    padding: 4px 1px 3px;
-    font-size: 9.5px;
-    line-height: 1.15;
-    text-align: center;
-    white-space: normal;
+    color: var(--text3);
+    font-size: 13px;
+    font-weight: 550;
+    text-decoration: none;
   }
-  .tabbar > a > [aria-hidden] {
-    font-size: 17px;
-    line-height: 1.1;
+  .dock a > span.ikone {
+    font-size: 19px;
+    line-height: 1;
   }
-  .tab-label-short {
-    overflow-wrap: anywhere;
+  .dock a[aria-current='page'] {
+    color: var(--akzent-text);
   }
-  .tab-label-full {
+  .dock a[aria-current='page'] > span.ikone {
+    transform: translateY(-1px) scale(1.06);
+  }
+
+  .boden-ablage {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    background: rgb(16 21 29 / 0.42);
+    padding: 0;
+  }
+  .ablage {
+    display: flex;
+    max-height: min(90dvh, 860px);
+    width: 100%;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 22px 22px 0 0;
+    background: var(--karte);
+    box-shadow: 0 -12px 40px -18px rgb(16 24 40 / 0.4);
+    animation: hochfahren 0.18s ease-out;
+  }
+  .ablage-inhalt {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px var(--randseiten) calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  .ablage-kopf {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px var(--randseiten);
+    border-bottom: 1px solid var(--rand);
+  }
+
+  .meldung {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--dokhoehe) + 74px);
+    z-index: 70;
+    transform: translateX(-50%);
+    max-width: min(92vw, 460px);
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: #10151d;
+    color: #fff;
+    font-size: 13.5px;
+    box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.5);
+    animation: hochfahren 0.16s ease-out;
+  }
+
+  .gelenk {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 2px 0;
+    margin: 0 calc(var(--randseiten) * -1);
+    padding-inline: var(--randseiten);
+    scroll-snap-type: x proximity;
+  }
+  .gelenk > * {
+    scroll-snap-align: center;
+  }
+  .gelenk::-webkit-scrollbar {
     display: none;
   }
-  /* der Inhalt muss über der Leiste enden, sonst liegt sie auf dem letzten Knopf –
-     die Grundbreite davon hat die Hülle schon (pb-16), hier kommt nur die Sicherheitzone dazu */
-  .pb-tabbar {
-    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-  }
 
-  @media (min-width: 768px) {
-    .tabbar {
-      position: static;
-      display: flex;
-      inset: auto;
-      z-index: auto;
-      gap: 4px;
-      overflow-x: auto;
-      padding: 4px;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 16px;
-      box-shadow: none;
-      backdrop-filter: none;
-    }
-    .tabbar > a {
-      flex-direction: row;
-      gap: 6px;
-      padding: 8px 12px;
-      font-size: 13px;
-      white-space: nowrap;
-    }
-    .tabbar > a > [aria-hidden] {
-      font-size: inherit;
-    }
-    .tab-label-short {
-      display: none;
-    }
-    .tab-label-full {
-      display: inline;
-    }
-    .pb-tabbar {
-      padding-bottom: 0;
-    }
-  }
-  .seg {
-    @apply inline-flex items-center gap-0.5 rounded-xl bg-white/[0.045] p-0.5;
-  }
-  .seg > button {
-    @apply rounded-[10px] px-2.5 py-1 text-[13px] font-medium text-slate-400 transition hover:text-slate-100;
-  }
-  .seg > .seg-on {
-    @apply bg-ink-700 text-white shadow-[0_1px_0_rgba(255,255,255,0.06)_inset];
-  }
-  .menu-pop {
-    @apply pop-in absolute right-0 z-50 mt-1 w-60 rounded-xl border border-white/10 bg-ink-800/95 p-1 text-left shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] backdrop-blur;
-  }
-  /* die Prioritätsstufe – dasselbe Etikett in Liste, Blech, Karte und Formular.
-     bewusst Inline-Text (kein Kästchen): so sitzt es in Zeilen mit Basenlinien-Ausrichtung
-     auf derselben Linie wie Name und Datum */
-  .prio {
-    @apply inline shrink-0 whitespace-nowrap text-[13px] font-medium;
-  }
-  /* winzige Schrift gibt es nur noch in Grafiken (Hitzefeld, Nacht-Streifen, Kalender,
-     Kartenrand) – `mikro` kennzeichnet die Ausnahme, alles andere ist mindestens 13px */
-  .mikro {
-    line-height: 1.15;
-    letter-spacing: 0.02em;
-  }
-  /* ein leerer Tag ist eine Zeile: so hoch wie der Kopf einer Karte (44px), gleicher
-     linker Rand, derselbe Farbrand links wie die Karte, die daraus wird, sobald ein
-     Punkt drinliegt – in der Liste stehen Datum und ＋ deshalb untereinander */
-  .day-line {
-    min-height: 44px;
-  }
-  .day-warn {
-    @apply rounded-md bg-shu-500/15 px-2 py-1 text-[13px] font-medium text-shu-50 ring-1 ring-inset ring-shu-400/40 transition hover:bg-shu-500/30;
-  }
-  /* das Ideen-Blech: von unten, mit Sicherheitszone unter dem Fuß */
-  .day-sheet {
-    animation: sheet-up 0.18s ease-out;
-  }
-  .day-sheet .sheet-foot {
-    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-  }
-  @media (min-width: 768px) {
-    .day-sheet .sheet-foot {
-      padding-bottom: 8px;
-    }
-  }
-
-  /* die Filterreihe auf dem Handy: eine Zeile, seitlich durchziehbar, ohne Scrollbalken */
-  .filter-row {
-    scrollbar-width: none;
-  }
-  .filter-row::-webkit-scrollbar {
-    height: 0;
-  }
-  .menu-sheet {
-    @apply fixed inset-x-2 z-50 mx-auto max-h-[72vh] w-auto max-w-lg overflow-y-auto rounded-2xl p-2;
-    bottom: calc(6px + var(--dock, 0px));
-    animation: sheet-up 0.18s ease-out;
-  }
-  @keyframes sheet-up {
-    from {
-      opacity: 0;
-      transform: translateY(14px);
-    }
-  }
-  .cell {
-    @apply px-2 py-1 align-top text-[13px] leading-snug;
+  .rahmen-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
-/* Leaflet in dunklem Layout */
-.leaflet-container {
-  background: #10131a;
-  font: inherit;
-}
-.leaflet-popup-content-wrapper,
-.leaflet-popup-tip {
-  background: #12151d;
-  color: #e8ecf4;
-  border-radius: 10px;
-  box-shadow: 0 8px 30px -10px rgba(0, 0, 0, 0.8);
-}
-.leaflet-popup-content {
-  margin: 10px 12px;
-  font-size: 13px;
-  line-height: 1.45;
-}
-.leaflet-bar a,
-.leaflet-control-zoom a {
-  background: #12151d;
-  color: #e8ecf4;
-  border-color: rgba(255, 255, 255, 0.12);
-}
-.leaflet-control-attribution {
-  background: rgba(11, 13, 18, 0.75) !important;
-  color: #94a3b8 !important;
-  font-size: 10px;
-}
-.leaflet-control-attribution a {
-  color: #cbd5e1 !important;
-}
-/*
- * Dunkelmodus für die offenen OpenStreetMap-Kacheln: nur die Bildkacheln werden
- * invertiert – Marker, Linien, Popups und Beschriftungen der App bleiben so, wie sie sind.
- * Kein Key, keine Registrierung, keine Kosten.
- */
-.tiles-dark {
-  filter: invert(1) hue-rotate(180deg) brightness(0.93) contrast(0.92) saturate(0.72);
-}
-.tiles-dark--soft {
-  filter: invert(1) hue-rotate(180deg) brightness(1.02) contrast(0.78) saturate(0.35);
-}
-.marker-clusterish {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 999px;
-  font-size: 13px;
-  line-height: 1;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+@keyframes hochfahren {
+  from {
+    transform: translateY(14px);
+    opacity: 0.4;
+  }
 }
 
-/* ── Ziehen mit dem Finger (Pointer-Schicht über dem HTML5-Drag) ───────────── */
-.grip {
-  display: inline-grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  flex: none;
-  border-radius: 9px;
-  color: #64748b;
-  font-size: 15px;
-  line-height: 1;
-  cursor: grab;
-  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+@keyframes pop {
+  from {
+    transform: scale(0.98);
+    opacity: 0;
+  }
 }
-.grip:hover {
-  color: #e2e8f0;
-  background: rgba(255, 255, 255, 0.07);
-}
-.grip:active {
-  cursor: grabbing;
-  transform: scale(0.94);
-}
-/* Touch: jede Fläche, die man antippen kann, ist mindestens 44 × 44 groß –
-   die Knöpfe der Kartenzeile, die Greifpunkte, die Eingabefelder, alles.
-   (Apple und Google rechnen mit dem Daumen, nicht mit dem Cursor.) */
+
+/* Finger: jede Fläche gut zu treffen, aber nie auf Kosten des Textes daneben */
 @media (hover: none) {
   button,
-  .btn,
-  .tab,
+  .knopf,
+  .dock a,
   summary,
-  .menu-pop a,
-  .menu-sheet a,
-  .day-nav a,
+  .ablage a,
+  .ablage button,
   input:not([type='checkbox']):not([type='radio']),
   select,
-  textarea {
+  textarea,
+  .zelle {
     min-height: 44px;
   }
-  /* 44 × 44 gilt für Flächen, die nur ein Zeichen tragen – ein Knopf mit Wort
-     breiter zu machen ändert nichts am Treffen, nimmt aber dem Text daneben die Breite */
-  .icon-btn,
-  .grip,
-  .tab,
-  .day-nav a,
-  .menu-pop a,
-  .menu-sheet a,
-  .menu-sheet button,
-  .seg > button {
+  .icon-knopf,
+  .knopf-klein {
     min-width: 44px;
   }
-  .icon-btn {
-    height: 44px;
-    width: 44px;
-    min-height: 44px;
-    min-width: 44px;
-  }
-  .day-arrow,
-  .btn-today {
-    height: 44px;
-  }
-  .grip {
-    width: 44px;
-    height: 44px;
-    font-size: 17px;
+  .eingabe {
+    font-size: 16px;
   }
 }
 
-body.is-dragging {
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-  cursor: grabbing;
-}
-
-.drag-ghost {
-  position: fixed;
-  left: 0;
-  top: 0;
-  z-index: 60;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: min(72vw, 320px);
-  padding: 9px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: linear-gradient(180deg, #232a39, #161b25);
-  box-shadow: 0 26px 50px -18px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  color: #f1f5f9;
-  font-size: 13px;
-  font-weight: 600;
-  pointer-events: none;
-  animation: ghost-in 0.14s ease-out both;
-}
-@keyframes ghost-in {
-  from {
-    opacity: 0;
-  }
-}
-.drag-ghost-icon {
-  color: #ff7047;
-}
-.drag-ghost-label {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-/* das Ziel leuchtet, solange der Finger daraufsteht */
-[data-dropzone][data-drag-over='true'] {
-  outline: 2px dashed rgba(255, 112, 71, 0.8);
-  outline-offset: -2px;
-  background: rgba(240, 78, 35, 0.09);
-  box-shadow: 0 20px 44px -28px rgba(240, 78, 35, 0.9);
-}
-[data-dropindex][data-drag-over='true'] {
-  border-radius: 12px;
-  background: rgba(79, 157, 91, 0.1);
-  box-shadow: inset 0 2px 0 0 #4f9d5b, 0 0 0 1px rgba(79, 157, 91, 0.4);
-}
-
-/* Drag & Drop */
-[data-dragging='true'] {
-  opacity: 0.45;
-}
-.drop-live {
-  outline: 2px dashed rgba(240, 78, 35, 0.55);
-  outline-offset: -3px;
-  background: rgba(240, 78, 35, 0.06);
-}
-
-@keyframes pop-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-.pop-in {
-  animation: pop-in 0.14s ease-out both;
-}
-
-/* ── Unterwegs – Farbe und Bewegung für die Hosentasche ─────────────────────
-   Eine Bewegung pro Klick, keine Dauerschleife, die vom Ablesen abhält.
-   Alles hier ist CSS: kein Layout-Framework, keine Library, nichts zu laden. */
-button,
-a {
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(9px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-.rise {
-  animation: rise 0.38s cubic-bezier(0.22, 0.61, 0.36, 1) both;
-  animation-delay: var(--d, 0ms);
-}
-
-@keyframes check-pop {
-  0% {
-    transform: scale(1);
-  }
-  38% {
-    transform: scale(1.32);
-  }
-  70% {
-    transform: scale(0.92);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-.check-pop {
-  animation: check-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-@keyframes sweep {
-  from {
-    transform: translateX(-115%);
-  }
-  to {
-    transform: translateX(135%);
-  }
-}
-.done-sweep::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  border-radius: inherit;
-  background: linear-gradient(100deg, transparent 16%, rgba(167, 211, 160, 0.32) 46%, rgba(255, 255, 255, 0.12) 55%, transparent 82%);
-  animation: sweep 0.85s ease-out both;
-}
-
-.ring-fill,
-.bar-fill {
-  transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 0.61, 0.36, 1), width 0.6s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-/* der Tageskopf: Farbe kommt vom Bett der Nacht */
-.live-hero {
-  position: relative;
-  overflow: hidden;
-  border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: radial-gradient(135% 120% at 6% -34%, var(--hc, rgba(240, 78, 35, 0.28)), transparent 58%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.015)), #12151d;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 20px 44px -28px rgba(0, 0, 0, 0.9);
-}
-.live-hero > * {
-  position: relative;
-}
-
-/* die Reise als Leiste: ein Feld pro Tag */
-.trip-seg {
-  flex: 1 1 0;
-  min-width: 3px;
-  height: 24px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.055);
-  cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.2s ease, background 0.3s ease;
-}
-.trip-seg[data-bed='nein'] {
-  background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0 3px, rgba(255, 255, 255, 0.02) 3px 6px);
-}
-.trip-seg:hover {
-  transform: scaleY(1.14);
-}
-.trip-seg.is-last {
-  background: repeating-linear-gradient(0deg, rgba(255, 210, 31, 0.42) 0 2px, rgba(255, 255, 255, 0.03) 2px 5px);
-}
-.trip-seg.is-today {
-  animation: today-pulse 3s ease-in-out infinite;
-}
-.trip-seg.is-viewed {
-  transform: scaleY(1.3);
-  box-shadow: 0 0 0 1.5px #fff, 0 8px 18px -10px rgba(0, 0, 0, 0.9);
-}
-@keyframes today-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45);
-  }
-  50% {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8), 0 0 14px 1px rgba(255, 255, 255, 0.2);
-  }
-}
-
-.day-arrow,
-.btn-today {
-  display: grid;
-  place-items: center;
-  height: 38px;
-  padding: 0 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.045);
-  color: #e2e8f0;
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.14s ease, background 0.2s ease, border-color 0.2s ease;
-}
-.day-arrow:hover,
-.btn-today:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.22);
-}
-.day-arrow:active,
-.btn-today:active,
-.big-check:active,
-.tick:active,
-.plan-chip:active {
-  transform: scale(0.92);
-}
-.day-arrow:disabled {
-  opacity: 0.32;
-  cursor: not-allowed;
-}
-.btn-today {
-  color: #ffd21f;
-  background: rgba(255, 210, 31, 0.12);
-  border-color: rgba(255, 210, 31, 0.32);
-}
-
-/* als nächstes – die eine Karte, die zählt */
-.nextup {
-  position: relative;
-  overflow: hidden;
-  padding: 14px;
-  border-color: rgba(255, 255, 255, 0.1);
-  background: linear-gradient(155deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02) 58%), #151922;
-  box-shadow: 0 24px 48px -32px var(--nc, #f04e23), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-.nextup-rail {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: linear-gradient(180deg, var(--nc, #f04e23), transparent);
-}
-.nextup::after {
-  content: '';
-  position: absolute;
-  right: -14%;
-  top: -55%;
-  width: 62%;
-  aspect-ratio: 1;
-  border-radius: 999px;
-  background: radial-gradient(circle, var(--nc, #f04e23) 0%, transparent 62%);
-  opacity: 0.16;
-  filter: blur(8px);
-  pointer-events: none;
-  animation: breathe 5.4s ease-in-out infinite;
-}
-@keyframes breathe {
-  0%,
-  100% {
-    opacity: 0.1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.26;
-    transform: scale(1.12);
-  }
-}
-.nextup-icon {
-  display: grid;
-  place-items: center;
-  height: 44px;
-  width: 44px;
-  flex: none;
-  border-radius: 14px;
-  font-size: 22px;
-  line-height: 1;
-}
-.big-check {
-  display: grid;
-  place-items: center;
-  height: 56px;
-  width: 56px;
-  flex: none;
-  border-radius: 999px;
-  border: 0;
-  color: #fff;
-  font-size: 24px;
-  line-height: 1;
-  cursor: pointer;
-  background: linear-gradient(180deg, #ff7a4f, #e8451c);
-  box-shadow: 0 12px 28px -12px rgba(240, 78, 35, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  transition: transform 0.14s ease, box-shadow 0.2s ease;
-}
-.big-check:hover {
-  box-shadow: 0 16px 34px -12px rgba(240, 78, 35, 1), inset 0 1px 0 rgba(255, 255, 255, 0.5);
-}
-
-.tick {
-  display: grid;
-  place-items: center;
-  height: 38px;
-  width: 38px;
-  flex: none;
-  border-radius: 999px;
-  border: 1.5px solid rgba(255, 255, 255, 0.22);
-  background: transparent;
-  color: #a7d3a0;
-  font-size: 15px;
-  cursor: pointer;
-  transition: transform 0.14s ease, border-color 0.2s ease, background 0.25s ease;
-}
-.tick span {
-  opacity: 0;
-  transform: scale(0.5);
-  transition: opacity 0.2s ease, transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.tick:hover {
-  border-color: rgba(255, 255, 255, 0.5);
-}
-.tick.is-on {
-  background: rgba(79, 157, 91, 0.22);
-  border-color: rgba(167, 211, 160, 0.62);
-}
-.tick.is-on span {
-  opacity: 1;
-  transform: scale(1);
-}
-
-/* Liste: farbige Schiene pro Kategorie, Ende = grün */
-.live-row {
-  position: relative;
-  padding-left: 13px;
-  padding-right: 9px;
-  border-radius: 14px;
-  transition: background 0.25s ease, opacity 0.25s ease;
-}
-.live-row::before {
-  content: '';
-  position: absolute;
-  left: 3px;
-  top: 9px;
-  bottom: 9px;
-  width: 3px;
-  border-radius: 999px;
-  background: var(--rc, #8b93a1);
-  opacity: 0.55;
-  transition: opacity 0.25s ease, background 0.25s ease;
-}
-.live-row:hover {
-  background: rgba(255, 255, 255, 0.035);
-}
-.live-row.is-done {
-  opacity: 0.62;
-  background: linear-gradient(90deg, rgba(79, 157, 91, 0.16), transparent 62%);
-}
-.live-row.is-done::before {
-  background: #4f9d5b;
-  opacity: 1;
-}
-.row-detail {
-  margin: 2px 0 10px 46px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.3);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
-}
-
-/* der Daumen bekommt den Auftrag, wenn die Karte hochgerutscht ist */
-.sticky-next {
-  position: fixed;
-  inset: auto 0 0 0;
-  z-index: 30;
-  margin-inline: auto;
-  width: 100%;
-  max-width: 36rem;
-  bottom: var(--dock, 0px);
-  /* die Sicherheitszone steckt schon im Dock – hier nicht noch einmal */
-  padding: 10px 12px;
-  opacity: 0;
-  transform: translateY(130%);
-  pointer-events: none;
-  transition: transform 0.34s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.24s ease;
-}
-.sticky-next.is-on {
-  opacity: 1;
-  transform: none;
-  pointer-events: auto;
-}
-.sticky-next .card {
-  backdrop-filter: blur(9px);
-  box-shadow: 0 -12px 34px -14px rgba(0, 0, 0, 0.8);
-}
-
-.plan-chip {
-  position: relative;
-  overflow: hidden;
-  flex: 0 0 auto;
-  width: 47%;
-  max-width: 220px;
-  scroll-snap-align: start;
-  text-align: left;
-  padding: 10px 11px 11px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018));
-  cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.plan-chip::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--cc, #8b93a1), transparent);
-  opacity: 0.85;
-}
-.plan-chip:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 18px 34px -24px var(--cc, #8b93a1);
-}
-
-/* ▶️ Reise starten – die eine Frage, die die Seite vorher stellt */
-.start-hero {
-  position: relative;
-  overflow: hidden;
-  border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: radial-gradient(120% 130% at 10% -22%, rgba(240, 78, 35, 0.36), transparent 58%), linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)), #12151d;
-}
-.start-hero > * {
-  position: relative;
-}
-.start-hero::after {
-  content: '';
-  position: absolute;
-  right: -16%;
-  bottom: -70%;
-  width: 240px;
-  height: 240px;
-  border-radius: 999px;
-  background: conic-gradient(from 0deg, rgba(240, 78, 35, 0.6), rgba(79, 157, 91, 0.4), rgba(255, 210, 31, 0.35), rgba(240, 78, 35, 0.6));
-  filter: blur(30px);
-  opacity: 0.42;
-  animation: spin 22s linear infinite;
-  pointer-events: none;
-}
-@keyframes spin {
-  to {
-    transform: rotate(1turn);
-  }
-}
-.btn-go {
-  position: relative;
-  overflow: hidden;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 14px 16px;
-  border: 0;
-  border-radius: 16px;
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  background: linear-gradient(180deg, #ff7a4f, #e8451c);
-  box-shadow: 0 16px 34px -14px rgba(240, 78, 35, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  transition: transform 0.14s ease, box-shadow 0.22s ease;
-}
-.btn-go::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(100deg, transparent 32%, rgba(255, 255, 255, 0.38) 48%, transparent 64%);
-  animation: sweep 3.4s ease-in-out infinite;
-  pointer-events: none;
-}
-.btn-go:hover {
-  box-shadow: 0 20px 42px -14px rgba(240, 78, 35, 1), inset 0 1px 0 rgba(255, 255, 255, 0.5);
-}
-.btn-go:active {
-  transform: scale(0.98);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .rise,
-  .check-pop,
-  .nextup::after,
-  .trip-seg.is-today,
-  .start-hero::after,
-  .btn-go::after,
-  .done-sweep::after {
-    animation: none !important;
-  }
-  .rise {
-    opacity: 1 !important;
-    transform: none !important;
-  }
-  .ring-fill,
-  .bar-fill,
-  .trip-seg,
-  .sticky-next,
-  .plan-chip,
-  .tick,
-  .big-check,
-  .live-row {
-    transition: none !important;
-  }
-}
-
-@media print {
-  .sticky-next,
-  .trip-seg {
-    display: none !important;
-  }
-  /* der Platz für die untere Reiterleiste gehört nicht aufs Papier */
-  .pb-tabbar {
-    padding-bottom: 0;
-  }
-}
-
-/* Papier – der Tages-Ausdruck sieht aus wie das Blatt, das aus dem Drucker kommt */
-.paper {
-  background: #fff;
-  color: #1c1917;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-}
-.paper a {
-  color: #1d4ed8;
-}
-
-@page {
-  size: A4;
-  margin: 12mm;
-}
-
-@media print {
+@media (min-width: 768px) {
   :root {
-    --bg: #ffffff;
+    --randseiten: 24px;
+    --radius: 20px;
   }
-  html,
   body {
-    background: #fff !important;
-    color: #000 !important;
+    font-size: 15.5px;
   }
-  .no-print {
+  h1 {
+    font-size: 26px;
+  }
+  .seitenkopf {
+    padding-top: 22px;
+  }
+  .seitenkopf .neben {
+    width: auto;
+  }
+  .zeile > .taten {
+    width: auto;
+    margin-left: auto;
+  }
+  .ablage {
+    max-width: 620px;
+    margin-inline: auto;
+    border-radius: 22px;
+    margin-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  }
+  .boden-ablage {
+    padding: 24px 16px;
+  }
+  .zelle {
+    min-height: 84px;
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 1024px) {
+  body {
+    padding-bottom: 28px;
+  }
+}
+
+@media print {
+  .dock,
+  .fab,
+  .taten {
     display: none !important;
   }
-  .card {
-    border-color: #d4d4d8 !important;
-    background: #fff !important;
-    box-shadow: none !important;
+  body {
+    background: #fff;
   }
-  .print-block {
-    break-inside: avoid;
-  }
-  .print-grid {
-    display: block !important;
-  }
-  table {
-    font-size: 10.5px !important;
-  }
-  th,
-  td {
-    border-color: #d4d4d8 !important;
-    color: #000 !important;
-    background: #fff !important;
-  }
-  .app-shell {
-    padding: 0 !important;
-  }
-  .paper {
-    border: 0;
-    border-radius: 0;
-    box-shadow: none !important;
-    padding: 0 !important;
-  }
-  /* ein Tag = eine Seite – das ist der ganze Trick am Ausdruck */
-  .print-page {
-    break-after: page;
-    page-break-after: always;
-  }
-  .print-page:last-child,
-  .paper.print-block:last-of-type {
-    break-after: auto;
-    page-break-after: auto;
-  }
-  .paper a {
-    color: #000 !important;
-    text-decoration: none !important;
-  }
-
 }
