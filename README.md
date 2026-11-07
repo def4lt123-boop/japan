@@ -69,4 +69,5 @@ Unten in der Seitenspalte (und auf dem Handy im Profil) steht ein Satz: **Datenb
 - **Lesen:** mindestens 13 px, Grautöne mit genug Kontrast, Namen in Reinschrift.
 - **Tippen:** jede Fläche mindestens 44 px hoch; 44 px breit nur bei Knöpfen, die ein einzelnes Zeichen tragen – sonst zerdrücken sie den Text daneben. In einer Zeile stehen die Knöpfe auf dem Handy unter dem Text.
 - **Menüs und Formulare** laufen als Ablage unten und werden nie abgeschnitten.
+- **Das Bild des Ortes steht hinter der Reihe**, nicht daneben: hell überfangen, damit der Text ruhig bleibt, mit Nachweis des Bilddienstes darunter. Gefunden wird für den Reisetag und die Unterkünfte; übernommen (oder entfernt) wird nur, wenn jemand es im Menü sagt.
 - **Nichts wird ungefragt verändert.** Vorschläge (Kategorie, Bild, Stadt aus der Adresse) stehen da, weil sie beim Tippen helfen, und lassen sich überdecken.

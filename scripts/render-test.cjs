@@ -64,15 +64,31 @@ const punkt = (id, titel, reiseId) => ({
   erstellt_am: '2026-01-08T09:00:00.000Z',
 });
 
+const PUNKT1 = { ...punkt('e1', 'Markt', 'r-test'), foto_url: 'https://beispiel.org/markt.jpg', foto_nachweis: 'Foto: Mia Gurt / Unsplash' };
+const PUNKT2 = { ...punkt('e2', 'Brunnen', 'r-test'), foto_url: 'https://beispiel.org/brunnen.jpg', foto_nachweis: 'Foto: Jem Kell / Unsplash' };
+const PUNKT3 = punkt('e3', 'Anderswo', 'r-andere');
+const BETT = {
+  ...punkt('e4', 'Albergo al Sole', 'r-test'),
+  art: 'unterkunft',
+  date: '2027-10-24',
+  bis_date: '2027-10-26',
+  zeit: '15:00',
+  bis_zeit: '10:00',
+  foto_url: 'https://beispiel.org/hotel.jpg',
+  foto_nachweis: 'Foto: Katrin Ohl / Wikimedia Commons',
+};
+
 window.localStorage.setItem(
   'reiseplan.v1',
   JSON.stringify({
     reisen: [REISE, ANDERE],
-    eintraege: [punkt('e1', 'Markt', 'r-test'), punkt('e2', 'Brunnen', 'r-test'), punkt('e3', 'Anderswo', 'r-andere')],
+    eintraege: [PUNKT1, PUNKT2, PUNKT3],
   })
 );
 
 const React = require('react');
+// die Blätter werden mit klassischem Laufzeit-Übersetzer gelesen – sie brauchen React im Raum
+global.React = React;
 const { createRoot } = require('react-dom/client');
 const { DatenProvider, useStore } = require('../src/lib/daten.tsx');
 
@@ -95,6 +111,60 @@ function Sonde() {
     spur.store = store;
   }, [store]);
   return React.createElement('p', { id: 'stand' }, `${plan.menge} Punkte · ${Object.keys(routen).length} Routen`);
+}
+
+/** Die Reihe selbst: Bild hinten, Text vorn, und ein Fund bleibt ein Fund. */
+async function reihenPrüfen() {
+  const { EintragZeile } = require('../src/components/EintragZeile.tsx');
+  const { BettZeile } = require('../src/components/BettZeile.tsx');
+  const behälter = document.createElement('div');
+  document.body.appendChild(behälter);
+  const grund = createRoot(behälter);
+  const reihe = (kind, props) => React.createElement(kind, { ...props, reise: REISE, bearbeiten: () => {} });
+
+  await act(async () => {
+    grund.render(
+      React.createElement(
+        DatenProvider,
+        null,
+        React.createElement(
+          'div',
+          null,
+          React.createElement(
+            'ul',
+            { className: 'liste' },
+            React.createElement('li', { className: 'karte overflow-hidden' }, reihe(EintragZeile, { eintrag: PUNKT2 })),
+            React.createElement('li', { className: 'karte overflow-hidden' }, reihe(EintragZeile, { eintrag: PUNKT1, kompakt: true })),
+            React.createElement('li', { className: 'karte overflow-hidden' }, reihe(EintragZeile, { eintrag: PUNKT3 }))
+          ),
+          reihe(BettZeile, { eintrag: BETT })
+        )
+      )
+    );
+  });
+  await act(async () => {
+    await new Promise((warten) => setTimeout(warten, 0));
+  });
+
+  assert.equal(behälter.querySelectorAll('.zeile').length, 4, 'jede Reihe steht, mit Bild oder ohne');
+  const hintergrund = behälter.querySelector('.zeile-bild img');
+  assert.ok(hintergrund, 'das Bild des Ortes liegt hinter der vollen Reihe');
+  assert.equal(hintergrund.getAttribute('alt'), '', 'das Bild ist Schmuck, der Name steht im Text');
+  assert.equal(hintergrund.getAttribute('loading'), 'lazy', 'es lädt nach, nicht vor dem Text');
+  assert.equal(behälter.querySelectorAll('.zeile-bild').length, 2, 'ein Punkt und das Bett, die dichte Reihe bleibt weiß');
+  assert.equal(behälter.querySelectorAll('img[alt="Markt"]').length, 1, 'die dichte Liste behält ihren Vorschnitt');
+  assert.ok(behälter.textContent.includes('Foto: Jem Kell / Unsplash'), 'der Nachweis steht sichtbar an der Reihe');
+  assert.ok(behälter.querySelector('.zeile-bett .zeile-bild'), 'auch das Bett zeigt sein Bild');
+  assert.ok(!behälter.querySelector('li:nth-child(3) .zeile-bild'), 'wo nichts zu finden ist, bleibt die Reihe leer');
+  assert.ok(!behälter.querySelector('.zeile li'), 'eine Reihe verschachtelt kein li in ein li');
+
+  const stand = JSON.parse(window.localStorage.getItem('reiseplan.v1'));
+  const gesuchter = stand.eintraege.find((e) => e.id === 'e3');
+  assert.equal(gesuchter.foto_url, null, 'ein Suchbild wird nicht ungefragt an den Eintrag geschrieben');
+
+  await act(async () => {
+    grund.unmount();
+  });
 }
 
 async function main() {
@@ -131,10 +201,12 @@ async function main() {
   assert.notEqual(nachher, vorher, 'nach dem Schreiben ist die Liste eine neue');
   assert.equal(spur.store.eintraegeVon('r-test'), nachher, 'und bleibt es, bis wieder geschrieben wird');
 
+  await reihenPrüfen();
+
   await act(async () => {
     wurzel.unmount();
   });
-  console.log(`🎉 Speicherblatt hält – ${spur.render} Render, Listen bleiben dieselben, Schreiben wirkt genau einmal`);
+  console.log(`🎉 Speicherblatt hält – ${spur.render} Render, Listen bleiben dieselben, Schreiben wirkt genau einmal, Bilder bleiben Bilder`);
 }
 
 main().catch((fehler) => {

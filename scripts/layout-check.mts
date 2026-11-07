@@ -79,7 +79,7 @@ assert.match(css, /\.icon-knopf\s*\{[^}]*width:\s*44px/, 'die Zeichenfläche ist
 const flaeche = css.match(/button,[\s\S]*?textarea\s*\{[^}]*\}/)?.[0] ?? '';
 assert.ok(!/min-width/.test(flaeche), 'Breite 44px nur bei Zeichen-Knöpfen – sonst zerdrückt sie den Text daneben');
 assert.match(css, /\.zeile\s*\{[^}]*flex-wrap:\s*wrap/, 'Zeilen umbrechen, Knöpfe rücken unter den Text');
-assert.match(css, /\.zeile-bett\s*\{[^}]*box-shadow:\s*inset/, 'eine Unterkunft sieht man in jeder Liste als eigene Art');
+assert.match(css, /\.zeile-bett::after\s*\{[^}]*box-shadow:\s*inset/, 'eine Unterkunft sieht man in jeder Liste als eigene Art');
 assert.match(text('src/components/EintragZeile.tsx'), /istBett && 'zeile-bett'/, 'die Bett-Zeile trägt ihr Bild');
 assert.match(css, /\.zeile > \.taten\s*\{[^}]*width:\s*100%/, 'die Aktionsgruppe steht auf dem Handy unter dem Text');
 assert.match(css, /\.ablage\s*\{[^}]*max-height/, 'die Ablage kann nie höher sein als das Gerät');
@@ -202,6 +202,26 @@ for (const [tabelle, spalten] of [['reisen', anzahl('reisen')], ['eintraege', an
   assert.ok(glatt.includes(`and table_name = '${tabelle}'; if n <> ${spalten} then`), `der Neuaufbau zählt ${spalten} Spalten in ${tabelle}, weil die App ${spalten} schreibt`);
 }
 assert.ok(!/NEXT_PUBLIC|anon key|service_role.*session/i.test(neu.replace(/grant usage on schema public to anon, authenticated, service_role;/g, '')), 'im Neuaufbau stehen keine Schlüssel, nur Rollennamen');
+
+
+/* ── 9 · das Bild des Ortes hinter der Reihe ─────────────────────────── */
+
+const bildreihe = text('src/components/ReihenBild.tsx');
+assert.match(bildreihe, /alt="" loading="lazy"/, 'das Reihenbild ist Schmuck und wird nachgeladen');
+assert.match(bildreihe, /aria-hidden="true"/, 'die Bildebene sagt niemandem etwas vor');
+assert.ok(!/eintragAendern|speichern\(/.test(bildreihe), 'ein gefunden Bild wird nicht von sich geschrieben');
+assert.match(text('src/lib/ortsbild.ts'), /const vorrat = new Map/, 'dieselbe Frage sucht nur einmal');
+assert.match(text('src/lib/ortsbild.ts'), /HÖCHSTENS = 2/, 'nicht acht Reihen, acht Suchen auf einmal');
+assert.match(text('src/components/EintragZeile.tsx'), /ReihenNachweis/, 'der Nachweis des Bilddienstes steht an der Reihe');
+assert.match(text('src/components/EintragZeile.tsx'), /Bild übernehmen/, 'behalten wird ein Fund erst nach dem Zuruf');
+assert.ok(!/<li[\s>]/.test(text('src/components/EintragZeile.tsx')), 'eine Reihe ist ein div – die Liste trägt das li');
+assert.match(css, /\.zeile\s*\{[^}]*isolation:\s*isolate/, 'die Bildebene bleibt in der Reihe');
+assert.match(css, /\.zeile-bild img\s*\{[^}]*object-fit:\s*cover/, 'das Bild füllt die Reihe, ohne es zu zerren');
+assert.match(css, /\.zeile-bild::after\s*\{[^}]*linear-gradient/, 'vor dem Text liegt ein Vorhang');
+assert.match(css, /\.zeile > :not\(\.zeile-bild\)\s*\{[^}]*z-index:\s*1/, 'Text und Knöpfe stehen über dem Bild');
+assert.match(css, /@media print[\s\S]*\.zeile-bild\s*\{\s*display:\s*none/, 'auf Papier bleibt die Reihe weiß');
+assert.match(text('src/app/api/bild/route.ts'), /max-age=86400/, 'ein Ort sieht den Tag über gleich aus');
+assert.match(text('src/components/EintragFormular.tsx'), /api\/bild\?q=\$\{encodeURIComponent\(frage\)\}`, \{ cache: 'no-store' \}/, 'wer selbst nach einem Bild sucht, fragt ohne Vorrat');
 
 
 console.log(`🎉 Neues Fundament hält – ${dateien.length} Dateien (${dateien.reduce((s, d) => s + text(d).split('\n').length, 0)} Zeilen), ${seiten.length} Seiten, ${blätter.length} Reiseblätter, kein Rest von früher`);

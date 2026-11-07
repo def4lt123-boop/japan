@@ -6,15 +6,15 @@ import { useParams } from 'next/navigation';
 import { useStore } from '../../../../../lib/daten';
 import { gilt, tagLang, tagNackt } from '../../../../../lib/dates';
 import { chronologisch, eintragVersetzen, reiseTage, tagesPlan } from '../../../../../lib/plan';
-import { MODI, kartenLink } from '../../../../../lib/karten';
+import { MODI } from '../../../../../lib/karten';
 import { routeZwischen, type RoutenInfo } from '../../../../../lib/routen';
-import { geld, wieVorher } from '../../../../../lib/format';
-import { kategorie } from '../../../../../lib/kategorien';
+import { wieVorher } from '../../../../../lib/format';
 import type { Eintrag, EintragArt } from '../../../../../lib/types';
 import { TagesLeiste } from '../../../../../components/Kalender';
 import { EintragZeile } from '../../../../../components/EintragZeile';
 import { EintragFormular } from '../../../../../components/EintragFormular';
-import { Ablage, Chip, IconKnopf, Karten, cx } from '../../../../../components/ui';
+import { Ablage, Karten, cx } from '../../../../../components/ui';
+import { BettZeile } from '../../../../../components/BettZeile';
 
 /** Der Reisetag: Zeitangaben links, Bild und Name daneben, Weg zum nächsten Punkt darunter. */
 export default function Reisetag() {
@@ -147,33 +147,7 @@ export default function Reisetag() {
           )}
 
           <div className="mt-2.5">
-            {bett ? (
-              <Karten className="overflow-hidden">
-                <div className="zeile !gap-x-2.5" style={{ borderLeft: `4px solid ${kategorie('unterschlupf').farbe}` }}>
-                  <span className="zeitangabe" aria-hidden>
-                    🛏️
-                  </span>
-                  <div className="text min-w-0">
-                    <p className="mikro font-semibold uppercase tracking-wide">Übernachtung</p>
-                    <button type="button" className="mt-0.5 block max-w-full truncate text-left text-[16px] font-semibold hover:underline" onClick={() => setFormular({ art: 'unterkunft', bestehend: bett })}>
-                      {bett.titel}
-                    </button>
-                    <p className="mikro mt-0.5 flex flex-wrap items-center gap-x-1.5">
-                      {[bett.zeit ? `Check-in ${bett.zeit}` : null, bett.bis_zeit ? `Check-out ${bett.bis_zeit}` : null, bett.ort].filter(Boolean).join(' · ')}
-                    </p>
-                    {bett.preis ? <Chip className="mt-1">{geld(bett.preis, reise.waehrung)}</Chip> : null}
-                  </div>
-                  <div className="taten">
-                    <a href={kartenLink(bett)} target="_blank" rel="noreferrer" className="icon-knopf no-underline" title="Hotel auf der Karte" aria-label="Hotel auf der Karte">
-                      🗺️
-                    </a>
-                    <IconKnopf titel="Unterkunft ändern" onClick={() => setFormular({ art: 'unterkunft', bestehend: bett })}>
-                      ✏️
-                    </IconKnopf>
-                  </div>
-                </div>
-              </Karten>
-            ) : (
+            {bett ? <BettZeile eintrag={bett} reise={reise} bearbeiten={() => setFormular({ art: 'unterkunft', bestehend: bett })} /> : (
               <button type="button" onClick={() => setFormular({ art: 'unterkunft' })} className="karte flex w-full items-center gap-2 p-3 text-left" style={{ borderStyle: 'dashed', borderColor: '#e5c98a', background: 'var(--warnt-fläche)' }}>
                 <span aria-hidden>🌙</span>
                 <span className="min-w-0 flex-1 text-[14px]" style={{ color: 'var(--warnt)' }}>
