@@ -38,6 +38,10 @@ Mit Schlüsseln in der Umgebung werden dieselben Stellen besser: `GOOGLE_MAPS_AP
 
 Lizenzpflichtige Bilder behalten ihren Nachweis am Bild (`foto_nachweis`, `cover_credit`).
 
+## Karte
+
+Die Karte steht auf offenen Kacheln von OpenStreetMap, mit Esri als Rückhalt – kein Schlüssel, kein Konto, kein Wasserzeichen. Kippt eine Quelle, rückt die nächste nach (`src/lib/kacheln.ts`); wer eigene Kacheln dienen lässt, setzt `NEXT_PUBLIC_KARTE_KACHELN`. Die Vorschau im Formular bettet dasselbe offen ein, der Sprung in Google Maps bleibt ein einfacher Link.
+
 ## Daten liegen, wo sie liegen sollen
 
 Stehen `NEXT_PUBLIC_SUPABASE_URL` und `NEXT_PUBLIC_SUPABASE_ANON_KEY`, liegt alles in `reisen` und `eintraege` – offen ohne Konto, jede Person mit der Adresse kann sehen und ändern. Ohne diese Werte liegt alles auf dem Gerät und die App läuft genauso. Geschrieben wird immer erst lokal, dann online; schlägt das nach, bleibt die Änderung auf dem Gerät und eine Zeile sagt es.

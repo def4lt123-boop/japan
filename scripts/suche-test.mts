@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { ausCommons, ausGoogle, ausOpenStreetMap, ausPexels, ausUnsplash, punktAusText, stadtAusAdresse } from '../src/lib/orte';
 import { kategorieVorschlag } from '../src/lib/kategorien';
 import { SIEHBT_BILDDIENST, SIEHBT_GOOGLE } from '../src/lib/anbieter';
+import { kacheln } from '../src/lib/kacheln';
+import { kartenVorschau } from '../src/lib/karten';
 
 /** Was die Anbieter liefern, muss sauber in Name, Punkt, Adresse und Bildnachweis enden. */
 
@@ -81,3 +83,26 @@ assert.equal(kategorieVorschlag('Zug nach Granada'), 'transport');
 assert.equal(kategorieVorschlag(''), 'sonstiges');
 
 console.log(`🎉 Suche und Bild passen – Google ${SIEHBT_GOOGLE ? 'mit' : 'ohne'} Schlüssel, Bilddienst ${SIEHBT_BILDDIENST ? 'mit' : 'ohne'} Schlüssel`);
+
+/* ── die Karte: offen, ohne Schlüssel, mit Rückhalt ────────────────────── */
+
+const quellen = kacheln();
+assert.ok(quellen.length >= 2, 'fällt eine Quelle aus, hat die Karte die nächste');
+assert.equal(quellen[0]!.url, 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', 'OpenStreetMap zuerst');
+for (const q of quellen) {
+  assert.ok(!/key=/.test(q.url), `${q.id}: die Kacheladresse kennt keinen Schlüssel`);
+  assert.ok(!/\{r\}/.test(q.url), `${q.id}: kein Retina-Platzhalter, den die Quelle nicht kennt`);
+  assert.ok(/\{z\}\/\{x\}\/\{y\}/.test(q.url) || /\{z\}\/\{y\}\/\{x\}/.test(q.url), `${q.id}: ein Kachelmuster, das jede Quelle versteht`);
+  assert.ok(/OpenStreetMap/.test(q.nachweis), `${q.id}: der Nachweis nennt OpenStreetMap`);
+}
+
+const rand = new URL(kartenVorschau({ lat: 37.3858, lng: -5.9824 }));
+assert.equal(rand.hostname, 'www.openstreetmap.org', 'die Vorschau fragt denselben offenen Dienst');
+assert.equal(rand.searchParams.get('marker'), '37.3858,-5.9824', 'der Punkt sitzt in der Mitte');
+const kanten = (rand.searchParams.get('bbox') ?? '').split(',').map(Number);
+assert.equal(kanten.length, 4, 'ein Rahmen, vier Kanten');
+assert.ok(kanten[0]! < kanten[2]! && kanten[1]! < kanten[3]!, 'links unter rechts, unten über oben');
+assert.ok(Math.abs((kanten[0]! + kanten[2]!) / 2 - -5.9824) < 0.001, 'der Rahmen ist um den Punkt gebaut');
+assert.ok(Math.abs((kanten[1]! + kanten[3]!) / 2 - 37.3858) < 0.001, 'und nicht über eine Halbkugel verschoben');
+
+console.log('🎉 Karte ohne Schlüssel – ' + quellen.length + ' offene Quellen, Vorschau offen eingebettet');

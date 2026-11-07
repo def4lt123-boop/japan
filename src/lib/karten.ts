@@ -28,10 +28,18 @@ export function kartenLink(p: Punkt): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stichwort)}`;
 }
 
-/** Vorschaueinbettung ohne Schlüssel – für die Karte direkt im Formular */
+/**
+ * Die Karte direkt im Formular: ein Rahmen um den Punkt, offen eingebettet,
+ * ohne Schlüssel und ohne Wasserzeichen. Der Ausschnitt wächst mit dem Zoom
+ * und wird über dem Breiteengrad aufgespannt, damit die Mitte trifft.
+ */
 export function kartenVorschau(p: Punkt, zoom = 15): string {
-  const q = punktVorhanden(p) ? `${p.lat},${p.lng}&zoom=${zoom}` : encodeURIComponent([p.titel, p.ort].filter(Boolean).join(' '));
-  return `https://maps.google.com/maps?q=${q}&z=${zoom}&hl=de&output=embed`;
+  if (!punktVorhanden(p)) return 'https://www.openstreetmap.org/export/embed.html?bbox=-180,-85,180,85&layer=mapnik';
+  const halbe = 0.012 * 2 ** (15 - zoom);
+  const laenge = halbe / Math.max(0.2, Math.cos(((p.lat as number) * Math.PI) / 180));
+  const rand = (n: number) => Number(n.toFixed(5));
+  const bbox = [rand((p.lng as number) - laenge), rand((p.lat as number) - halbe), rand((p.lng as number) + laenge), rand((p.lat as number) + halbe)].join(',');
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${p.lat},${p.lng}`;
 }
 
 export const MODI = [

@@ -147,8 +147,9 @@ assert.ok(schaetzungMinuten(1, 'zu fuss') >= 12 && schaetzungMinuten(1, 'zu fuss
 assert.equal(MODI.length, 4);
 assert.match(kartenLink(erste), /37\.3833/);
 assert.match(kartenLink({ titel: 'Alcázar', ort: 'Sevilla' }), /query=Alc%C3%A1zar%2C%20Sevilla/);
-assert.match(kartenVorschau(erste), /output=embed/);
-assert.equal(kartenVorschau({ lat: 1, lng: 2, titel: 'x' }).includes('zoom=15'), true);
+assert.match(kartenVorschau(erste), /openstreetmap\.org\/export\/embed\.html/, 'die Vorschau bettet den offenen Dienst ein');
+assert.match(kartenVorschau(erste), /marker=37\.3833,-5\.99$/, 'und stellt den Punkt in die Mitte');
+assert.ok(!/key=|output=embed|google/.test(kartenVorschau(erste)), 'kein Schlüssel, kein Google-Fenster');
 
 /* ── Kategorien ───────────────────────────────────────────────────────── */
 assert.equal(kategorieVorschlag('Ramen Ichiran'), 'restaurant');

@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { kacheln } from '../lib/kacheln';
 
 /**
  * Die Karte der Reise: nummerierte Nadeln in Kategoriefarbe, antippen öffnet
- * das Blatt mit Bild, Zeit und dem Weg nach Google Maps.
+ * das Blatt mit Bild, Zeit und dem Weg nach Google Maps. Die Kacheln kommen von
+ * einem offenen Dienst – ausfällt einer, rückt der nächste nach.
  */
 
 export interface KartenPunkt {
@@ -60,6 +62,10 @@ export function KartenAnsicht({
   strecke?: [number, number][] | null;
   klasse?: string;
 }) {
+  const quellen = useMemo(() => kacheln(), []);
+  const [versuch, setVersuch] = useState(0);
+  const fehler = useRef(0);
+  const quelle = quellen[Math.min(versuch, quellen.length - 1)]!;
   const mittelpunkt = useMemo<[number, number]>(() => {
     if (!punkte.length) {
       const teile = (punkte[0]?.lat ?? 0) === 0 ? [48.2082, 16.3738] : [0, 0];
@@ -74,9 +80,19 @@ export function KartenAnsicht({
     <div className={klasse}>
       <MapContainer center={mittelpunkt} zoom={12} scrollWheelZoom={false} className="h-full w-full" style={{ background: '#e9eef4' }} attributionControl>
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          attribution='&copy; OpenStreetMap-Mitwirkende &copy; CARTO'
-          maxZoom={19}
+          key={quelle.id}
+          url={quelle.url}
+          attribution={quelle.nachweis}
+          maxZoom={quelle.maxZoom}
+          eventHandlers={{
+            tileerror: () => {
+              // eine einzelne fehlende Kachel ist noch kein Ausfall – drei schon
+              fehler.current += 1;
+              if (fehler.current < 3) return;
+              fehler.current = 0;
+              setVersuch((v) => (v + 1 < quellen.length ? v + 1 : v));
+            },
+          }}
         />
         {strecke && strecke.length > 1 ? <Polyline positions={strecke} pathOptions={{ color: '#0f766e', weight: 4, opacity: 0.75 }} /> : null}
         {punkte.map((p) => (
