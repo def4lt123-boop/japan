@@ -259,8 +259,7 @@ assert.match(karte, /nr: istBett \? null : \(stelle \+= 1\)/, 'ein bett zählt n
 assert.match(karte, /const folge = punkte\.filter\(\(p\) => p\.nr !== null\)/, 'die schnur verbindet nur die halte – ein bett hängt nicht am weg');
 assert.match(karte, /artMeta\('unterkunft'\)\.Icon/, 'das bett zeigt sein zeichen, nicht eine zahl');
 assert.match(karte, /marke: istBett \? artMeta\('unterkunft'\)\.wort/, 'die legende nennt die art, nicht den ersten titel');
-assert.match(karte, /\{ohnePunkt \? \(([\s\S]{0,320})nicht auf der Karte/, 'was keinen punkt hat, erklärt sich, statt zu fehlen');
-assert.match(karte, /const ohnePunkt = useMemo\([\s\S]{0,140}punktVorhanden/, 'gezählt wird im rechenblatt – dasselbe, was auch die karte sieht');
+assert.match(karte, /const ohnePunktListe = useMemo\(\(\) => \(reise \? kartenEintraege\([\s\S]{0,90}punktVorhanden/, 'gezählt wird dasselbe wie auf der karte – nicht an ihr vorbei');
 
 const kartenBlatt = text('src/components/KartenAnsicht.tsx');
 assert.match(kartenBlatt, /html: nadelHtml\(p\)/, 'die nadel kommt aus dem rechenblatt, nicht aus der ansicht');
@@ -277,6 +276,18 @@ assert.ok(/\.nadel-koerper b \{[\s\S]{0,320}border-radius: 999px/.test(nadel), '
 assert.ok(/@media \(hover: hover\)[\s\S]{0,200}\.nadel-koerper:hover[\s\S]{0,120}scale\(1\.07\)/.test(scss), 'ein aufziehen nur für die maus');
 assert.match(scss, /@media \(prefers-reduced-motion: no-preference\)[\s\S]{0,120}\.nadel-koerper[\s\S]{0,80}transition/, 'die bewegung bleibt eine Bitte');
 assert.match(text('src/lib/karten.ts'), /export function nadelHtml/, 'die nadel ist reine rechnung und damit ohne karte prüfbar');
+
+const punktfindung = text('src/lib/punktfindung.ts');
+assert.match(punktfindung, /fetch\(\s*["'`~]\/api\/orte\?q=/, 'die suche nach dem punkt geht durch dasselbe tor wie das formular');
+assert.ok(!/key=|API_KEY|process\.env/.test(punktfindung), 'kein zweiter schlüssel und keine neue anbietertür');
+assert.match(punktfindung, /if \(!stadt\.some\(\(w\) => ziel\.has\(w\)\)\) continue/, 'eine genannte stadt muss dabeisein – lieber kein punkt als ein falscher');
+assert.match(punktfindung, /if \(!gesuchte\.some\(\(w\) => name\.has\(w\)\)\) continue/, 'ein treffer muss sich für den namen halten, nicht nur für die stadt');
+assert.match(text('src/components/EintragFormular.tsx'), /if \(werte\.lat === null\) void punktNachtragen/, 'nachgereicht wird nur, wo noch keiner steht');
+assert.match(text('src/components/EintragFormular.tsx'), /Punkt von \$\{treffer\.name\} · \$\{treffer\.quelle\} übernommen/, 'und es bleibt gesagt, woher der punkt kommt');
+assert.match(karte, /onClick=\{\(\) => void punkteFinden\(\)\}/, 'auf der karte liegt der knopf, nicht im formularversteck');
+assert.match(karte, /ohnePunktListe\.slice\(0, 5\)/, 'höchstens fünf auf einmal – die offene suche will nicht gemäht werden');
+assert.match(karte, /window\.setTimeout\(r, 240\)/, 'zwischen zwei anfragen liegt eine pause – die offene suche wird nicht gemäht');
+assert.match(karte, /ohne Punkt steht nichts auf der Karte/, 'die lücke ist am bild erklärt, nicht unterm knick');
 assert.ok(!/p\.titel/.test(text('src/lib/karten.ts').split('nadelHtml')[1] ?? ''), 'fremder text wird nicht in die nadel gehoben');
 
 
