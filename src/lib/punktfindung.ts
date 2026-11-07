@@ -1,4 +1,4 @@
-import { stadtAusAdresse } from './orte';
+import { quellenName, stadtAusAdresse } from './orte';
 import type { Eintrag, Ortsvorschlag } from './types';
 
 /**
@@ -99,7 +99,7 @@ export async function punktFuer(e: Punktquelle, land?: string | null, holen: (te
         ...(!e.adresse?.trim() && treffer.adresse ? { adresse: treffer.adresse } : {}),
       },
       name: treffer.name,
-      quelle: treffer.quelle === 'google' ? 'Google' : 'OpenStreetMap',
+      quelle: quellenName(treffer.quelle),
     };
   }
   return null;

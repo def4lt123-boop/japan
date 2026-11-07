@@ -93,7 +93,7 @@ export interface Ortsvorschlag {
   lat: number;
   lng: number;
   stichwort: string | null;
-  quelle: 'google' | 'openstreetmap';
+  quelle: 'google' | 'openstreetmap' | 'photon';
 }
 
 export interface Bildvorschlag {

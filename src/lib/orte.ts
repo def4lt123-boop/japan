@@ -1,3 +1,4 @@
+import { entfernungKm } from './karten';
 import type { Bildvorschlag, Ortsvorschlag } from './types';
 
 /**
@@ -123,4 +124,132 @@ export function punktAusText(text: string): { lat: number | null; lng: number | 
   if (lat === undefined || lng === undefined || !Number.isFinite(lat) || !Number.isFinite(lng)) return { lat: null, lng: null };
   if (Math.abs(lat) > 90 || Math.abs(lng) > 180 || (lat === 0 && lng === 0)) return { lat: null, lng: null };
   return { lat, lng };
+}
+
+/* ── die zweite quelle ohne schlüssel: Photon, die OpenStreetMap-Suche ────── */
+
+export interface PhotonFeature {
+  geometry?: { coordinates?: number[] };
+  properties?: {
+    name?: string;
+    street?: string;
+    housenumber?: string;
+    postcode?: string;
+    city?: string;
+    district?: string;
+    state?: string;
+    country?: string;
+    countrycode?: string;
+    type?: string;
+    [key: string]: unknown;
+  };
+}
+
+/** klein, ohne akzente, ohne zeichen – „Big Ben." und „big  ben" werden gleich */
+export function vergleichText(text: string | null | undefined): string {
+  return (text ?? '')
+    .toLowerCase()
+    .replace(/ß/g, 'ss')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** was photon zurückgibt: geojon, kein anzeige text – den bauen wir selbst */
+export function ausPhoton(roh: { features?: PhotonFeature[] } | null): Ortsvorschlag[] {
+  return (roh?.features ?? [])
+    .map((f) => {
+      const [lng, lat] = f.geometry?.coordinates ?? [];
+      const p = f.properties ?? {};
+      const name = glatt(p.name);
+      const stadt = glatt(p.city) || glatt(p.district) || glatt(p.state);
+      const strasse = [glatt(p.street), glatt(p.housenumber)].filter(Boolean).join(' ');
+      // die adresse fängt an, wo der name aufhört – das blatt zeigt beides untereinander
+      const stücke = [strasse, glatt(p.postcode), stadt, glatt(p.state), glatt(p.country)].filter(Boolean).filter((teil) => teil !== name);
+      const adresse = [...new Set(stücke)].join(', ');
+      return {
+        name: name || stadt || glatt(p.street) || '',
+        adresse: glatt(adresse) || null,
+        lat: Number(lat),
+        lng: Number(lng),
+        stichwort: glatt(p.type) || null,
+        quelle: 'photon' as const,
+      };
+    })
+    .filter((d) => d.name && Number.isFinite(d.lat) && Number.isFinite(d.lng));
+}
+
+/**
+ * Woher ein treffer kommt, in einem wort unter dem namen. Die beiden offenen
+ * quellen sind dieselbe datenbank, also heißt sie hier auch dasselbe.
+ */
+export function quellenName(quelle: Ortsvorschlag['quelle']): string {
+  return quelle === 'google' ? 'Google' : 'OpenStreetMap';
+}
+
+/**
+ * Zählwerte für einen Treffer: der Name schlägt die Adresse, ein Ort schlägt eine
+ * Flächenangabe, und was nahe an der Reise liegt, schlägt dasselbe Ding in einer
+ * anderen Stadt. Ein negativer Wert heißt: passt nicht, fällt weg.
+ */
+const ORT_ART = ['attraction', 'historic', 'tourism', 'viewpoint', 'monument', 'memorial', 'castle', 'palace', 'tower', 'museum', 'theatre', 'stadium', 'place_of_worship', 'archaeological_site', 'botanical_garden', 'zoo', 'theme_park', 'beach', 'natural', 'peak', 'island', 'lake', 'river'];
+const GROSSE_FLÄCHE = ['country', 'state', 'region', 'county', 'province', 'continent', 'administrative'];
+
+export function ortPunkte(t: Ortsvorschlag, suchwort: string, nahe?: { lat: number; lng: number } | null): number {
+  const frage = vergleichText(suchwort);
+  const ziel = vergleichText(t.name);
+  if (!frage || !ziel) return -1;
+  let punkte = 0;
+  if (ziel === frage) punkte += 130;
+  else if (ziel.startsWith(frage)) punkte += 75;
+  else if (ziel.includes(frage)) punkte += 50;
+  else {
+    const worte = new Set(ziel.split(' '));
+    punkte += frage.split(' ').filter((w) => w.length > 2 && worte.has(w)).length * 14;
+  }
+  const art = vergleichText(t.stichwort);
+  if (ORT_ART.includes(art)) punkte += 22;
+  if (GROSSE_FLÄCHE.includes(art)) punkte -= 45;
+  if (punkte <= 0) {
+    const adresse = vergleichText(t.adresse);
+    if (!adresse.includes(frage)) return -1;
+    punkte += 18;
+  } else if (punkte < 130 && vergleichText(t.adresse).includes(frage)) punkte += 12;
+  if (nahe) {
+    const km = entfernungKm({ lat: t.lat, lng: t.lng }, nahe);
+    if (km !== null) {
+      if (km <= 25) punkte += 42;
+      else if (km <= 120) punkte += 26;
+      else if (km <= 500) punkte += 10;
+      else if (km > 3000) punkte -= 24;
+    }
+  }
+  return punkte;
+}
+
+/**
+ * Mehrere Trefferlisten zusammen mischen: dasselbe Ding von zwei Diensten bleibt
+ * ein Vorschlag, der bessere vorn.
+ */
+export function stelleOrte(listen: Ortsvorschlag[][], opts: { suchwort: string; nahe?: { lat: number; lng: number } | null }): Ortsvorschlag[] {
+  const beste = new Map<string, { treffer: Ortsvorschlag; punkte: number }>();
+  for (const liste of listen) {
+    for (const t of liste) {
+      const punkte = ortPunkte(t, opts.suchwort, opts.nahe ?? null);
+      if (punkte < 0) continue;
+      const kern = `${t.lat.toFixed(3)},${t.lng.toFixed(3)}`;
+      const bisher = beste.get(kern);
+      if (!bisher || punkte > bisher.punkte) beste.set(kern, { treffer: t, punkte });
+    }
+  }
+  return [...beste.values()]
+    .sort((a, b) => b.punkte - a.punkte || a.treffer.name.length - b.treffer.name.length)
+    .map((x) => x.treffer);
+}
+
+/** ob sich eine frage lohnt: zwei buchstaben, so im blatt wie auf dem server */
+export function frageLohnt(text: string): boolean {
+  return vergleichText(text).length >= 2;
 }
