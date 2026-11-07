@@ -6,6 +6,7 @@ import { reiseTage } from '../lib/plan';
 import { ANDERE_KATEGORIEN, kategorie, kategorieVorschlag, artMeta } from '../lib/kategorien';
 import { kartenLink, kartenVorschau } from '../lib/karten';
 import { punktAusText, stadtAusAdresse } from '../lib/orte';
+import { punktFuer, suchkandidaten, type Punktquelle } from '../lib/punktfindung';
 import { geld } from '../lib/format';
 import { useStore } from '../lib/daten';
 import type { Eintrag, EintragArt, Reise } from '../lib/types';
@@ -143,6 +144,22 @@ export function EintragFormular({
 
   const punkte = tage.length ? tage : [entwurf.date].filter(Boolean);
 
+  /**
+   * Wer ohne Punkt speichert, kriegt ihn von der Suche nachgereicht – nach dem
+   * Schließen, damit das Speichern nie auf ein Netzwerk wartet. Der Nachweis
+   * bleibt im Toast, damit jemand sehen kann, woher der Punkt kommt.
+   */
+  const punktNachtragen = async (eintragsId: string, quelltext: Punktquelle) => {
+    if (!suchkandidaten(quelltext).length) return;
+    const treffer = await punktFuer(quelltext, reise.land);
+    if (!treffer) {
+      store.sagen('Keinen passenden Punkt gefunden – in der Zeile den Ort suchen.');
+      return;
+    }
+    await store.eintragAendern(eintragsId, treffer.patch);
+    store.sagen(`Punkt von ${treffer.name} · ${treffer.quelle} übernommen.`);
+  };
+
   const speichern = async () => {
     const titel = entwurf.titel.trim();
     if (!titel) return;
@@ -169,12 +186,15 @@ export function EintragFormular({
       foto_url: entwurf.foto_url,
       foto_nachweis: entwurf.foto_nachweis,
     };
+    const quelltext: Punktquelle = { titel, ort: werte.ort, adresse: werte.adresse, karten_stichwort: werte.karten_stichwort };
     if (bestehend) {
       await store.eintragAendern(bestehend.id, werte);
       nachSpeichern?.({ ...bestehend, ...werte } as Eintrag);
+      if (werte.lat === null) void punktNachtragen(bestehend.id, quelltext);
     } else {
       const neu = await store.eintragAnlegen({ ...werte, reise_id: reise.id, titel } as Partial<Eintrag> & { reise_id: string; titel: string });
       nachSpeichern?.(neu);
+      if (werte.lat === null) void punktNachtragen(neu.id, quelltext);
     }
     store.sagen(`${metadaten.wort} gespeichert.`);
     schliessen();

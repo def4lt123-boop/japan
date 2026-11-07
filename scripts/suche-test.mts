@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { ausCommons, ausGoogle, ausOpenStreetMap, ausPexels, ausUnsplash, punktAusText, stadtAusAdresse } from '../src/lib/orte';
 import { kategorieVorschlag } from '../src/lib/kategorien';
+import { bestenPunkt, punktFuer, suchkandidaten } from '../src/lib/punktfindung';
+import type { Ortsvorschlag } from '../src/lib/types';
 import { SIEHBT_BILDDIENST, SIEHBT_GOOGLE } from '../src/lib/anbieter';
 import { kacheln } from '../src/lib/kacheln';
 import { kartenVorschau } from '../src/lib/karten';
@@ -105,4 +107,44 @@ assert.ok(kanten[0]! < kanten[2]! && kanten[1]! < kanten[3]!, 'links unter recht
 assert.ok(Math.abs((kanten[0]! + kanten[2]!) / 2 - -5.9824) < 0.001, 'der Rahmen ist um den Punkt gebaut');
 assert.ok(Math.abs((kanten[1]! + kanten[3]!) / 2 - 37.3858) < 0.001, 'und nicht über eine Halbkugel verschoben');
 
+/**
+ * Der Punkt, den sich die App selbst holt: ein Eintrag ohne Punkt steht nicht
+ * auf der Karte, also wird er gesucht – und nur übernommen, wenn er passt.
+ */
+const osm = (name: string, adresse: string, lat = 51.87, lng = -0.37): Ortsvorschlag => ({ name, adresse, lat, lng, stichwort: 'lodging', quelle: 'openstreetmap' });
+
+assert.deepEqual(suchkandidaten({ titel: 'Premier Inn London Luton', ort: 'Luton', adresse: null, karten_stichwort: null }), ['Premier Inn London Luton, Luton'], 'gefragt wird, was am meisten hergibt');
+assert.deepEqual(suchkandidaten({ titel: 'X', ort: null, adresse: '1 Airport Way, Luton', karten_stichwort: 'hotel in luton' }), ['hotel in luton', '1 Airport Way, Luton'], 'das Stichwort zuerst, zu Kurzes fällt weg');
+assert.deepEqual(suchkandidaten({ titel: 'Café', ort: null, adresse: null, karten_stichwort: null }), [], 'was kürzer als fünf Zeichen ist, wird nicht gefragt');
+
+assert.equal(bestenPunkt([osm('Premier Inn Manchester', 'Piccadilly, Manchester'), osm('Premier Inn London Luton Airport', 'Gops Meadow Lane, Luton, England')], 'Premier Inn London Luton, Luton')?.name, 'Premier Inn London Luton Airport', 'die stadt entscheidet, nicht die reihenfolge');
+assert.equal(bestenPunkt([osm('Premier Inn Manchester', 'Piccadilly, Manchester')], 'Premier Inn London Luton, Luton'), null, 'lieber kein punkt als ein falscher');
+assert.equal(bestenPunkt([osm('BP Tankstelle', 'Luton, England')], 'Premier Inn London Luton, Luton'), null, 'ein treffer ohne gemeinsames wort ist nicht gemeint');
+assert.equal(bestenPunkt([], 'Hotel Prado, Sevilla'), null, 'ohne treffer kein punkt');
+
+const gesuchteFragen: string[] = [];
+const fund = await punktFuer({ titel: 'Hotel Prado', ort: 'Sevilla', adresse: null, karten_stichwort: null }, 'Spanien', async (text) => {
+  gesuchteFragen.push(text);
+  return [osm('Falsches Haus', 'Chaussée, Brüssel'), osm('Hotel Prado', 'Paseo de Prado, Sevilla')];
+});
+assert.equal(fund?.patch.lat, 51.87, 'der punkt kommt aus der offenen suche');
+assert.equal(fund?.patch.lng, -0.37);
+assert.equal(fund?.patch.karten_stichwort, 'lodging', 'das stichwort für die maps-suche wird gemerkt');
+assert.equal(fund?.patch.adresse, 'Paseo de Prado, Sevilla', 'was fehlt, wird mitgenommen');
+assert.ok(!('ort' in (fund?.patch ?? {})), 'eine gesetzte stadt bleibt stehen');
+assert.equal(fund?.quelle, 'OpenStreetMap', 'der nachweis sagt, woher der punkt kommt');
+assert.deepEqual(gesuchteFragen, ['Hotel Prado, Sevilla'], 'gefragt wird einmal, durch dasselbe tor wie im formular');
+
+const leereStadt = await punktFuer({ titel: 'Hotel Prado', ort: null, adresse: null, karten_stichwort: null }, 'Spanien', async () => [osm('Hotel Prado', 'Paseo de Prado, 41004, Sevilla, Spanien')]);
+assert.equal(leereStadt?.patch.ort, 'Sevilla', 'die stadt folgt dem treffer, wo sie noch fehlt');
+assert.equal(await punktFuer({ titel: 'Zug nach Granada', ort: null, adresse: null, karten_stichwort: 'train station granada' }, null, async () => []), null, 'eine leere hand bleibt eine leere hand');
+assert.equal(
+  await punktFuer({ titel: 'Fähre am Morgen', ort: 'Calais', adresse: null, karten_stichwort: null }, null, async () => {
+    throw new Error('netz weg');
+  }),
+  null,
+  'ein fehler beim suchen wirft niemanden um',
+);
+
 console.log('🎉 Karte ohne Schlüssel – ' + quellen.length + ' offene Quellen, Vorschau offen eingebettet');
+console.log('🎉 Punkte, die sich selbst finden – Stadt muss passen, Nachweis bleibt dran');

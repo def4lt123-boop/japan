@@ -10,6 +10,7 @@ import { kartenEintraege, reiseTage } from '../../../../lib/plan';
 import { artMeta, kategorie } from '../../../../lib/kategorien';
 import { kartenLink, punktVorhanden } from '../../../../lib/karten';
 import { uhrzeitText } from '../../../../lib/format';
+import { punktFuer } from '../../../../lib/punktfindung';
 import { routeZwischen } from '../../../../lib/routen';
 import { wieVorher } from '../../../../lib/format';
 import { Chip, Karten, KartenKopf, Punkt, Segment, cx } from '../../../../components/ui';
@@ -34,6 +35,7 @@ export default function ReiseKarte() {
   const store = useStore();
   const reise = store.reisen.find((r) => r.id === params.tripId);
   const [tag, setTag] = useState<string>('alle');
+  const [punkteSucht, setPunkteSucht] = useState(false);
   const [route, setRoute] = useState<[number, number][] | null>(null);
 
   const eintraege = reise ? store.eintraegeVon(reise.id) : [];
@@ -71,7 +73,34 @@ export default function ReiseKarte() {
   const zahlPunkte = punkte.filter((p) => p.nr !== null).length;
   const zahlBetten = punkte.length - zahlPunkte;
   // ein eintrag ohne punkt liegt nirgends – das soll nicht unerklärt bleiben
-  const ohnePunkt = useMemo(() => (reise ? kartenEintraege(eintraege, tag === 'alle' ? null : tag).filter((e) => !punktVorhanden(e)).length : 0), [eintraege, reise, tag]);
+  const ohnePunktListe = useMemo(() => (reise ? kartenEintraege(eintraege, tag === 'alle' ? null : tag).filter((e) => !punktVorhanden(e)) : []), [eintraege, reise, tag]);
+  const ohnePunkt = ohnePunktListe.length;
+
+  /**
+   * Der Punkt, den sich die App selbst holt: wer eine unterkunft nach name und
+   * ort angelegt hat, soll sie nicht noch einmal anfassen müssen, damit die
+   * karte sie zeigt. Höchstens fünf auf einmal – die offene Suche will nicht
+   * gemäht werden.
+   */
+  const punkteFinden = async () => {
+    if (!reise) return;
+    setPunkteSucht(true);
+    let gesetzt = 0;
+    for (const [stelle, e] of ohnePunktListe.slice(0, 5).entries()) {
+      // zwischen zwei anfragen liegt eine pause – die offene suche mag es nicht eilig
+      if (stelle) await new Promise((r) => window.setTimeout(r, 240));
+      const treffer = await punktFuer({ titel: e.titel, ort: e.ort, adresse: e.adresse, karten_stichwort: e.karten_stichwort }, reise.land);
+      if (!treffer) continue;
+      await store.eintragAendern(e.id, treffer.patch);
+      gesetzt += 1;
+    }
+    setPunkteSucht(false);
+    store.sagen(
+      gesetzt
+        ? `${gesetzt} ${gesetzt === 1 ? 'Punkt' : 'Punkte'} gesetzt · zum Nachprüfen in der Liste antippen`
+        : 'Keinen passenden Punkt gefunden – in der Zeile den Ort suchen.',
+    );
+  };
 
   useEffect(() => {
     let abbruch = false;
@@ -127,11 +156,28 @@ export default function ReiseKarte() {
             <div className="p-4 text-center">
               <p className="text-[15px] font-semibold">Noch kein Punkt auf der Karte</p>
               <p className="mikro mt-1">Einen Ort anlegen und in der Suche einen Vorschlag antippen – dann steht er hier. Auch das Bett erscheint auf der Karte, sobald es einen Punkt hat.</p>
-              <Link href={`/t/${reise.id}/liste`} className="knopf knopf-klein mt-2.5 no-underline">
-                Ort anlegen
-              </Link>
+              <div className="mt-2.5 flex flex-wrap items-center justify-center gap-2">
+                <Link href={`/t/${reise.id}/liste`} className="knopf knopf-klein no-underline">
+                  Ort anlegen
+                </Link>
+                {ohnePunktListe.length ? (
+                  <button type="button" className="knopf knopf-klein" onClick={() => void punkteFinden()} disabled={punkteSucht}>
+                    {punkteSucht ? 'suche Punkte …' : 'Punkte finden'}
+                  </button>
+                ) : null}
+              </div>
             </div>
           )}
+          {ohnePunktListe.length ? (
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-t px-3 py-2" style={{ borderColor: 'var(--rand)' }}>
+              <p className="mikro m-0 min-w-0 flex-1">
+                {ohnePunktListe.length === 1 ? 'Ein Eintrag hat keinen Punkt' : `${ohnePunktListe.length} Einträge haben keinen Punkt`} – ohne Punkt steht nichts auf der Karte: {ohnePunktListe.map((e) => e.titel).slice(0, 3).join(' · ')}
+              </p>
+              <button type="button" className="knopf knopf-klein" onClick={() => void punkteFinden()} disabled={punkteSucht}>
+                {punkteSucht ? 'suche Punkte …' : 'Punkte finden'}
+              </button>
+            </div>
+          ) : null}
         </Karten>
 
         <Karten className="overflow-hidden">
@@ -159,11 +205,6 @@ export default function ReiseKarte() {
             ))}
             {!punkte.length ? <li className="p-3 mikro">Nichts zu zeigen – Punkte entstehen mit Datum und Ort.</li> : null}
           </ul>
-          {ohnePunkt ? (
-            <p className="mikro m-0 border-t px-3 py-2" style={{ borderColor: 'var(--rand)' }}>
-              {ohnePunkt} {ohnePunkt === 1 ? 'Eintrag' : 'Einträge'} ohne Punkt {ohnePunkt === 1 ? 'liegt' : 'liegen'} nicht auf der Karte – in der Zeile den Ort antippen und einen Vorschlag wählen.
-            </p>
-          ) : null}
           {punkte.length ? (
             <div className="flex flex-wrap items-center gap-2 border-t p-2.5" style={{ borderColor: 'var(--rand)' }}>
               <span className="mikro">Legende</span>
