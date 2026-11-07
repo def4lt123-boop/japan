@@ -187,4 +187,21 @@ for (const [blatt, setter] of [
 const ablage = text('src/components/ui.tsx');
 assert.match(ablage, /\[offen, fokus\]\);/, 'Sperre und Fokus der Ablage hängen am Öffnen, nicht am Schließen');
 
+/* ── 8 · der Neuaufbau des Speichers ───────────────────────────────────── */
+
+const neu = text('supabase/neu-aufbau.sql');
+const spaltentext = text('src/lib/supabase.ts');
+const anzahl = (tabelle: string) => {
+  const anfang = spaltentext.indexOf(`${tabelle}: [`);
+  assert.ok(anfang >= 0, `SPALTEN.${tabelle} ist zu finden`);
+  const ende = spaltentext.indexOf(']', anfang);
+  return (spaltentext.slice(anfang, ende).match(/'[a-z_]+'/g) ?? []).length;
+};
+const glatt = neu.replace(/\s+/g, ' ');
+for (const [tabelle, spalten] of [['reisen', anzahl('reisen')], ['eintraege', anzahl('eintraege')]] as [string, number][]) {
+  assert.ok(glatt.includes(`and table_name = '${tabelle}'; if n <> ${spalten} then`), `der Neuaufbau zählt ${spalten} Spalten in ${tabelle}, weil die App ${spalten} schreibt`);
+}
+assert.ok(!/NEXT_PUBLIC|anon key|service_role.*session/i.test(neu.replace(/grant usage on schema public to anon, authenticated, service_role;/g, '')), 'im Neuaufbau stehen keine Schlüssel, nur Rollennamen');
+
+
 console.log(`🎉 Neues Fundament hält – ${dateien.length} Dateien (${dateien.reduce((s, d) => s + text(d).split('\n').length, 0)} Zeilen), ${seiten.length} Seiten, ${blätter.length} Reiseblätter, kein Rest von früher`);

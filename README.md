@@ -42,7 +42,9 @@ Lizenzpflichtige Bilder behalten ihren Nachweis am Bild (`foto_nachweis`, `cover
 
 Stehen `NEXT_PUBLIC_SUPABASE_URL` und `NEXT_PUBLIC_SUPABASE_ANON_KEY`, liegt alles in `reisen` und `eintraege` – offen ohne Konto, jede Person mit der Adresse kann sehen und ändern. Ohne diese Werte liegt alles auf dem Gerät und die App läuft genauso. Geschrieben wird immer erst lokal, dann online; schlägt das nach, bleibt die Änderung auf dem Gerät und eine Zeile sagt es.
 
-`supabase/schema.sql` (oder `supabase/migrations/…`) einspielen, fertig. Ein GitHub-Workflow überträgt Änderungen an `supabase/migrations/` automatisch, wenn `SUPABASE_ACCESS_TOKEN` und `SUPABASE_PROJECT_REF` als Secrets gesetzt sind.
+`supabase/schema.sql` (oder `supabase/migrations/…`) einspielen, fertig.
+
+Verdacht auf einen halben Stand in Supabase – eine Spalte fehlt, eine Richtlinie steht nicht, der Zwischenspeicher von PostgREST kennt die neue Tabelle nicht: `supabase/neu-aufbau.sql` im SQL-Editor ausführen. Der Durchgang wirft alles in `public` fort, legt die zwei Blätter neu an, stellt die Rechte zu und prüft am Ende nach, dass Spalten, Kaskade, Index und Richtlinien wirklich dastehen – passt etwas nicht, bricht er ab, statt ein halbes Blatt zurückzulassen. Vorher in der App unter Profil „als Datei sichern“ drücken, danach wieder laden; das Gerät wird beim nächsten Öffnen vom leeren Online-Stand ersetzt. Abgespielt wird die Datei nie von sich aus (der Workflow sieht nur `supabase/migrations/` vor). Ein GitHub-Workflow überträgt Änderungen an `supabase/migrations/` automatisch, wenn `SUPABASE_ACCESS_TOKEN` und `SUPABASE_PROJECT_REF` als Secrets gesetzt sind.
 
 ## Betreiben
 
@@ -50,7 +52,7 @@ Stehen `NEXT_PUBLIC_SUPABASE_URL` und `NEXT_PUBLIC_SUPABASE_ANON_KEY`, liegt all
 npm install
 npm run dev            # http://localhost:3000
 npm run build
-npm run test:all       # Typen, Rechenblatt, Suche und Bild, Layout, Listen im Speicher, alle Seiten
+npm run test:all       # Typen, Rechenblatt, Suche und Bild, Layout, Sql, Listen im Speicher, alle Seiten
 ```
 
 Auf Vercel reicht das Projekt verbinden; die vier Umgebungswerte sind optional. Region `fra1` in `vercel.json`.
