@@ -10,6 +10,7 @@ import { useStore } from '../lib/daten';
 import type { RoutenInfo } from '../lib/routen';
 import type { Eintrag, Reise } from '../lib/types';
 import { Ablage, Chip, Foto, IconKnopf, Menue, cx } from './ui';
+import { ReihenBild, ReihenNachweis, useOrtsbild } from './ReihenBild';
 
 /**
  * Eine Zeile im Kalender: Zeit links, Bild, Name, darunter was dazugehört.
@@ -39,6 +40,9 @@ export function EintragZeile({
   const katz = kategorie(eintrag.kategorie);
   const metadaten = artMeta(eintrag.art);
   const istBett = eintrag.art === 'unterkunft';
+  /* dichte Listen zeigen das Bild als Vorschnitt, die volle Reihe als Hintergrund */
+  const bild = useOrtsbild(eintrag, reise, !kompakt);
+  const hintergrund = kompakt ? null : bild;
   const zeiten = [eintrag.zeit ? uhrzeitText(eintrag.zeit) : null, eintrag.bis_zeit ? `bis ${uhrzeitText(eintrag.bis_zeit)}` : null].filter(Boolean).join(' · ');
   const nacht = istBett && gilt(eintrag.date) && gilt(eintrag.bis_date) ? abstandTage(eintrag.date, eintrag.bis_date) : 0;
 
@@ -48,6 +52,12 @@ export function EintragZeile({
     store.sagen(`${metadaten.wort} nach ${tagKurz(datum)} verschoben.`);
   };
 
+  const uebernehmen = async () => {
+    if (!bild?.gefunden) return;
+    await store.eintragAendern(eintrag.id, { foto_url: bild.url, foto_nachweis: bild.nachweis });
+    store.sagen('Bild übernommen.');
+  };
+
   const duplizieren = async () => {
     const { id, erstellt_am, ...ohne } = eintrag;
     await store.eintragAnlegen({ ...ohne, titel: `${eintrag.titel} (Kopie)`, sortierung: eintrag.sortierung + 0.5 });
@@ -55,12 +65,13 @@ export function EintragZeile({
   };
 
   return (
-    <li className="group">
-      <div className={cx('zeile !gap-x-2.5', istBett && 'zeile-bett', kompakt ? '!py-1.5' : '!py-2.5')}>
+    <div className="group">
+      <div className={cx('zeile !gap-x-2.5', hintergrund && 'zeile-bild-da', istBett && 'zeile-bett', kompakt ? '!py-1.5' : '!py-2.5')}>
+        {hintergrund ? <ReihenBild url={hintergrund.url} /> : null}
         <span className="zeitangabe" style={{ color: eintrag.zeit ? 'var(--text)' : undefined }}>
           {istBett ? '🛏️' : eintrag.zeit ? eintrag.zeit : <span style={{ color: 'var(--text3)' }}>—</span>}
         </span>
-        {eintrag.foto_url ? <Foto url={eintrag.foto_url} nachweis={eintrag.foto_nachweis} alt={eintrag.titel} zeichen={katz.icon} hoehe={kompakt ? 44 : 56} /> : null}
+        {kompakt && eintrag.foto_url ? <Foto url={eintrag.foto_url} nachweis={eintrag.foto_nachweis} alt={eintrag.titel} zeichen={katz.icon} hoehe={44} /> : null}
         <div className="text min-w-0">
           <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <button type="button" onClick={bearbeiten} className="min-w-0 max-w-full truncate rounded text-left text-[16px] font-semibold leading-snug hover:underline">
@@ -86,6 +97,7 @@ export function EintragZeile({
           </p>
           {eintrag.notiz ? <p className="mt-1 line-clamp-2 text-[13.5px] leading-snug text-[var(--text2)]">{eintrag.notiz}</p> : null}
           {eintrag.adresse && !kompakt ? <p className="mikro mt-0.5 truncate">{eintrag.adresse}</p> : null}
+          {hintergrund ? <ReihenNachweis nachweis={hintergrund.nachweis} /> : null}
         </div>
         <div className="taten">
           {oben || unten ? (
@@ -115,6 +127,8 @@ export function EintragZeile({
               { label: 'bearbeiten', zeichen: '✏️', onClick: bearbeiten },
               { label: 'auf anderen Tag', zeichen: '🗓️', onClick: () => setTagWaehlen(true) },
               { label: 'duplizieren', zeichen: '⧉', onClick: duplizieren },
+              bild?.gefunden ? { label: 'Bild übernehmen', zeichen: '🖼️', onClick: () => void uebernehmen() } : null,
+              eintrag.foto_url ? { label: 'Bild entfernen', zeichen: '✂️', onClick: () => void store.eintragAendern(eintrag.id, { foto_url: null, foto_nachweis: null }) } : null,
               eintrag.buchung_url ? { label: 'Buchung öffnen', zeichen: '🔗', href: eintrag.buchung_url } : null,
               { label: 'löschen', zeichen: '🗑', gefahr: true, onClick: () => void store.eintragLoeschen(eintrag.id) },
             ].filter(Boolean) as never}
@@ -163,6 +177,6 @@ export function EintragZeile({
           </button>
         </div>
       </Ablage>
-    </li>
+    </div>
   );
 }

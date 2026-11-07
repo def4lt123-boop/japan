@@ -145,6 +145,8 @@
     align-items: flex-start;
     gap: 8px 10px;
     padding: 12px;
+    position: relative;
+    isolation: isolate;
   }
   .zeile > .text {
     min-width: 0;
@@ -152,8 +154,17 @@
   }
   .zeile-bett {
     background: linear-gradient(90deg, rgb(109 91 208 / 0.09), transparent 46%);
-    box-shadow: inset 3px 0 0 #6d5bd0;
     border-radius: 12px;
+  }
+  /* das Band muß über dem Bild stehen, sonst verschwindet ein Bett hinter seiner eigenen Unterkunft */
+  .zeile-bett::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: 12px;
+    box-shadow: inset 3px 0 0 #6d5bd0;
+    pointer-events: none;
   }
   .zeile > .taten {
     display: flex;
@@ -162,6 +173,37 @@
     justify-content: flex-end;
     gap: 4px;
     width: 100%;
+  }
+
+  /* ── Bild des Ortes hinter dem Text ─────────────────────────────────── */
+  .zeile-bild {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    border-radius: 12px;
+    background: #e9edf4;
+  }
+  .zeile-bild img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    object-position: 50% 42%;
+    opacity: 0.5;
+  }
+  /* Vorhang von links: wo Text steht, bleibt der Grund hell genug zum Lesen */
+  .zeile-bild::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, rgb(255 255 255 / 0.95) 0%, rgb(255 255 255 / 0.9) 42%, rgb(255 255 255 / 0.68) 100%);
+  }
+  .zeile > :not(.zeile-bild) {
+    position: relative;
+    z-index: 1;
+  }
+  .zeile-bild-da {
+    border-radius: 12px;
   }
 
   /* ── Knöpfe ─────────────────────────────────────────────────────────── */
@@ -548,6 +590,12 @@
   }
 }
 
+@keyframes einblenden {
+  from {
+    opacity: 0;
+  }
+}
+
 @keyframes pop {
   from {
     transform: scale(0.98);
@@ -623,10 +671,17 @@
 @media print {
   .dock,
   .fab,
-  .taten {
+  .taten,
+  .zeile-bild {
     display: none !important;
   }
   body {
     background: #fff;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .zeile-bild img {
+    animation: einblenden 0.24s ease-out;
   }
 }

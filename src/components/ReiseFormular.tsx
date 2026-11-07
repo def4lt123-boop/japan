@@ -177,7 +177,7 @@ export function ReiseFormular({
     setBildLaeuft(true);
     setFehler(null);
     try {
-      const antwort = await fetch(`/api/bild?q=${encodeURIComponent(frage)}`);
+      const antwort = await fetch(`/api/bild?q=${encodeURIComponent(frage)}`, { cache: 'no-store' });
       const daten = (await antwort.json()) as { url?: string; nachweis?: string | null };
       if (daten.url) {
         set({ cover_url: daten.url, cover_credit: daten.nachweis ?? null });

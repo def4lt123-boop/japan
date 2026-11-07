@@ -120,7 +120,7 @@ export function EintragFormular({
     if (frage.length < 3) return;
     setBildLaeuft(true);
     try {
-      const antwort = await fetch(`/api/bild?q=${encodeURIComponent(frage)}`);
+      const antwort = await fetch(`/api/bild?q=${encodeURIComponent(frage)}`, { cache: 'no-store' });
       const daten = (await antwort.json()) as { url?: string; nachweis?: string | null };
       if (daten.url) set({ foto_url: daten.url, foto_nachweis: daten.nachweis ?? null });
     } catch {
