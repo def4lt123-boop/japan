@@ -40,7 +40,7 @@ Lizenzpflichtige Bilder behalten ihren Nachweis am Bild (`foto_nachweis`, `cover
 
 ## Karte
 
-Die Karte steht auf offenen Kacheln von OpenStreetMap, mit Esri als Rückhalt – kein Schlüssel, kein Konto, kein Wasserzeichen. Kippt eine Quelle, rückt die nächste nach (`src/lib/kacheln.ts`); wer eigene Kacheln dienen lässt, setzt `NEXT_PUBLIC_KARTE_KACHELN`. Die Vorschau im Formular bettet dasselbe offen ein, der Sprung in Google Maps bleibt ein einfacher Link.
+Die Karte steht auf offenen Kacheln von OpenStreetMap, mit Esri als Rückhalt – kein Schlüssel, kein Konto, kein Wasserzeichen. Kippt eine Quelle, rückt die nächste nach (`src/lib/kacheln.ts`); wer eigene Kacheln dienen lässt, setzt `NEXT_PUBLIC_KARTE_KACHELN`. Die Vorschau im Formular bettet dasselbe offen ein, der Sprung in Google Maps bleibt ein einfacher Link. Punkte stehen als Nadel da – Nummer im Körper, Kategorie als Siegel daneben; die Übernachtung gehört ebenfalls auf die Karte, als 🛏️ ohne Nummer, weil das Bett kein Halt der Route ist, sondern der Grund für sie. Ein Eintrag ohne Punkt kann nicht stecken bleiben: er fehlt, und die Liste sagt es.
 
 ## Daten liegen, wo sie liegen sollen
 

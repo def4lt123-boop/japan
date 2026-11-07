@@ -9,6 +9,20 @@ import type { Eintrag, Reise } from './types';
  * Store, damit sich jede Regel allein prüfen lässt.
  */
 
+/**
+ * Was auf der Karte steht: die Punkte mit Datum in der Reihenfolge ihrer Tage
+ * – und die Betten dahinter, eines für jede Nacht, in der es bezogen ist. Ein
+ * Bett bekommt keine Zahl: es ist nicht Halt der Route, es ist der Grund,
+ * warum die Route an diesem Ort endet.
+ */
+export function kartenEintraege(eintraege: Eintrag[], datum: string | null): Eintrag[] {
+  const punkte = eintraege
+    .filter((e) => e.art !== 'unterkunft' && e.date && (datum === null || e.date === datum))
+    .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '') || chronologisch(a, b));
+  const betten = eintraege.filter((e) => e.art === 'unterkunft' && (datum === null || giltAm(e, datum)));
+  return [...punkte, ...betten];
+}
+
 /** Zeit zuerst, dann die von Hand gezogene Reihenfolge, dann der Titel */
 export function chronologisch(a: Eintrag, b: Eintrag): number {
   const za = a.zeit ?? '99:99';

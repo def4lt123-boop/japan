@@ -581,6 +581,76 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
+
+  /* ── Die Nadel über einem Punkt ──────────────────────────────────────── */
+  .kartennadel {
+    background: none;
+    border: 0;
+  }
+  .nadel-koerper {
+    position: relative;
+    display: block;
+    width: 30px;
+    height: 30px;
+    border-radius: 50% 50% 50% 6px;
+    transform: rotate(-45deg);
+    background: var(--nadel, #0f766e);
+    background: linear-gradient(158deg, color-mix(in srgb, var(--nadel, #0f766e) 78%, #fff) 0%, var(--nadel, #0f766e) 60%);
+    border: 2px solid #fff;
+    box-shadow: 0 7px 14px -7px rgb(16 21 29 / 0.55), 0 0 0 1px rgb(16 21 29 / 0.08);
+  }
+  .nadel-koerper i {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-style: normal;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+    transform: rotate(45deg);
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 1px 1px rgb(16 21 29 / 0.3);
+  }
+  .nadel-koerper i.nadel-zeichen {
+    font-size: 15px;
+    text-shadow: none;
+  }
+  .nadel-koerper b {
+    position: absolute;
+    right: -11px;
+    top: 50%;
+    display: grid;
+    place-items: center;
+    width: 19px;
+    height: 19px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid var(--rand);
+    font-weight: 400;
+    font-size: 12px;
+    line-height: 1;
+    transform: translate(0, -50%) rotate(45deg);
+    box-shadow: 0 2px 5px -2px rgb(16 21 29 / 0.3);
+  }
+  /* die fläche um die nadel ist größer als der körper – der körper sitzt
+     oben links in ihr, damit die spitze auf dem punkt bleibt */
+  .kartennadel:active .nadel-koerper {
+    transform: rotate(-45deg) scale(0.97);
+  }
+  /* nur wer mit der maus zeigt, sieht das aufziehen */
+  @media (hover: hover) and (pointer: fine) {
+    .nadel-koerper:hover,
+    .kartennadel:focus-visible .nadel-koerper {
+      transform: rotate(-45deg) scale(1.07);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .nadel-koerper {
+      transition: transform 0.12s ease;
+    }
+  }
 }
 
 @keyframes hochfahren {
