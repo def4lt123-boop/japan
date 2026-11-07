@@ -24,9 +24,11 @@ Die untere Leiste führt auf dem Handy durch Dashboard, Reisen, Kalender, Karte 
 Zwei Tabellen, Feldnamen identisch zu `src/lib/types.ts`:
 
 - **`reisen`** – Name, Land, Stationen, Zeitraum, Titelbild samt Nachweis, Beschreibung, Budget, Währung, Personen, Archiv
-- **`eintraege`** – alles, was in einen Kalender gehört: `art` ist `aktivitaet`, `unterkunft` oder `fahrt`. Kategorie, Titel, Tag, Zeiten, Dauer, Ort, Adresse, Punkt (lat/lng), Notiz, Preis, Buchung, Foto und Sortierung
+- **`eintraege`** – alles, was in einen Kalender gehört: `art` ist `aktivitaet`, `unterkunft` oder `fahrt`. Kategorie, Titel, Tag, Zeiten, Dauer, Ort, Adresse, Punkt (lat/lng), Notiz, Preis mit eigener Währung, Buchungsnummer und -link, Foto samt Nachweis und Sortierung
 
-Eine Unterkunft mit Check-in und Check-out gilt für jede Nacht dazwischen und erscheint dort automatisch – sie wird nicht für jeden Tag einzeln eingetragen. Aktivitäten ohne Tag sind ausdrücklich erlaubt und sammeln sich unter „Ohne Tag".
+Eine Unterkunft mit Check-in und Check-out (Datum wie Uhrzeit) gilt für jede Nacht dazwischen und erscheint dort automatisch – sie wird nicht für jeden Tag einzeln eingetragen. Auf dem Reisetag steht sie als eigener Bett-Block, in Listen an der violetten Kante, und die Nächte-Zeile zeigt sofort, wo noch kein Bett ist. Aktivitäten ohne Tag sind ausdrücklich erlaubt und sammeln sich unter „Ohne Tag".
+
+Preis und Währung gehören zusammen, stehen aber je Eintrag: ein Ryokan in ¥ neben dem Zug in € ist normal. Summen und Budget laufen in der Reise-Währung, Beträge in anderer Währung werden daneben aufgezählt und nicht umgerechnet – ohne Kurs wäre das erfunden.
 
 ## Ortssuche, Bilder, Routen
 

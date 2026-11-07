@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useStore } from '../../../../lib/daten';
 import { tagKurz } from '../../../../lib/dates';
-import { naechte, unterkuenfte } from '../../../../lib/plan';
+import { kostenSumme, naechte, unterkuenfte } from '../../../../lib/plan';
 import { geld, plural } from '../../../../lib/format';
 import { kartenLink } from '../../../../lib/karten';
 import { EintragZeile } from '../../../../components/EintragZeile';
@@ -26,7 +26,7 @@ export default function Hotels() {
 
   if (!store.bereit || !reise) return null;
 
-  const summe = betten.reduce((s, e) => s + (e.preis ?? 0), 0);
+  const { gesamt: summe, fremde } = kostenSumme(reise, betten);
   const nächtiges = naechtlich.filter((n) => n.bett).length;
 
   return (
@@ -65,6 +65,7 @@ export default function Hotels() {
             ) : (
               <span>Preise fehlen noch – sie stehen an der Unterkunft.</span>
             )}
+            {fremde.length ? <span className="mikro">· {fremde.map((f) => f.text).join(', ')} – nicht umgerechnet</span> : null}
             {reise.budget ? (
               <Chip className="ml-auto" titel="Anteil am Budget">
                 {Math.round((summe / reise.budget) * 100)} % vom Budget

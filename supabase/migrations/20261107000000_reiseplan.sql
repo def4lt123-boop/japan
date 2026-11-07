@@ -37,6 +37,7 @@ create table if not exists public.eintraege (
   karten_stichwort text,
   notiz            text,
   preis           numeric(12, 2),
+  waehrung        text,
   buchung_nr       text,
   buchung_url      text,
   foto_url         text,

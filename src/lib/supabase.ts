@@ -43,6 +43,7 @@ export const SPALTEN: Record<TabellenName, string[]> = {
     'karten_stichwort',
     'notiz',
     'preis',
+    'waehrung',
     'buchung_nr',
     'buchung_url',
     'foto_url',

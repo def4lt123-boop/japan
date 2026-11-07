@@ -199,6 +199,7 @@ export function DatenProvider({ children }: { children: React.ReactNode }) {
         karten_stichwort: null,
         notiz: null,
         preis: null,
+        waehrung: null,
         buchung_nr: null,
         buchung_url: null,
         foto_url: null,
