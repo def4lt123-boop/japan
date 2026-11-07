@@ -150,6 +150,11 @@
     min-width: 0;
     flex: 1 1 12rem;
   }
+  .zeile-bett {
+    background: linear-gradient(90deg, rgb(109 91 208 / 0.09), transparent 46%);
+    box-shadow: inset 3px 0 0 #6d5bd0;
+    border-radius: 12px;
+  }
   .zeile > .taten {
     display: flex;
     flex-wrap: wrap;

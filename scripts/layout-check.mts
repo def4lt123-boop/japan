@@ -79,6 +79,8 @@ assert.match(css, /\.icon-knopf\s*\{[^}]*width:\s*44px/, 'die Zeichenfläche ist
 const flaeche = css.match(/button,[\s\S]*?textarea\s*\{[^}]*\}/)?.[0] ?? '';
 assert.ok(!/min-width/.test(flaeche), 'Breite 44px nur bei Zeichen-Knöpfen – sonst zerdrückt sie den Text daneben');
 assert.match(css, /\.zeile\s*\{[^}]*flex-wrap:\s*wrap/, 'Zeilen umbrechen, Knöpfe rücken unter den Text');
+assert.match(css, /\.zeile-bett\s*\{[^}]*box-shadow:\s*inset/, 'eine Unterkunft sieht man in jeder Liste als eigene Art');
+assert.match(text('src/components/EintragZeile.tsx'), /istBett && 'zeile-bett'/, 'die Bett-Zeile trägt ihr Bild');
 assert.match(css, /\.zeile > \.taten\s*\{[^}]*width:\s*100%/, 'die Aktionsgruppe steht auf dem Handy unter dem Text');
 assert.match(css, /\.ablage\s*\{[^}]*max-height/, 'die Ablage kann nie höher sein als das Gerät');
 assert.match(css, /--dock:\s*60px/, 'die Leiste unten hat eine feste Höhe');
@@ -123,5 +125,30 @@ const technnik = seitenTexte.filter(({ inhalt }) => /NEXT_PUBLIC|supabase|anon-|
 assert.deepEqual(technnik, [], 'auf den Seiten steht kein Technik-Kram, nur der Status');
 assert.match(text('src/lib/anbieter.ts'), /AbortSignal\.timeout/, 'Suche und Bild haben eine Frist');
 assert.match(text('src/app/api/orte/route.ts'), /dynamic = 'force-dynamic'/, 'die Suche wird nicht zwischengespeichert');
+
+/* ── 5 · Felder und Spalten ───────────────────────────────────────────── */
+
+function felder(schnittstelle: string, quelltextText: string): string[] {
+  const start = quelltextText.indexOf(schnittstelle);
+  const end = quelltextText.indexOf('\n}', start);
+  const block = quelltextText.slice(start, end);
+  return [...block.matchAll(/^\s{2}(\w+)(\??):/gm)].map((m) => m[1]!);
+}
+const typen = text('src/lib/types.ts');
+const spalten = text('src/lib/supabase.ts');
+const typZeilen = felder('export interface Reise', typen);
+const spaltenText = spalten.slice(spalten.indexOf("  reisen: ["), spalten.indexOf("  eintraege: ["));
+const fehlt = typZeilen.filter((f) => !spaltenText.includes(`'${f}'`));
+assert.deepEqual(fehlt, [], `jedes Feld der Reise hat eine Spalte (es fehlt: ${fehlt.join(', ')})`);
+const eintragZeilen = felder('export interface Eintrag', typen);
+const eintragSpalten = spalten.slice(spalten.indexOf("  eintraege: ["), spalten.indexOf('};', spalten.indexOf("  eintraege: [")));
+const fehlt2 = eintragZeilen.filter((f) => !eintragSpalten.includes(`'${f}'`));
+assert.deepEqual(fehlt2, [], `jedes Feld des Eintrags hat eine Spalte (es fehlt: ${fehlt2.join(', ')})`);
+const schema = text('supabase/schema.sql');
+for (const feld of [...eintragZeilen, ...typZeilen]) {
+  assert.match(schema, new RegExp(`\\b${feld}\\b`), `schema.sql kennt ${feld} nicht`);
+}
+const migration = text('supabase/migrations/20261107000000_reiseplan.sql');
+assert.equal(migration.replace(/^\s*--.*$/gm, '').trim(), schema.replace(/^\s*--.*$/gm, '').trim(), 'schema.sql und die Migration sind dasselbe Blatt');
 
 console.log(`🎉 Neues Fundament hält – ${dateien.length} Dateien (${dateien.reduce((s, d) => s + text(d).split('\n').length, 0)} Zeilen), ${seiten.length} Seiten, ${blätter.length} Reiseblätter, kein Rest von früher`);

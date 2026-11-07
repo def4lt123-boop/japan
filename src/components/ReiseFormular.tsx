@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { addTage, gilt, heuteIso, abstandTage } from '../lib/dates';
-import { sauber } from '../lib/format';
+import { sauber, WAEHRUNGEN } from '../lib/format';
 import type { Reise } from '../lib/types';
 import { Foto, TextFeld, ZahlFeld, cx } from './ui';
 
@@ -24,8 +24,6 @@ export interface ReiseEntwurf {
   cover_credit: string | null;
   beschreibung: string;
 }
-
-const WAEHRUNGEN = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'AUD', 'CAD', 'TRY', 'THB', 'AED', 'NZD', 'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'MXN', 'ARS', 'ZAR', 'SGD', 'HKD', 'KRW', 'INR', 'IDR', 'MYR', 'BRL', 'CLP', 'EGP', 'MAR'];
 
 export function entwurfAus(reise: Reise | null, waehrung: string, personen: number): ReiseEntwurf {
   return {

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useStore } from '../../../../lib/daten';
-import { planFortschritt, reiseTage, unterkuenfte } from '../../../../lib/plan';
+import { kostenSumme, planFortschritt, reiseTage, unterkuenfte } from '../../../../lib/plan';
 import { geld, plural } from '../../../../lib/format';
 import { ReiseFormular, entwurfAus } from '../../../../components/ReiseFormular';
 import { Ablage, Chip, Karten, KartenKopf, Knopf, cx } from '../../../../components/ui';
@@ -24,7 +24,7 @@ export default function Reisedaten() {
   const tage = reiseTage(reise);
   const aktivitaeten = eintraege.filter((e) => e.art === 'aktivitaet').length;
   const betten = unterkuenfte(eintraege).length;
-  const kosten = eintraege.reduce((s, e) => s + (e.preis ?? 0), 0);
+  const { gesamt: kosten, fremde } = kostenSumme(reise, eintraege);
 
   return (
     <main className="pb-6">
@@ -98,6 +98,7 @@ export default function Reisedaten() {
                 </>
               ) : null}
               {reise.budget && kosten > reise.budget ? <Chip ton="warnt">über Budget</Chip> : null}
+              {fremde.length ? <span>· dazu {fremde.map((f) => f.text).join(', ')} – nicht umgerechnet</span> : null}
             </p>
           </Karten>
 

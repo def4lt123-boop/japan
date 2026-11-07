@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { gilt, heuteIso, tagLang, zeitraum } from '../lib/dates';
-import { laufend, planFortschritt, reiseTage, tagEintraege, inTagen } from '../lib/plan';
+import { kostenSumme, laufend, planFortschritt, reiseTage, tagEintraege, inTagen } from '../lib/plan';
 import { geld, plural, zaehlen } from '../lib/format';
 import type { Eintrag, Reise } from '../lib/types';
 import { Chip, Fortschritt, Menue, cx, type MenuePunkt } from './ui';
@@ -27,7 +27,7 @@ export function ReiseKarte({
   const geplant = eintraege.filter((e) => e.date).length;
   const betten = eintraege.filter((e) => e.art === 'unterkunft').length;
   const beplant = tage.filter((d) => tagEintraege(eintraege, d).length > 0).length;
-  const kosten = eintraege.reduce((s, e) => s + (e.preis ?? 0), 0);
+  const { gesamt: kosten } = kostenSumme(reise, eintraege);
 
   return (
     <article

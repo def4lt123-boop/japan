@@ -56,6 +56,8 @@ export interface Eintrag {
   karten_stichwort: string | null;
   notiz: string | null;
   preis: number | null;
+  /** eigene Währung über dem Preis – leer heißt: die der Reise */
+  waehrung: string | null;
   /** Buchungsnummer oder Referenz */
   buchung_nr: string | null;
   buchung_url: string | null;

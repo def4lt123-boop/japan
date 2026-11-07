@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { tagKurz, gilt, abstandTage } from '../lib/dates';
-import { reiseTage } from '../lib/plan';
+import { preisText, reiseTage } from '../lib/plan';
 import { artMeta, kategorie } from '../lib/kategorien';
 import { kartenLink } from '../lib/karten';
 import { geld, minutenText, uhrzeitText } from '../lib/format';
@@ -56,7 +56,7 @@ export function EintragZeile({
 
   return (
     <li className="group">
-      <div className={cx('zeile !gap-x-2.5', kompakt ? '!py-1.5' : '!py-2.5')}>
+      <div className={cx('zeile !gap-x-2.5', istBett && 'zeile-bett', kompakt ? '!py-1.5' : '!py-2.5')}>
         <span className="zeitangabe" style={{ color: eintrag.zeit ? 'var(--text)' : undefined }}>
           {istBett ? '🛏️' : eintrag.zeit ? eintrag.zeit : <span style={{ color: 'var(--text3)' }}>—</span>}
         </span>
@@ -80,7 +80,7 @@ export function EintragZeile({
               </span>
             ) : null}
             {istBett ? <span>🌙 {nacht > 0 ? `${nacht} ${nacht === 1 ? 'Nacht' : 'Nächte'}` : 'eine Nacht'}</span> : null}
-            {eintrag.preis ? <Chip titel={istBett ? 'pro Aufenthalt' : 'Preis'}>{geld(eintrag.preis, reise.waehrung)}</Chip> : null}
+            {eintrag.preis ? <Chip titel={istBett ? 'pro Aufenthalt' : 'Preis'}>{preisText(eintrag, reise)}</Chip> : null}
             {eintrag.buchung_nr ? <Chip titel="Buchungsnummer">🎫 {eintrag.buchung_nr}</Chip> : null}
             {!eintrag.date ? <Chip ton="warnt">ohne Tag</Chip> : null}
           </p>

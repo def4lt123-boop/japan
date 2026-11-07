@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { abstandTage, addTage, gilt, monatsRaster, tagKurz, tagLang, wochenTage, zeitraum, zahlReisetage, heuteIso, WOCHEN_ANFANG } from '../src/lib/dates';
-import { chronologisch, eintragVersetzen, reiseTage, giltAm, naechte, offeneNachte, planFortschritt, sortierungTauschen, stadtDesTages, tagesPlan, tagEintraege, tagWechsel, uebernachtungAm, unterkuenfte, aufschluesselung, laufend, vergangen, inTagen, heutigerTag } from '../src/lib/plan';
+import { chronologisch, eintragVersetzen, preisText, reiseTage, giltAm, naechte, offeneNachte, planFortschritt, sortierungTauschen, stadtDesTages, tagesPlan, tagEintraege, tagWechsel, uebernachtungAm, unterkuenfte, aufschluesselung, laufend, vergangen, inTagen, heutigerTag } from '../src/lib/plan';
 import { ANDERE_KATEGORIEN, KATEGORIEN, kategorie, kategorieVorschlag, artMeta } from '../src/lib/kategorien';
 import { geld, plural, sauber, uid, zaehlen, minutenText } from '../src/lib/format';
 import { MODI, entfernungKm, kartenLink, kartenVorschau, schaetzungKm, schaetzungMinuten } from '../src/lib/karten';
@@ -42,6 +42,7 @@ const ein = (patch: Partial<Eintrag>): Eintrag => ({
   karten_stichwort: null,
   notiz: null,
   preis: null,
+  waehrung: null,
   buchung_nr: null,
   buchung_url: null,
   foto_url: null,
@@ -121,6 +122,16 @@ assert.equal(kosten.gesamtProPerson, 178);
 assert.equal(kosten.offen, 844);
 assert.deepEqual(kosten.jeKategorie.map((k) => k.kategorie), ['unterschlupf', 'transport', 'sehenswuerdigkeit'], 'nach Betrag sortiert, die Fahrt zählt zu Transport');
 assert.deepEqual(kosten.jeKategorie.map((k) => k.betrag), [300, 42, 14]);
+
+/* eigene Währung am Preis */
+const ryokan = ein({ titel: 'Ryokan am See', art: 'unterkunft', date: '2027-10-26', bis_date: '2027-10-27', preis: 30000, waehrung: 'JPY', kategorie: 'unterschlupf' });
+const gemischt = aufschluesselung(reise, [...alle, ryokan]);
+assert.equal(gemischt.gesamt, 356, 'ein Betrag in anderer Währung läuft nicht in die Summe');
+assert.deepEqual(gemischt.fremde.map((f) => f.titel), ['Ryokan am See']);
+assert.match(gemischt.fremde[0]!.text, /30\.000 ¥ in JPY/);
+assert.equal(gemischt.mitPreis, kosten.mitPreis + 1, 'gezählt wird er trotzdem');
+assert.equal(preisText(ryokan, reise), '30.000 ¥');
+assert.equal(preisText(erste, reise), '14 €');
 assert.equal(geld(1240, 'EUR'), '1.240 €');
 assert.equal(geld(99.5, 'USD'), '99,50 $');
 assert.equal(geld(null, 'EUR'), '—');

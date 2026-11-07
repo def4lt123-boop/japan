@@ -36,6 +36,8 @@ export function kurz(text: string | null | undefined, max = 46): string {
   return t.length <= max ? t : `${t.slice(0, Math.max(0, max - 1)).trimEnd()}…`;
 }
 
+export const WAEHRUNGEN = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'AUD', 'CAD', 'TRY', 'THB', 'AED', 'NZD', 'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'MXN', 'ARS', 'ZAR', 'SGD', 'HKD', 'KRW', 'INR', 'IDR', 'MYR', 'BRL', 'CLP', 'EGP', 'MAR'];
+
 const ZEICHEN: Record<string, string> = { EUR: '€', USD: '$', JPY: '¥', GBP: '£', CHF: 'CHF', AUD: 'A$', CAD: 'C$', TRY: '₺', AED: 'د.إ ', THB: '฿' };
 
 export function zeichen(waehrung: string | null | undefined): string {

@@ -9,7 +9,8 @@ import { punktAusText, stadtAusAdresse } from '../lib/orte';
 import { geld } from '../lib/format';
 import { useStore } from '../lib/daten';
 import type { Eintrag, EintragArt, Reise } from '../lib/types';
-import { Ablage, Chip, Feld, Foto, IconKnopf, Karten, TextFeld, Umschalter, ZahlFeld, ZeitFeld, cx } from './ui';
+import { Ablage, Auswahl, Chip, Feld, Foto, IconKnopf, Karten, TextFeld, Umschalter, ZahlFeld, ZeitFeld, cx } from './ui';
+import { WAEHRUNGEN } from '../lib/format';
 import { OrtSuche, type Gewaehlt } from './OrtSuche';
 
 /**
@@ -31,6 +32,7 @@ interface Entwurf {
   lng: number | null;
   karten_stichwort: string | null;
   preis: number | null;
+  waehrung: string;
   buchung_url: string;
   buchung_nr: string;
   notiz: string;
@@ -52,6 +54,7 @@ const leer = (vor: Partial<Eintrag> | null | undefined, reise: Reise, datum: str
   lng: vor?.lng ?? null,
   karten_stichwort: vor?.karten_stichwort ?? null,
   preis: vor?.preis ?? null,
+  waehrung: vor?.waehrung ?? '',
   buchung_url: vor?.buchung_url ?? '',
   buchung_nr: vor?.buchung_nr ?? '',
   notiz: vor?.notiz ?? '',
@@ -80,7 +83,8 @@ export function EintragFormular({
 }) {
   const store = useStore();
   const [entwurf, setEntwurf] = useState<Entwurf>(() => leer(bestehend ?? vorlage, reise, datum));
-  const [mehr, setMehr] = useState(() => Boolean(bestehend?.notiz || bestehend?.buchung_url || bestehend?.buchung_nr));
+  // an einer Unterkunft sind Adresse, Buchung und Notiz Kernangaben – das Fach bleibt dort offen
+  const [mehr, setMehr] = useState(() => Boolean(bestehend?.notiz || bestehend?.buchung_url || bestehend?.buchung_nr) || art === 'unterkunft');
   const [bildLaeuft, setBildLaeuft] = useState(false);
 
   useEffect(() => {
@@ -158,6 +162,7 @@ export function EintragFormular({
       lng: entwurf.lng,
       karten_stichwort: entwurf.karten_stichwort,
       preis: entwurf.preis,
+      waehrung: entwurf.waehrung.trim().toUpperCase() || null,
       buchung_url: entwurf.buchung_url.trim() || null,
       buchung_nr: entwurf.buchung_nr.trim() || null,
       notiz: entwurf.notiz.trim() || null,
@@ -278,7 +283,21 @@ export function EintragFormular({
 
         <div className="grid grid-cols-2 gap-2">
           <TextFeld label="Ort" wert={entwurf.ort} beimAendern={(t) => set({ ort: t })} platzhalter="Stadt oder Insel" />
-          <ZahlFeld label={`Preis (${reise.waehrung})`} wert={entwurf.preis} beimAendern={(n) => set({ preis: n })} vorzeichen={geld(1, reise.waehrung).replace(/[\d.,\s]/g, '')} hinweis={istBett && entwurf.preis ? `${geld(entwurf.preis / Math.max(1, naehte(entwurf.date, entwurf.bis_date || entwurf.date)), reise.waehrung)} pro Nacht` : undefined} />
+          <div className="grid grid-cols-[minmax(0,1fr)_6.4rem] items-start gap-1.5">
+            <ZahlFeld
+              label="Preis"
+              wert={entwurf.preis}
+              beimAendern={(n) => set({ preis: n })}
+              vorzeichen={geld(1, entwurf.waehrung || reise.waehrung).replace(/[\d.,\s]/g, '')}
+              hinweis={istBett && entwurf.preis ? `${geld(entwurf.preis / Math.max(1, naehte(entwurf.date, entwurf.bis_date || entwurf.date)), entwurf.waehrung || reise.waehrung)} pro Nacht` : undefined}
+            />
+            <Auswahl
+              label="Währung"
+              wert={entwurf.waehrung}
+              beimAendern={(w) => set({ waehrung: w })}
+              optionen={[{ value: '', label: `${reise.waehrung} (wie Reise)` }, ...WAEHRUNGEN.filter((w) => w !== reise.waehrung).map((w) => ({ value: w, label: w }))]}
+            />
+          </div>
         </div>
 
         <div>
@@ -312,7 +331,7 @@ export function EintragFormular({
         ) : null}
 
         <button type="button" className="mikro flex w-full items-center justify-between rounded-lg px-1 py-1.5 text-left" onClick={() => setMehr((m) => !m)}>
-          <span>{mehr ? 'weniger Angaben' : 'mehr Angaben (Adresse, Buchung, Notiz)'}</span>
+          <span>{mehr ? (istBett ? 'weniger Angaben' : 'mehr Angaben (Adresse, Buchung, Notiz)') : istBett ? 'Adresse, Buchung, Notiz' : 'mehr Angaben (Adresse, Buchung, Notiz)'}</span>
           <span aria-hidden>{mehr ? '⌃' : '⌄'}</span>
         </button>
         {mehr ? (

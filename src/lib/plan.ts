@@ -1,5 +1,6 @@
 import { gilt, abstandTage, addTage, tageListe, tagKurz } from './dates';
 import { kategorie } from './kategorien';
+import { geld } from './format';
 import type { Eintrag, Reise } from './types';
 
 /**
@@ -154,11 +155,37 @@ export interface Kosten {
   offen: number | null;
   jeKategorie: { kategorie: string; label: string; icon: string; farbe: string; betrag: number }[];
   mitPreis: number;
+  /** Beträge in einer anderen Währung als der Reise – sie bleiben aus der Summe draußen */
+  fremde: { id: string; titel: string; text: string }[];
+}
+
+/** Die Währung über dem Preis, sonst die der Reise */
+export function waehrungVon(e: Eintrag, reise: Reise): string {
+  return (e.waehrung || reise.waehrung || 'EUR').toUpperCase();
+}
+
+export function preisText(e: Eintrag, reise: Reise): string {
+  if (!e.preis) return '';
+  return geld(e.preis, waehrungVon(e, reise));
+}
+
+/** Aufaddiert wird nur, was dieselbe Währung hat – Umrechnen ohne Kurs wäre erfunden */
+export function kostenSumme(reise: Reise, eintraege: Eintrag[]): { gesamt: number; fremde: { id: string; titel: string; text: string }[] } {
+  const daheim = (reise.waehrung || 'EUR').toUpperCase();
+  let gesamt = 0;
+  const fremde: { id: string; titel: string; text: string }[] = [];
+  for (const e of eintraege) {
+    if (!e.preis) continue;
+    if (waehrungVon(e, reise) === daheim) gesamt += e.preis;
+    else fremde.push({ id: e.id, titel: e.titel, text: `${geld(e.preis, waehrungVon(e, reise))} in ${waehrungVon(e, reise)}` });
+  }
+  return { gesamt: Math.round(gesamt * 100) / 100, fremde };
 }
 
 export function aufschluesselung(reise: Reise, eintraege: Eintrag[]): Kosten {
-  const bepreiste = eintraege.filter((e) => e.preis !== null && e.preis > 0);
-  const gesamt = bepreiste.reduce((s, e) => s + (e.preis ?? 0), 0);
+  const { gesamt, fremde } = kostenSumme(reise, eintraege);
+  const daheim = (reise.waehrung || 'EUR').toUpperCase();
+  const bepreiste = eintraege.filter((e) => e.preis && waehrungVon(e, reise) === daheim);
   const gruppen = new Map<string, number>();
   for (const e of bepreiste) {
     const schluessel = e.art === 'unterkunft' ? 'unterschlupf' : e.art === 'fahrt' ? 'transport' : e.kategorie ?? 'sonstiges';
@@ -178,7 +205,8 @@ export function aufschluesselung(reise: Reise, eintraege: Eintrag[]): Kosten {
     budget,
     offen: budget === null ? null : budget - gesamt,
     jeKategorie,
-    mitPreis: bepreiste.length,
+    mitPreis: bepreiste.length + fremde.length,
+    fremde,
   };
 }
 
