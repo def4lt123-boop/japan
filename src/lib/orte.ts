@@ -249,6 +249,28 @@ export function stelleOrte(listen: Ortsvorschlag[][], opts: { suchwort: string; 
     .map((x) => x.treffer);
 }
 
+/**
+ * Das brauchbarste bild aus den quellen, die gleichzeitig geantwortet haben: die
+ * reihenfolge der liste sagt, wem zu trauen ist (google kennt das haus selbst,
+ * unsplash und pexels kuratieren, commons hat, was die welt hochlud), und was
+ * zuerst zurückkommt, gewinnt nicht automatisch.
+ */
+export function bestesBild(kandidaten: Array<Bildvorschlag | null>): Bildvorschlag | null {
+  for (const bild of kandidaten) {
+    if (bild?.url) return bild;
+  }
+  return null;
+}
+
+/**
+ * Der kern einer frage. „big ben, Westminster, London, England" ist für eine
+ * bildersuche zu viel gemeint: was vor dem ersten komma steht, ist das objekt.
+ */
+export function bildGrund(frage: string): string {
+  const kern = glatt((frage ?? '').replace(/\(.*?\)/g, ' ').split(',')[0] ?? '');
+  return kern.length >= 4 ? kern : '';
+}
+
 /** ob sich eine frage lohnt: zwei buchstaben, so im blatt wie auf dem server */
 export function frageLohnt(text: string): boolean {
   return vergleichText(text).length >= 2;

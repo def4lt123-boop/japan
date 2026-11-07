@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { bildFragen, ortsBild, type Ortsbild } from '../lib/ortsbild';
+import { bildFragen, bildFuer, type Ortsbild } from '../lib/ortsbild';
 import type { Eintrag, Reise } from '../lib/types';
 
 /**
@@ -24,17 +24,10 @@ export function useOrtsbild(
   useEffect(() => {
     if (!suchen || eintrag.foto_url || !fragen.length) return;
     let abbruch = false;
-    void (async () => {
-      for (const frage of fragen) {
-        const bild = await ortsBild(frage);
-        if (abbruch) return;
-        if (bild) {
-          setFund({ ...bild, gefunden: true });
-          return;
-        }
-      }
-      setFund(null);
-    })();
+    void bildFuer(eintrag, reise, { abgebrochen: () => abbruch }).then((bild) => {
+      if (abbruch) return;
+      setFund(bild ? { ...bild, gefunden: true } : null);
+    });
     return () => {
       abbruch = true;
     };

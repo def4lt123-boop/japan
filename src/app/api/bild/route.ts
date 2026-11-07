@@ -20,6 +20,10 @@ export async function GET(anfrage: Request) {
   const q = url.searchParams.get('q') ?? '';
   if (q.trim().length < 3) return NextResponse.json({ url: null });
   const bild = await bildFinden(q);
+  if (!bild) {
+    // eine leere hand wird nicht weitergereicht: die nächste frage darf es noch einmal versuchen
+    return NextResponse.json({ url: null }, { headers: { 'cache-control': 'no-store' } });
+  }
   // derselbe Ort sieht den ganzen Tag gleich aus – die Reihe darf fragen, so oft sie will
-  return NextResponse.json(bild ?? { url: null }, { headers: { 'cache-control': 'public, max-age=86400, stale-while-revalidate=604800' } });
+  return NextResponse.json(bild, { headers: { 'cache-control': 'public, max-age=86400, stale-while-revalidate=604800' } });
 }
