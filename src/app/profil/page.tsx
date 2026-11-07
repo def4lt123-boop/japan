@@ -6,6 +6,7 @@ import { exportiere, liesDatei } from '../../lib/datei';
 import { geld, plural, sauber } from '../../lib/format';
 import { abstandTage } from '../../lib/dates';
 import { Ablage, Chip, Hinweis, Karten, KartenKopf, Knopf, SeitenKopf, TextFeld, Umschalter, ZahlFeld } from '../../components/ui';
+import { StatusAnzeige } from '../../components/StatusAnzeige';
 
 /** Profil: wie die App spricht, was sie vorausfüllt, und wohin die Daten gehören. */
 export default function Profil() {
@@ -81,9 +82,10 @@ export default function Profil() {
         <Karten>
           <KartenKopf
             titel="Wohin die Daten gehen"
-            seitlich={<Chip ton={store.modus === 'online' ? 'gut' : undefined}>{store.modus === 'online' ? 'im Datenspeicher verbunden' : 'auf diesem Gerät'}</Chip>}
+            seitlich={<StatusAnzeige pruefen />}
           />
           <div className="space-y-2 p-3">
+            {store.speicher.ms !== null ? <p className="mikro">Nachfrage in {store.speicher.ms} ms beantwortet.</p> : null}
             <p className="text-[14px] leading-relaxed text-[var(--text2)]">
               {store.modus === 'online'
                 ? 'Alle Reisen liegen in einem gemeinsamen Datenbestand. Ohne Anmeldung kann jede Person, die die Adresse der App kennt, sehen und ändern – praktisch für die Familie, bitte im Kopf behalten.'

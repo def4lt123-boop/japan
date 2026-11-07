@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useStore } from '../lib/daten';
+import { StatusAnzeige } from './StatusAnzeige';
 
 /**
  * Die eine Hülle für Handy und Rechner: auf dem Smartphone die Leiste unten,
@@ -74,9 +75,12 @@ export function Huelle({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         ) : null}
-        <Link href="/reisen/neu" className="knopf mt-auto w-full no-underline" style={{ color: '#fff' }}>
+        <div className="mt-auto pt-3">
+          <StatusAnzeige variant="zeile" pruefen />
+          <Link href="/reisen/neu" className="knopf mt-1 w-full no-underline" style={{ color: '#fff' }}>
           + Neue Reise
         </Link>
+        </div>
       </nav>
 
       <div className="min-w-0 flex-1">{children}</div>

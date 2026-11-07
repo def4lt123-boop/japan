@@ -151,4 +151,20 @@ for (const feld of [...eintragZeilen, ...typZeilen]) {
 const migration = text('supabase/migrations/20261107000000_reiseplan.sql');
 assert.equal(migration.replace(/^\s*--.*$/gm, '').trim(), schema.replace(/^\s*--.*$/gm, '').trim(), 'schema.sql und die Migration sind dasselbe Blatt');
 
+/* ── 6 · Status der Datenhaltung ─────────────────────────────────────── */
+
+const status = text('src/components/StatusAnzeige.tsx');
+assert.match(status, /verbunden: 'Datenbank verbunden'/, 'der Erfolgssatz heißt genau „Datenbank verbunden“');
+assert.match(status, /if \(!text\) return null/, 'beim Prüfen wird nichts behauptet');
+assert.ok(!/SUPABASE_URL|process\.env|apikey/i.test(status), 'der Status nennt keine Umgebungswerte');
+assert.ok(!/URL|SCHLUESSEL|fetch\(/.test(status), 'gefragt wird im Speicherblatt, nicht im Streifen');
+const pruefer = text('src/app/api/status/route.ts');
+assert.match(pruefer, /AbortSignal\.timeout/, 'die Nachfrage hat eine Frist');
+assert.match(pruefer, /rest\/v1\/reisen/, 'geprüft wird eine echte Abfrage, nicht nur eine Umgebung');
+assert.match(pruefer, /cache: 'no-store'/, 'der Status wird nicht zwischengespeichert');
+const stores = text('src/lib/daten.tsx');
+assert.match(stores, /window\.addEventListener\('focus'/, 'wer zurückkommt, sieht einen frischen Status');
+assert.match(text('src/components/Huelle.tsx'), /<StatusAnzeige variant="zeile" pruefen \/>/, 'auf dem Rechner steht der Status in der Spalte');
+assert.match(text('src/app/profil/page.tsx'), /<StatusAnzeige pruefen \/>/, 'auf dem Handy steht er im Profil');
+
 console.log(`🎉 Neues Fundament hält – ${dateien.length} Dateien (${dateien.reduce((s, d) => s + text(d).split('\n').length, 0)} Zeilen), ${seiten.length} Seiten, ${blätter.length} Reiseblätter, kein Rest von früher`);

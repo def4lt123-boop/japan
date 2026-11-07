@@ -8,6 +8,7 @@ import { inTagen, laufend, reiseTage, vergangen } from '../lib/plan';
 import { plural } from '../lib/format';
 import { ReiseKarte } from '../components/ReiseKarte';
 import { Karten, KartenKopf, Chip, Fortschritt, Hinweis, Leer, SeitenKopf } from '../components/ui';
+import { StatusAnzeige } from '../components/StatusAnzeige';
 import { planFortschritt } from '../lib/plan';
 
 /** Das Dashboard: was läuft, was kommt, was zu tun ist. */
@@ -84,7 +85,16 @@ export default function Dashboard() {
     <main className="seite pb-6">
       <SeitenKopf
         titel={`${begriessung()}${name ? `, ${name}` : ''}`}
-        untertitel={`${tagLang(heute)} · ${plural(reisen.length, 'Reise', 'Reisen')} geplant`}
+        untertitel={
+          <span className="flex flex-wrap items-center gap-x-1.5">
+            <span>{tagLang(heute)}</span>
+            <span aria-hidden>·</span>
+            <span>{plural(reisen.length, 'Reise', 'Reisen')} geplant</span>
+            <span className="md:hidden">
+              <StatusAnzeige />
+            </span>
+          </span>
+        }
         seitlich={
           <Link href="/reisen/neu" className="knopf no-underline">
             + Neue Reise
