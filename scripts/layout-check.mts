@@ -224,4 +224,20 @@ assert.match(text('src/app/api/bild/route.ts'), /max-age=86400/, 'ein Ort sieht 
 assert.match(text('src/components/EintragFormular.tsx'), /api\/bild\?q=\$\{encodeURIComponent\(frage\)\}`, \{ cache: 'no-store' \}/, 'wer selbst nach einem Bild sucht, fragt ohne Vorrat');
 
 
+/* ── 10 · die Karte ohne Schlüssel ────────────────────────────────────── */
+
+const kachelblatt = text('src/lib/kacheln.ts');
+assert.match(kachelblatt, /tile\.openstreetmap\.org\/\{z\}\/\{x\}\/\{y\}\.png/, 'zuerst fragt die Karte den offenen OpenStreetMap-Dienst');
+assert.match(kachelblatt, /arcgisonline\.com[\s\S]*\{z\}\/\{y\}\/\{x\}/, 'danach steht eine zweite offene Quelle bereit');
+assert.ok(!/cartocdn/.test(kachelblatt), 'CARTO ist raus – es legt seit 2026 ein Wasserzeichen ohne Schlüssel');
+assert.match(kachelblatt, /NEXT_PUBLIC_KARTE_KACHELN/, 'eigene Kacheln darf wer will, nicht muss');
+const kachelnAlles = [...dateien.filter((d) => /\.(tsx?|css)$/.test(d))].map((d) => text(d)).join('\n');
+assert.ok(!/basemaps\.cartocdn\.com/.test(kachelnAlles), 'kein Blatt bittet mehr um einen Kartenschlüssel');
+assert.match(text('src/components/KartenAnsicht.tsx'), /tileerror/, 'eine fehlende Kachel wird bemerkt');
+assert.match(text('src/components/KartenAnsicht.tsx'), /setVersuch/, 'dann tritt die nächste Quelle ein');
+assert.match(text('src/components/KartenAnsicht.tsx'), /fehler\.current < 3/, 'erst drei Fehlgriffe, dann ein Wechsel – eine Kachel macht noch keinen Ausfall');
+assert.match(text('src/lib/karten.ts'), /openstreetmap\.org\/export\/embed\.html/, 'die Vorschau im Formular ist offen eingebettet');
+assert.ok(!/output=embed/.test(text('src/lib/karten.ts')), 'kein Google-Fenster, das einen Schlüssel will');
+
+
 console.log(`🎉 Neues Fundament hält – ${dateien.length} Dateien (${dateien.reduce((s, d) => s + text(d).split('\n').length, 0)} Zeilen), ${seiten.length} Seiten, ${blätter.length} Reiseblätter, kein Rest von früher`);
