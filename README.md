@@ -55,6 +55,10 @@ npm run test:all       # Typen, Rechenblatt, Suche und Bild, Layout, alle Seiten
 
 Auf Vercel reicht das Projekt verbinden; die vier Umgebungswerte sind optional. Region `fra1` in `vercel.json`.
 
+## Status
+
+Unten in der Seitenspalte (und auf dem Handy im Profil) steht ein Satz: **Datenbank verbunden**. Er kommt nicht aus einer Annahme – `/api/status` tut eine echte winzige Abfrage und meldet die Antwortzeit. Ist der Speicher nicht erreichbar, heißt es „Datenbank nicht erreichbar“ mit einem Knopf zur erneuten Prüfung; ohne angebundenen Speicher „Auf diesem Gerät“. Beim Prüfen selbst sagt die App nichts.
+
 ## Regeln, nach denen gebaut wird
 
 - **Mobile zuerst.** Was auf dem Handy nicht geht, ist kaputt. Keine Seite ist breiter als das Gerät, Scrollen nur da, wo es ein Zweck hat (Tagesstreifen, Kartenliste).

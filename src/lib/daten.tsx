@@ -36,9 +36,22 @@ function schreibeLokal(schluessel: string, wert: unknown) {
   }
 }
 
+/** Was der Blatt-Status unten links und im Profil zeigt */
+export type SpeicherZustand = 'pruefen' | 'verbunden' | 'gestoert' | 'kein_speicher';
+
+export interface Speicher {
+  zustand: SpeicherZustand;
+  /** Antwortzeit der Nachfrage in ms – nur für die Statistik im Profil */
+  ms: number | null;
+  /** Zeitpunkt der letzten Nachfrage (Gerätezeit) */
+  geaeprt: number | null;
+}
+
 export interface StoreWert {
   bereit: boolean;
   modus: 'online' | 'geraet';
+  speicher: Speicher;
+  speicherPruefen: () => Promise<void>;
   meldung: string | null;
   sagen: (text: string) => void;
   neuLaden: () => Promise<void>;
@@ -80,6 +93,7 @@ export function DatenProvider({ children }: { children: React.ReactNode }) {
   const [bereit, setBereit] = useState(false);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [einstellungen, setEinstellungen] = useState<Einstellungen>(EINSTELLUNGS_LEER);
+  const [speicher, setSpeicher] = useState<Speicher>({ zustand: 'pruefen', ms: null, geaeprt: null });
   const warner = useRef<number | null>(null);
 
   const sagen = useCallback((text: string) => {
@@ -114,6 +128,42 @@ export function DatenProvider({ children }: { children: React.ReactNode }) {
       abbruch = true;
     };
   }, [sagen]);
+
+  const speichernPruefen = useCallback(async () => {
+    setSpeicher((v) => ({ ...v, zustand: 'pruefen' }));
+    try {
+      const antwort = await fetch('/api/status', { cache: 'no-store' });
+      const paket = (await antwort.json()) as { speicher?: string; erreichbar?: boolean; ms?: number };
+      setSpeicher({
+        zustand: paket.speicher === 'aus' ? 'kein_speicher' : paket.erreichbar ? 'verbunden' : 'gestoert',
+        ms: typeof paket.ms === 'number' ? paket.ms : null,
+        geaeprt: Date.now(),
+      });
+    } catch {
+      setSpeicher({ zustand: dbOnline ? 'gestoert' : 'kein_speicher', ms: null, geaeprt: Date.now() });
+    }
+  }, []);
+
+  useEffect(() => {
+    void speichernPruefen();
+  }, [speichernPruefen]);
+
+  // wer zurückkommt, bekommt einen frischen Blick – ohne Dauerfragen
+  useEffect(() => {
+    let zuletzt = Date.now();
+    const beiRueckkehr = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - zuletzt < 60_000) return;
+      zuletzt = Date.now();
+      void speichernPruefen();
+    };
+    window.addEventListener('focus', beiRueckkehr);
+    document.addEventListener('visibilitychange', beiRueckkehr);
+    return () => {
+      window.removeEventListener('focus', beiRueckkehr);
+      document.removeEventListener('visibilitychange', beiRueckkehr);
+    };
+  }, [speichernPruefen]);
 
   useEffect(() => {
     if (bereit) schreibeLokal(DATEN_SCHLUESSEL, daten);
@@ -271,7 +321,9 @@ export function DatenProvider({ children }: { children: React.ReactNode }) {
   const wert = useMemo<StoreWert>(
     () => ({
       bereit,
-      modus: dbOnline ? 'online' : 'geraet',
+      modus: speicher.zustand === 'verbunden' || speicher.zustand === 'gestoert' ? 'online' : 'geraet',
+      speicher,
+      speicherPruefen: speichernPruefen,
       meldung,
       sagen,
       neuLaden: async () => {
@@ -297,7 +349,7 @@ export function DatenProvider({ children }: { children: React.ReactNode }) {
       allesLoeschen,
       importieren,
     }),
-    [bereit, eintraege, eintragAendern, eintragAnlegen, eintragLoeschen, eintraegeRueckwaerts, einstellungen, reisen, reiseAendern, reiseAnlegen, reiseLoeschen, sagen, stellen, aktivSetzen, allesLoeschen, importieren, meldung],
+    [bereit, eintraege, eintragAendern, eintragAnlegen, eintragLoeschen, eintraegeRueckwaerts, einstellungen, reisen, reiseAendern, reiseAnlegen, reiseLoeschen, sagen, stellen, aktivSetzen, allesLoeschen, importieren, meldung, speicher, speichernPruefen],
   );
 
   return <Ctx.Provider value={wert}>{children}</Ctx.Provider>;
