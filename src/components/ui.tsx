@@ -541,13 +541,19 @@ export function Ablage({
 }) {
   const [koerper, setKoerper] = useState<HTMLElement | null>(null);
   const randRef = useRef<HTMLDivElement | null>(null);
+  /* der Schließknopf kommt bei jedem Render als neuer – die Sperre soll das nicht tun */
+  const schliessenRef = useRef(schliessen);
 
   useEffect(() => setKoerper(document.body), []);
 
   useEffect(() => {
+    schliessenRef.current = schliessen;
+  }, [schliessen]);
+
+  useEffect(() => {
     if (!offen) return;
     const taste = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') schliessen();
+      if (e.key === 'Escape') schliessenRef.current();
     };
     document.addEventListener('keydown', taste);
     const vorher = document.body.style.overflow;
@@ -561,7 +567,7 @@ export function Ablage({
       document.body.style.overflow = vorher;
       window.clearTimeout(zeit);
     };
-  }, [offen, schliessen, fokus]);
+  }, [offen, fokus]);
 
   if (!offen || !koerper) return null;
   return createPortal(

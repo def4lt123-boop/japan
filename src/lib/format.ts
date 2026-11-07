@@ -92,3 +92,12 @@ export function initialen(name: string | null | undefined, fallback = 'Du'): str
     .map((t) => t[0]?.toUpperCase() ?? '')
     .join('');
 }
+
+/**
+ * Gleicher Inhalt, gleicher Zeiger. Ein Zustand, der beim selben Stand einen
+ * neuen Zeiger bekommt, wirft einen Render nach dem nächsten: Render → Effekt
+ * → Render. Deshalb hier entlang, wenn ein Effekt etwas vergleicht.
+ */
+export function wieVorher<T>(vorher: T, neu: T): T {
+  return vorher === neu || JSON.stringify(vorher) === JSON.stringify(neu) ? vorher : neu;
+}
