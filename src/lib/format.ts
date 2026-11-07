@@ -1,168 +1,92 @@
-const DE = 'de-DE';
+/** Kleine Helfer für alles, was auf dem Bildschirm steht. */
+
+export function uid(prefix = 'e'): string {
+  const zufall = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID().slice(0, 8) : Math.random().toString(36).slice(2, 10);
+  return `${prefix}-${Date.now().toString(36).slice(-5)}${zufall}`;
+}
+
+const WORT = /^[^\d\W]/;
+/** Bindewörter, die in Namen klein bleiben – und Kürzel, die niemand groß schreibt */
+const KLEIN = new Set(['of', 'the', 'and', 'de', 'del', 'di', 'du', 'la', 'le', 'el', 'y', 'e', 'i', 'und', 'von', 'der', 'den', 'im', 'am', 'auf', 'en', 'da', 'das', 'nan', 'mont']);
 
 /**
- * Ein Tag, geschrieben wie er gemeint ist – ohne Zeitzonen-Sprung.
- * `toISOString()` schiebt Mitternacht in UTC und verliert damit in Europa jeden Tag
- * einen Tag; alle Rechenwege hier arbeiten deshalb lokal.
+ * Namen in Reinschrift: „  kyoto station " → „Kyoto Station". BindeWörter und
+ * Kürzel wie „db" bleiben, wie sie gemeint sind – die Regel soll lesen helfen,
+ * nicht umbenennen.
  */
-export function isoOf(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+export function sauber(text: string | null | undefined): string {
+  const glatt = (text ?? '').replace(/\s+/g, ' ').trim();
+  if (!glatt) return '';
+  const woerter = glatt.split(' ');
+  return woerter
+    .map((wort, i) => {
+      if (!WORT.test(wort)) return wort;
+      const klein = wort.toLowerCase();
+      if (wort.length <= 2) return wort;
+      if (i > 0 && KLEIN.has(klein)) return klein;
+      if (wort !== klein && wort[0] === wort[0].toUpperCase()) return wort;
+      return wort[0].toUpperCase() + wort.slice(1);
+    })
+    .join(' ')
+    .replace(/\s+([,.;:!?])/g, '$1');
 }
 
-/** JJJJ-MM-TT (oder ein Datumsstempel davor) als lokaler Mitternachtsmoment */
-export function dayStart(iso?: string | null): Date | null {
-  if (!iso) return null;
-  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
-  if (!y || !m || !d) return null;
-  const date = new Date(y, m - 1, d);
-  return Number.isNaN(date.getTime()) ? null : date;
+export function kurz(text: string | null | undefined, max = 46): string {
+  const t = (text ?? '').trim();
+  return t.length <= max ? t : `${t.slice(0, Math.max(0, max - 1)).trimEnd()}…`;
 }
 
-export function fmtDate(iso?: string | null, opts: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric' }): string {
-  if (!iso) return '—';
-  const d = new Date(`${iso.length === 10 ? iso + 'T00:00:00' : iso}`);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(DE, opts);
+const ZEICHEN: Record<string, string> = { EUR: '€', USD: '$', JPY: '¥', GBP: '£', CHF: 'CHF', AUD: 'A$', CAD: 'C$', TRY: '₺', AED: 'د.إ ', THB: '฿' };
+
+export function zeichen(waehrung: string | null | undefined): string {
+  return ZEICHEN[(waehrung ?? 'EUR').toUpperCase()] ?? `${(waehrung ?? 'EUR').toUpperCase()} `;
 }
 
-/**
- * Das Datum, wie es in Listen steht: `Sa 24.10.` – kurz, gleiche Breite, kein JJJJ.
- * Ausgeschrieben (`Samstag, 24. Oktober`) nur wo ein Satz oder eine Überschrift steht.
- */
-export function fmtDay(iso?: string | null): string {
-  if (!iso) return '—';
-  // Intl hängt an das abgekürzte Wochentagwort Punkt und Komma („Sa., 06.03.“) –
-  // in einer Liste soll `Sa 06.03.` stehen, also wird es aus den Stücken gesetzt.
-  return `${weekdayShort(iso)} ${fmtDate(iso, { day: '2-digit', month: '2-digit' })}`;
+/** „1.240 €" – ohne Dezimalstellen bei runden Beträgen, sonst zwei */
+export function geld(wert: number | null | undefined, waehrung = 'EUR'): string {
+  if (wert === null || wert === undefined || !Number.isFinite(wert)) return '—';
+  const glatt = Math.abs(wert % 1) < 0.005;
+  const zahl = new Intl.NumberFormat('de-DE', { minimumFractionDigits: glatt ? 0 : 2, maximumFractionDigits: glatt ? 0 : 2 }).format(wert);
+  return `${zahl} ${zeichen(waehrung)}`.trim();
 }
 
-/** wie fmtDay, aber ausgeschrieben – für Überschriften und den Satz davor */
-export function fmtDayLong(iso?: string | null): string {
-  if (!iso) return '—';
-  return fmtDate(iso, { weekday: 'long', day: 'numeric', month: 'long' });
-}
-
-export function weekdayShort(iso: string): string {
-  const d = new Date(`${iso}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(DE, { weekday: 'short' });
-}
-
-export function fmtRange(from?: string | null, to?: string | null): string {
-  if (!from && !to) return 'ohne Termine';
-  return `${fmtDate(from, { day: '2-digit', month: '2-digit', year: 'numeric' })} – ${fmtDate(to, { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
-}
-
-export function daysBetween(from?: string | null, to?: string | null): number {
-  if (!from || !to) return 0;
-  const a = new Date(`${from}T00:00:00`).getTime();
-  const b = new Date(`${to}T00:00:00`).getTime();
-  if (Number.isNaN(a) || Number.isNaN(b) || b < a) return 0;
-  return Math.round((b - a) / 86400000) + 1;
-}
-
-export function eachDate(from?: string | null, to?: string | null): string[] {
-  const start = dayStart(from);
-  const end = dayStart(to);
-  if (!start || !end || !from || !to || end < start) return [];
-  const out: string[] = [];
-  for (let d = new Date(start), i = 0; d <= end && i < 400; d.setDate(d.getDate() + 1), i++) {
-    out.push(isoOf(d));
-  }
-  return out;
-}
-
-export function today(): string {
-  return isoOf(new Date());
-}
-
-export function addDays(iso: string, n: number): string {
-  const d = dayStart(iso);
-  if (!d) return iso;
-  d.setDate(d.getDate() + n);
-  return isoOf(d);
-}
-
-export function fmtMoney(value?: number | null, currency: 'EUR' | 'JPY' = 'EUR'): string {
-  if (value === null || value === undefined || Number.isNaN(value)) return '—';
-  return new Intl.NumberFormat(DE, {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: currency === 'EUR' ? 2 : 0,
-    minimumFractionDigits: currency === 'EUR' ? 2 : 0,
-  }).format(value);
-}
-
-export function fmtDuration(min?: number | null): string {
-  if (min === null || min === undefined || !Number.isFinite(min)) return '—';
+export function minutenText(min: number | null | undefined): string {
+  if (!min || min < 1) return '';
   if (min < 60) return `${Math.round(min)} Min`;
   const h = Math.floor(min / 60);
   const m = Math.round(min % 60);
   return m ? `${h} h ${m} Min` : `${h} h`;
 }
 
-export function parseDuration(input?: string | null): number | null {
-  if (!input) return null;
-  const s = input.trim().toLowerCase();
-  if (!s) return null;
-  // Unterstützt "2h", "1:30h", "90 min", "1,5 std", "2 h 15", "3h15"
-  const colon = s.match(/^(\d{1,2})[:.,](\d{1,2})\s*(h|std)?/);
-  if (colon) return Number(colon[1]) * 60 + Number(colon[2]);
-  const hours = s.match(/(\d+(?:[.,]\d+)?)\s*(h|std|stunden|hour)/);
-  const mins = s.match(/(\d+)\s*(min|m\b|minute)/);
-  if (hours && mins) return Math.round(Number(hours[1].replace(',', '.')) * 60) + Number(mins[1]);
-  if (hours) return Math.round(Number(hours[1].replace(',', '.')) * 60);
-  if (mins) return Number(mins[1]);
-  const plain = Number(s.replace(',', '.'));
-  return Number.isFinite(plain) && plain > 0 ? Math.round(plain * 60) : null; // ohne Einheit = Stunden
+export function uhrzeitText(zeit: string | null | undefined): string {
+  if (!zeit) return '';
+  const [h, m] = zeit.split(':');
+  return m === '00' || !m ? `${h} Uhr` : `${h}:${m}`;
 }
 
-export function num(v: string): number | null {
-  const t = v.trim().replace(/\./g, '').replace(',', '.');
-  if (!t) return null;
-  const n = Number(t);
-  return Number.isFinite(n) ? n : null;
+export function stundenAus(zeit: string | null | undefined): number | null {
+  if (!zeit || !/^\d{1,2}:\d{2}$/.test(zeit)) return null;
+  const [h, m] = zeit.split(':').map(Number);
+  return h + m / 60;
 }
 
-/**
- * Eine Stadt, die man nicht kennt, soll nicht als „Unbekannt“ im Weg stehen –
- * leer heißt hier: noch nicht eingetragen, also nichts anzeigen (oder den Hinweis).
- */
-export function knownCity(city?: string | null): string | null {
-  const c = properName(city);
-  return !c || c.toLowerCase() === 'unbekannt' ? null : c;
+/** „2 Aktivitäten · 3 Unterkünfte" – nur was da ist */
+export function zaehlen(zahlen: [number, string, string][]): string {
+  return zahlen
+    .filter(([n]) => n > 0)
+    .map(([n, eins, viele]) => `${n} ${n === 1 ? eins : viele}`)
+    .join(' · ');
 }
 
-/**
- * Städte- und Unterkunftsnamen in Reinschrift: außen Leerzeichen weg, innen eines,
- * jeder Wortanfang groß. Alles, was schon groß oder in Großbuchstaben dasteht
- * (JR, TDR, Osaka-jo), bleibt wie es ist – normalisieren soll nicht verschlimmern.
- */
-export function properName(raw?: string | null): string {
-  const t = (raw ?? '').replace(/\s+/g, ' ').trim();
-  if (!t) return '';
-  const klein = new Set(['am', 'an', 'auf', 'aus', 'bei', 'im', 'in', 'mit', 'nach', 'sur', 'und', 'van', 'von', 'der', 'den', 'die', 'de', 'du', 'la', 'le']);
-  return t
-    .split(' ')
-    .map((wort, i) => {
-      const buch = /[A-Za-zÀ-ÖØ-Þß-ÿ]/.test(wort);
-      if (!buch) return wort;
-      if (wort === wort.toUpperCase() && wort.replace(/[^A-Za-z]/g, '').length <= 4) return wort; // Abkürzungen
-      if (wort !== wort.toLowerCase() && /[A-Z]/.test(wort.slice(1))) return wort; // schreibt selbst gemischt
-      if (i > 0 && klein.has(wort.toLowerCase())) return wort.toLowerCase();
-      return wort[0].toUpperCase() + wort.slice(1);
-    })
-    .join(' ');
+export function plural(n: number, eins: string, viele: string): string {
+  return `${n} ${n === 1 ? eins : viele}`;
 }
 
-export function plural(n: number, one: string, many: string): string {
-  return `${n} ${n === 1 ? one : many}`;
-}
-
-export function uid(prefix = 'id'): string {
-  const rnd =
-    typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2) + Date.now().toString(36);
-  return `${prefix}-${rnd}`;
+export function initialen(name: string | null | undefined, fallback = 'Du'): string {
+  const teile = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (!teile.length) return fallback;
+  return teile
+    .slice(0, 2)
+    .map((t) => t[0]?.toUpperCase() ?? '')
+    .join('');
 }

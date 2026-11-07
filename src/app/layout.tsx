@@ -1,23 +1,31 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { StoreProvider } from '../lib/store';
-import { AppShell } from '../components/AppShell';
+import { DatenProvider } from '../lib/daten';
+import { Huelle } from '../components/Huelle';
 
 export const metadata: Metadata = {
-  title: 'Urlaubsplaner – Japan',
-  description: 'Urlaubsplanung pro Tag: Aktivitäten als nummerierte Liste, Google-Maps-Punkte, Unterkünfte, Preise und Budget.',
-  applicationName: 'Urlaubsplaner',
+  title: {
+    default: 'Reiseplan – dein digitaler Reiseassistent',
+    template: '%s · Reiseplan',
+  },
+  description: 'Reisen anlegen, Tage planen, Unterkünfte und Orte auf der Karte – unterwegs auf dem Handy, zu Hause am Rechner.',
+  applicationName: 'Reiseplan',
 };
 
-export const viewport: Viewport = { themeColor: '#0b0d12', width: 'device-width', initialScale: 1 };
+export const viewport: Viewport = {
+  themeColor: '#f4f6f9',
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="de">
-      <body className="min-h-screen antialiased">
-        <StoreProvider>
-          <AppShell>{children}</AppShell>
-        </StoreProvider>
+      <body>
+        <DatenProvider>
+          <Huelle>{children}</Huelle>
+        </DatenProvider>
       </body>
     </html>
   );

@@ -1,478 +1,691 @@
 'use client';
 
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import Link from 'next/link';
-import clsx from 'clsx';
-import { PRIORITY_META } from '../lib/categories';
-import type { Priority } from '../lib/types';
+import { clsx, type ClassValue } from 'clsx';
 
-/** useLayoutEffect nur im Browser – beim Server-Rendering würde React sonst warnen */
-const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+export const cx = (...werte: ClassValue[]) => clsx(werte);
 
-export function cx(...parts: (string | false | null | undefined)[]) {
-  return clsx(parts);
+/* ── Rahmen ─────────────────────────────────────────────────────────────── */
+
+export function Seite({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <main className={cx('seite', className)}>{children}</main>;
 }
 
-/** Aufklappbarer Block für alles, was nicht beim ersten Blick stören muss */
-export function Disclosure({ title, children, open = false, hint }: { title: React.ReactNode; children: React.ReactNode; open?: boolean; hint?: React.ReactNode }) {
+export function Karten({
+  children,
+  className,
+  rand = true,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  rand?: boolean;
+}) {
+  return <section className={cx(rand ? 'karte' : 'karte-flach', className)}>{children}</section>;
+}
+
+export function KartenKopf({
+  titel,
+  untertitel,
+  seitlich,
+  className,
+}: {
+  titel: React.ReactNode;
+  untertitel?: React.ReactNode;
+  seitlich?: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <details open={open} className="group/disclosure rounded-xl border border-white/[0.07] bg-white/[0.02] px-2.5 py-2">
-      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[13px] font-medium text-slate-300 [&::-webkit-details-marker]:hidden">
-        <span aria-hidden className="mikro text-[10px] text-slate-400 transition group-open/disclosure:rotate-90">
-          ▸
-        </span>
-        {title}
-        {hint ? <span className="font-normal text-slate-400">· {hint}</span> : null}
-      </summary>
-      <div className="mt-2.5 space-y-2.5">{children}</div>
-    </details>
+    <div className={cx('kopf', className)}>
+      <div className="titel min-w-0">
+        <h2 className="truncate">{titel}</h2>
+        {untertitel ? <p className="mikro mt-0.5">{untertitel}</p> : null}
+      </div>
+      {seitlich ? <div className="flex flex-wrap items-center justify-end gap-1">{seitlich}</div> : null}
+    </div>
   );
 }
 
-/** Kleine eckige Icon-Aktionen, die im Ruhezustand leise bleiben */
-export function IconBtn({ children, className, ...rest }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+export function SeitenKopf({
+  titel,
+  untertitel,
+  seitlich,
+  ueber,
+}: {
+  titel: React.ReactNode;
+  untertitel?: React.ReactNode;
+  seitlich?: React.ReactNode;
+  ueber?: React.ReactNode;
+}) {
   return (
-    <button type="button" className={cx('icon-btn', className)} {...rest}>
+    <>
+      {ueber}
+      <header className="seitenkopf">
+        <div className="titel min-w-0">
+          <h1 className="text-balance">{titel}</h1>
+          {untertitel ? <p className="mt-1 text-[14px] leading-snug text-[var(--text2)]">{untertitel}</p> : null}
+        </div>
+        {seitlich ? <div className="neben">{seitlich}</div> : null}
+      </header>
+    </>
+  );
+}
+
+/* ── Knöpfe ─────────────────────────────────────────────────────────────── */
+
+type KnopfTon = 'akzent' | 'ghost' | 'dezent' | 'gefahr';
+
+export function Knopf({
+  children,
+  ton = 'akzent',
+  klein = false,
+  breit = false,
+  ...rest
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { children: React.ReactNode; ton?: KnopfTon; klein?: boolean; breit?: boolean }) {
+  return (
+    <button
+      type="button"
+      {...rest}
+      className={cx(
+        'knopf',
+        ton === 'ghost' && 'knopf-ghost',
+        ton === 'dezent' && 'knopf-dezent',
+        ton === 'gefahr' && 'knopf-gefahr',
+        klein && 'knopf-klein',
+        breit && 'w-full',
+        rest.className,
+      )}
+    >
       {children}
     </button>
   );
 }
 
-/**
- * Die Prioritätsstufe, so wie sie an jeder Stelle der Seite dasteht: Symbol und Wort,
- * gleiche Größe, gleiche Farbe. Nirgends ein Stern allein, nirgends ein Wort ohne Stern.
- */
-export function PriorityTag({ priority, title, className }: { priority?: Priority | null; title?: string; className?: string }) {
-  const meta = PRIORITY_META[(priority ?? 'soll') as Priority] ?? PRIORITY_META.soll;
-  return (
-    <span className={cx('prio', meta.tone, className)} title={title ?? `Priorität: ${meta.label}`}>
-      <span aria-hidden>{meta.icon}</span> {meta.label}
-    </span>
-  );
-}
-
-/** Segmented control: wenige, klar beschriftete choices statt Dropdown-Liste */
-export function Seg<T extends string>({
-  options,
-  value,
-  onChange,
-  className,
-  title,
-}: {
-  options: { value: T; label: React.ReactNode; title?: string }[];
-  value: T | '' | null;
-  onChange: (v: T) => void;
-  className?: string;
-  title?: string;
-}) {
-  return (
-    <div className={cx('seg', className)} title={title} role="group">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          title={o.title}
-          aria-pressed={value === o.value}
-          className={cx(value === o.value && 'seg-on')}
-          onClick={() => onChange(o.value)}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-export interface MenuItem {
-  label: React.ReactNode;
-  hint?: string;
-  icon?: React.ReactNode;
-  run?: () => void;
-  href?: string;
-  danger?: boolean;
-}
-
-/**
- * Ein Knopf, der Aktionen erst zeigt, wenn man sie braucht.
- * Das Panel sitzt am Viewport verankert und nicht am Knopf festgeklebt: dadurch wird es
- * auf dem Handy nicht abgeschnitten, klemmt nicht in Containern mit overflow und rutscht
- * nach oben, wenn unter dem Knopf zu wenig Platz ist. Unter 640 px öffnet es als Blech
- * von unten – mit großen Feldern für den Daumen.
- */
-export function Menu({
-  items,
-  label,
-  icon,
-  title,
-  variant = 'ghost',
-  align = 'right',
-}: {
-  items: MenuItem[];
-  label?: React.ReactNode;
-  icon?: React.ReactNode;
-  title?: string;
-  variant?: 'primary' | 'ghost' | 'quiet';
-  align?: 'left' | 'right';
-}) {
-  const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
-  const [sheet, setSheet] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const popRef = useRef<HTMLDivElement>(null);
-
-  const place = React.useCallback(() => {
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const btn = btnRef.current;
-    setSheet(vw < 640);
-    if (!btn || vw < 640) return;
-    const r = btn.getBoundingClientRect();
-    const pop = popRef.current;
-    const width = Math.min(pop?.offsetWidth || 268, vw - 16);
-    const height = pop?.offsetHeight || Math.min(44 + items.length * 44, vh * 0.72);
-    const raw = align === 'left' ? r.left : r.right - width;
-    const left = Math.max(8, Math.min(raw, vw - width - 8));
-    const below = r.bottom + 8;
-    const top = below + height > vh - 8 ? Math.max(8, r.top - height - 8) : below;
-    setPos({ top, left, width });
-  }, [align, items.length]);
-
-  useIsoLayoutEffect(() => {
-    if (open) place();
-  }, [open, place]);
-
-  useEffect(() => {
-    if (!open) return;
-    const away = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node) && !popRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
-    const move = () => place();
-    window.addEventListener('mousedown', away);
-    window.addEventListener('keydown', esc);
-    window.addEventListener('resize', move);
-    window.addEventListener('scroll', move, true);
-    return () => {
-      window.removeEventListener('mousedown', away);
-      window.removeEventListener('keydown', esc);
-      window.removeEventListener('resize', move);
-      window.removeEventListener('scroll', move, true);
-    };
-  }, [open, place]);
-
-  const rows = (big: boolean) => (
-    <>
-      {items.map((item, i) =>
-        item.href ? (
-          <Link
-            key={i}
-            href={item.href}
-            onClick={() => setOpen(false)}
-            className={cx('flex items-start gap-2 rounded-lg px-2 text-[13px] text-slate-200 transition hover:bg-white/[0.07] hover:text-white', big ? 'py-2.5' : 'py-1.5')}
-          >
-            {item.icon ? <span aria-hidden className="mt-px">{item.icon}</span> : null}
-            <span className="min-w-0 flex-1">
-              <span className="block">{item.label}</span>
-              {item.hint ? <span className="block text-[13px] text-slate-400">{item.hint}</span> : null}
-            </span>
-          </Link>
-        ) : (
-          <button
-            key={i}
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              item.run?.();
-            }}
-            className={cx('flex w-full items-start gap-2 rounded-lg px-2 text-left text-[13px] transition hover:bg-white/[0.07]', big ? 'py-2.5' : 'py-1.5', item.danger ? 'text-red-200/90 hover:text-red-100' : 'text-slate-200 hover:text-white')}
-          >
-            {item.icon ? <span aria-hidden className="mt-px">{item.icon}</span> : null}
-            <span className="min-w-0 flex-1">
-              <span className="block">{item.label}</span>
-              {item.hint ? <span className="block text-[13px] text-slate-400">{item.hint}</span> : null}
-            </span>
-          </button>
-        ),
-      )}
-    </>
-  );
-
-  return (
-    <div className="relative" ref={wrapRef}>
-      <button
-        ref={btnRef}
-        type="button"
-        className={clsBtn(variant)}
-        title={title}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        onClick={() => {
-          setPos(null);
-          setOpen((v) => !v);
-        }}
-      >
-        {icon ? <span aria-hidden>{icon}</span> : null}
-        {label}
-        <span aria-hidden className={cx('mikro text-[9px] opacity-60 transition', open && 'rotate-180')}>
-          ▾
-        </span>
-      </button>
-
-      {/* ins document.body gesetzt – sonst klemmt das Panel in Containern mit backdrop-blur/overflow */}
-      {open && sheet && typeof document !== 'undefined'
-        ? createPortal(
-            <>
-              <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]" onClick={() => setOpen(false)} aria-hidden />
-              <div ref={popRef} role="menu" className="menu-pop menu-sheet">
-                <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-white/20" aria-hidden />
-                {title ? <p className="px-2 pb-1.5 text-[13px] uppercase tracking-[0.12em] text-slate-400">{title}</p> : null}
-                {rows(true)}
-                <button type="button" className="btn-quiet mt-1.5 w-full justify-center" onClick={() => setOpen(false)}>
-                  schließen
-                </button>
-              </div>
-            </>,
-            document.body,
-          )
-        : null}
-
-      {open && !sheet && typeof document !== 'undefined'
-        ? createPortal(
-            <div
-              ref={popRef}
-              role="menu"
-              className="menu-pop"
-              style={{ position: 'fixed', right: 'auto', marginTop: 0, top: pos?.top ?? 0, left: pos?.left ?? 0, width: pos?.width, visibility: pos ? 'visible' : 'hidden' }}
-            >
-              {rows(false)}
-            </div>,
-            document.body,
-          )
-        : null}
-    </div>
-  );
-}
-
-const clsBtn = (variant: 'primary' | 'ghost' | 'quiet') => (variant === 'primary' ? 'btn-primary' : variant === 'quiet' ? 'btn-quiet' : 'btn-ghost');
-
-export function Card({ className, children, ...rest }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={cx('card', className)} {...rest}>
-      {children}
-    </div>
-  );
-}
-
-export function SectionTitle({
-  title,
-  hint,
-  right,
-  icon,
-}: {
-  title: React.ReactNode;
-  hint?: React.ReactNode;
-  right?: React.ReactNode;
-  icon?: React.ReactNode;
-}) {
-  return (
-    <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-      <div>
-        <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-white">
-          {icon ? <span aria-hidden>{icon}</span> : null}
-          {title}
-        </h2>
-        {hint ? <p className="mt-0.5 text-[13px] text-slate-400">{hint}</p> : null}
-      </div>
-      {right ? <div className="flex flex-wrap items-center gap-1.5">{right}</div> : null}
-    </div>
-  );
-}
-
-export function Pill({
+export function IconKnopf({
   children,
-  className,
-  style,
-  title,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  style?: React.CSSProperties;
-  title?: string;
-}) {
-  return (
-    <span title={title} className={cx('chip', className)} style={style}>
-      {children}
-    </span>
-  );
-}
-
-export function Stat({ label, value, hint, tone }: { label: string; value: React.ReactNode; hint?: React.ReactNode; tone?: 'good' | 'warn' | 'bad' }) {
-  return (
-    <Card className={cx('px-3 py-2.5', tone === 'bad' && 'border-shu-500/40')}>
-      <div className="text-[13px] font-semibold uppercase tracking-wider text-slate-400">{label}</div>
-      <div className="mt-0.5 text-xl font-semibold leading-tight text-white">{value}</div>
-      {hint ? <div className={cx('mt-0.5 text-[13px]', tone === 'bad' ? 'text-shu-300' : tone === 'warn' ? 'text-amber-200/80' : tone === 'good' ? 'text-emerald-200/80' : 'text-slate-400')}>{hint}</div> : null}
-    </Card>
-  );
-}
-
-export function Button({
-  variant = 'ghost',
-  size = 'md',
-  className,
+  titel,
+  deaktiviert,
   ...rest
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'ghost' | 'quiet' | 'danger'; size?: 'sm' | 'md' }) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { children: React.ReactNode; titel: string; deaktiviert?: boolean }) {
   return (
     <button
-      className={cx(
-        variant === 'primary' && 'btn-primary',
-        variant === 'ghost' && 'btn-ghost',
-        variant === 'quiet' && 'btn-quiet',
-        variant === 'danger' && 'btn bg-red-500/15 text-red-200 ring-1 ring-inset ring-red-500/30 hover:bg-red-500/25',
-        size === 'sm' && '!px-2 !py-1 !text-[13px]',
-        className,
-      )}
+      type="button"
+      title={titel}
+      aria-label={titel}
+      disabled={deaktiviert}
       {...rest}
-    />
-  );
-}
-
-export function Field({ label, children, hint, className }: { label: string; children: React.ReactNode; hint?: React.ReactNode; className?: string }) {
-  return (
-    <label className={cx('block', className)}>
-      <span className="label">{label}</span>
+      className={cx('icon-knopf', rest.className)}
+    >
       {children}
-      {hint ? <span className="mt-1 block text-[13px] text-slate-400">{hint}</span> : null}
-    </label>
+    </button>
   );
 }
 
-export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  const { className, ...rest } = props;
-  return <input className={cx('input', className)} {...rest} />;
-}
-
-export function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  const { className, ...rest } = props;
-  return <textarea rows={3} className={cx('input resize-y leading-snug', className)} {...rest} />;
-}
-
-export function Select({
-  options,
-  className,
-  allowEmpty,
-  emptyLabel = '—',
-  ...rest
-}: React.SelectHTMLAttributes<HTMLSelectElement> & { options: (string | { value: string; label: string })[]; allowEmpty?: boolean; emptyLabel?: string }) {
-  return (
-    <select className={cx('input appearance-none bg-[length:0]', className)} {...rest}>
-      {allowEmpty ? <option value="">{emptyLabel}</option> : null}
-      {options.map((o) => {
-        const value = typeof o === 'string' ? o : o.value;
-        const label = typeof o === 'string' ? o : o.label;
-        return (
-          <option key={value} value={value} className="bg-ink-900 text-slate-100">
-            {label}
-          </option>
-        );
-      })}
-    </select>
-  );
-}
-
-export function Modal({
-  title,
-  subtitle,
-  onClose,
+export function LinkKnopf({
+  href,
   children,
-  footer,
-  width = 'max-w-3xl',
-}: {
-  title: React.ReactNode;
-  subtitle?: React.ReactNode;
-  onClose: () => void;
-  children: React.ReactNode;
-  footer?: React.ReactNode;
-  width?: string;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        const form = ref.current?.querySelector('form');
-        if (form) form.requestSubmit();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
-    };
-  }, [onClose]);
-
-  return (
-    <div className="no-print fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div ref={ref} className={cx('pop-in card my-auto w-full', width)}>
-        <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-3">
-          <div>
-            <h3 className="text-[15px] font-semibold text-white">{title}</h3>
-            {subtitle ? <p className="mt-0.5 text-[13px] text-slate-400">{subtitle}</p> : null}
-          </div>
-          <Button variant="quiet" size="sm" onClick={onClose} aria-label="Schließen">
-            ✕
-          </Button>
-        </div>
-        <div className="max-h-[70vh] overflow-y-auto px-4 py-3">{children}</div>
-        {footer ? <div className="flex flex-wrap items-center justify-end gap-2 border-t border-white/10 px-4 py-3">{footer}</div> : null}
-      </div>
-    </div>
-  );
-}
-
-export function Empty({ title, hint, action }: { title: string; hint?: string; action?: React.ReactNode }) {
-  return (
-    <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-8 text-center">
-      <p className="text-sm font-medium text-slate-300">{title}</p>
-      {hint ? <p className="mx-auto mt-1 max-w-md text-[13px] text-slate-400">{hint}</p> : null}
-      {action ? <div className="mt-3 flex justify-center">{action}</div> : null}
-    </div>
-  );
-}
-
-export function Money({ value, className }: { value?: number | null; className?: string }) {
-  if (value === null || value === undefined) return <span className={cx('text-slate-400', className)}>—</span>;
-  return (
-    <span className={cx('whitespace-nowrap tabular-nums', value === 0 ? 'text-emerald-300/80' : 'text-slate-100', className)}>
-      {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 }).format(value)}
-    </span>
-  );
-}
-
-export function LinkTag({ href, children, title }: { href: string; children: React.ReactNode; title?: string }) {
+  ton = 'ghost',
+  klein = false,
+  className,
+  ...rest
+}: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string; children: React.ReactNode; ton?: KnopfTon; klein?: boolean }) {
   return (
     <a
       href={href}
-      target="_blank"
-      rel="noreferrer noopener"
-      title={title}
-      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[13px] font-medium text-sky-200/90 ring-1 ring-inset ring-sky-400/25 transition hover:bg-sky-400/10 hover:text-white"
+      target={href.startsWith('http') ? '_blank' : undefined}
+      rel={href.startsWith('http') ? 'noreferrer' : undefined}
+      {...rest}
+      className={cx(
+        'knopf',
+        ton === 'ghost' && 'knopf-ghost',
+        ton === 'dezent' && 'knopf-dezent',
+        ton === 'gefahr' && 'knopf-gefahr',
+        klein && 'knopf-klein',
+        className,
+      )}
     >
       {children}
     </a>
   );
 }
 
-export function ProgressBar({ value, max, tone = 'shu' }: { value: number; max: number; tone?: 'shu' | 'matcha' }) {
-  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
-  const over = max > 0 && value > max;
+/* ── Kleines ────────────────────────────────────────────────────────────── */
+
+export function Chip({
+  children,
+  ton,
+  className,
+  titel,
+}: {
+  children: React.ReactNode;
+  ton?: 'warnt' | 'gut';
+  className?: string;
+  titel?: string;
+}) {
   return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-      <div className={cx('h-full rounded-full transition-all', over ? 'bg-shu-500' : tone === 'matcha' ? 'bg-matcha-500' : 'bg-shu-400')} style={{ width: `${pct}%` }} />
+    <span title={titel} className={cx('chip', ton === 'warnt' && 'chip-warnt', ton === 'gut' && 'chip-gut', className)}>
+      {children}
+    </span>
+  );
+}
+
+export function Punkt({ farbe, groesse = 10 }: { farbe: string; groesse?: number }) {
+  return (
+    <span
+      aria-hidden
+      className="inline-flex shrink-0 items-center justify-center rounded-full"
+      style={{ width: groesse, height: groesse, background: farbe }}
+    />
+  );
+}
+
+export function Fortschritt({ prozent, className }: { prozent: number; className?: string }) {
+  return (
+    <div className={cx('fortschritt', className)} role="progressbar" aria-valuenow={Math.round(prozent)} aria-valuemin={0} aria-valuemax={100}>
+      <span style={{ width: `${Math.max(0, Math.min(100, prozent))}%` }} />
     </div>
+  );
+}
+
+export function Segment({
+  wert,
+  optionen,
+  beimAendern,
+  className,
+}: {
+  wert: string;
+  optionen: { id: string; label: string; zeichen?: string }[];
+  beimAendern: (id: string) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cx('gelenk', className)} role="tablist">
+      {optionen.map((o) => {
+        const aktiv = o.id === wert;
+        return (
+          <button
+            key={o.id}
+            type="button"
+            role="tab"
+            aria-selected={aktiv}
+            onClick={() => beimAendern(o.id)}
+            className={cx('chip !text-[13.5px] !px-3 !py-2', aktiv ? 'chip-aktiv' : 'bg-white')}
+            style={{ borderColor: aktiv ? 'var(--akzent)' : 'var(--rand)', borderWidth: 1, borderStyle: 'solid' }}
+          >
+            {o.zeichen ? <span aria-hidden>{o.zeichen} </span> : null}
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function Umschalter({
+  an,
+  beimUmschalten,
+  label,
+  hinweis,
+}: {
+  an: boolean;
+  beimUmschalten: (an: boolean) => void;
+  label: string;
+  hinweis?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={an}
+      onClick={() => beimUmschalten(!an)}
+      className="flex w-full items-center gap-3 rounded-xl border p-3 text-left"
+      style={{ borderColor: 'var(--rand)', background: 'var(--karte)' }}
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-medium">{label}</span>
+        {hinweis ? <span className="mikro block">{hinweis}</span> : null}
+      </span>
+      <span
+        aria-hidden
+        className="flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors"
+        style={{ background: an ? 'var(--akzent)' : '#dbe1ea' }}
+      >
+        <span className="h-5 w-5 rounded-full bg-white shadow transition-transform" style={{ transform: an ? 'translateX(20px)' : undefined }} />
+      </span>
+    </button>
+  );
+}
+
+/* ── Felder ─────────────────────────────────────────────────────────────── */
+
+export function Feld({
+  label,
+  hinweis,
+  children,
+  className,
+}: {
+  label?: string;
+  hinweis?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const id = useId();
+  return (
+    <div className={cx('feld', className)}>
+      {label ? (
+        <label className="label" htmlFor={id}>
+          {label}
+        </label>
+      ) : null}
+      <div data-feld={label ? id : undefined}>{children}</div>
+      {hinweis ? <p className="mikro mt-1">{hinweis}</p> : null}
+    </div>
+  );
+}
+
+function feldKlasse(fehler?: string) {
+  return cx('eingabe', fehler && '!border-[var(--gefahr)]');
+}
+
+export function TextFeld({
+  label,
+  wert,
+  beimAendern,
+  platzhalter,
+  typ = 'text',
+  fehler,
+  mehrzeilig = false,
+  autoVeroellstaendigen,
+  eingabeModus,
+  hinweis,
+  className,
+}: {
+  label?: string;
+  wert: string;
+  beimAendern: (wert: string) => void;
+  platzhalter?: string;
+  typ?: string;
+  fehler?: string;
+  mehrzeilig?: boolean;
+  autoVeroellstaendigen?: string;
+  eingabeModus?: 'text' | 'decimal' | 'url' | 'email' | 'tel';
+  hinweis?: React.ReactNode;
+  className?: string;
+}) {
+  const id = useId();
+  return (
+    <div className={cx('feld', className)}>
+      {label ? (
+        <label className="label" htmlFor={id}>
+          {label}
+        </label>
+      ) : null}
+      {mehrzeilig ? (
+        <textarea id={id} className={feldKlasse(fehler)} value={wert} placeholder={platzhalter} onChange={(e) => beimAendern(e.target.value)} rows={3} />
+      ) : (
+        <input
+          id={id}
+          className={feldKlasse(fehler)}
+          type={typ}
+          value={wert}
+          placeholder={platzhalter}
+          inputMode={eingabeModus}
+          autoComplete={autoVeroellstaendigen}
+          onChange={(e) => beimAendern(e.target.value)}
+        />
+      )}
+      {fehler ? (
+        <p className="mt-1 text-[13px] font-medium text-[var(--gefahr)]">{fehler}</p>
+      ) : hinweis ? (
+        <p className="mikro mt-1">{hinweis}</p>
+      ) : null}
+    </div>
+  );
+}
+
+export function ZahlFeld({
+  label,
+  wert,
+  beimAendern,
+  vorzeichen,
+  hinweis,
+  platzhalter = '—',
+  className,
+}: {
+  label?: string;
+  wert: number | null;
+  beimAendern: (wert: number | null) => void;
+  vorzeichen?: string;
+  hinweis?: React.ReactNode;
+  platzhalter?: string;
+  className?: string;
+}) {
+  const [text, setText] = useState(wert === null ? '' : String(wert).replace('.', ','));
+  useEffect(() => {
+    setText((aktuell) => {
+      const gedeutet = parseZahl(aktuell);
+      return gedeutet === wert ? aktuell : wert === null ? '' : String(wert).replace('.', ',');
+    });
+  }, [wert]);
+  const id = useId();
+  return (
+    <div className={cx('feld', className)}>
+      {label ? (
+        <label className="label" htmlFor={id}>
+          {label}
+        </label>
+      ) : null}
+      <div className="relative">
+        <input
+          id={id}
+          className={cx('eingabe', vorzeichen && 'pr-10')}
+          inputMode="decimal"
+          value={text}
+          placeholder={platzhalter}
+          onChange={(e) => {
+            setText(e.target.value);
+            beimAendern(parseZahl(e.target.value));
+          }}
+        />
+        {vorzeichen ? <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--text3)]">{vorzeichen}</span> : null}
+      </div>
+      {hinweis ? <p className="mikro mt-1">{hinweis}</p> : null}
+    </div>
+  );
+}
+
+function parseZahl(text: string): number | null {
+  const sauber = text.replace(/[^\d,.-]/g, '').replace(',', '.');
+  if (!sauber || sauber === '-' || sauber === '.') return null;
+  const zahl = Number(sauber);
+  return Number.isFinite(zahl) ? zahl : null;
+}
+
+export function Auswahl({
+  label,
+  wert,
+  optionen,
+  beimAendern,
+  className,
+  hinweis,
+}: {
+  label?: string;
+  wert: string;
+  optionen: { value: string; label: string }[];
+  beimAendern: (wert: string) => void;
+  className?: string;
+  hinweis?: React.ReactNode;
+}) {
+  const id = useId();
+  return (
+    <div className={cx('feld', className)}>
+      {label ? (
+        <label className="label" htmlFor={id}>
+          {label}
+        </label>
+      ) : null}
+      <select id={id} className={cx('eingabe selekt', hinweis && 'mb-0')} value={wert} onChange={(e) => beimAendern(e.target.value)}>
+        {optionen.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      {hinweis ? <p className="mikro mt-1">{hinweis}</p> : null}
+    </div>
+  );
+}
+
+export function ZeitFeld({ label, wert, beimAendern, className }: { label: string; wert: string | null; beimAendern: (wert: string | null) => void; className?: string }) {
+  const id = useId();
+  return (
+    <div className={cx('feld', className)}>
+      <label className="label" htmlFor={id}>
+        {label}
+      </label>
+      <input
+        id={id}
+        type="time"
+        className="eingabe"
+        value={wert ?? ''}
+        onChange={(e) => beimAendern(e.target.value || null)}
+      />
+    </div>
+  );
+}
+
+export function DatumFeld({ label, wert, beimAendern, kleinste, groesste, className }: { label: string; wert: string | null; beimAendern: (wert: string | null) => void; kleinste?: string; groesste?: string; className?: string }) {
+  const id = useId();
+  return (
+    <div className={cx('feld', className)}>
+      <label className="label" htmlFor={id}>
+        {label}
+      </label>
+      <input
+        id={id}
+        type="date"
+        className="eingabe"
+        value={wert ?? ''}
+        min={kleinste}
+        max={groesste}
+        onChange={(e) => beimAendern(e.target.value || null)}
+      />
+    </div>
+  );
+}
+
+/* ── Bilder ─────────────────────────────────────────────────────────────── */
+
+export function Foto({
+  url,
+  nachweis,
+  alt,
+  zeichen = '🧭',
+  hoehe = 56,
+  rund = false,
+  className,
+}: {
+  url: string | null | undefined;
+  nachweis?: string | null;
+  alt: string;
+  zeichen?: string;
+  hoehe?: number;
+  rund?: boolean;
+  className?: string;
+}) {
+  const [kaputt, setKaputt] = useState(false);
+  const bild = url && !kaputt;
+  const gross = hoehe >= 110;
+  return (
+    <span
+      title={nachweis && !gross ? nachweis : undefined}
+      className={cx('relative block shrink-0 overflow-hidden', rund ? 'rounded-full' : 'rounded-xl', className)}
+      style={{
+        height: hoehe,
+        width: hoehe,
+        background: bild ? '#e9edf4' : 'linear-gradient(135deg, #dfe7f1, #eef3f8)',
+      }}
+    >
+      {bild ? (
+        <img src={url} alt={alt} loading="lazy" decoding="async" className="h-full w-full object-cover" onError={() => setKaputt(true)} />
+      ) : (
+        <span aria-hidden className="flex h-full w-full items-center justify-center" style={{ fontSize: Math.round(hoehe * 0.42) }}>
+          {zeichen}
+        </span>
+      )}
+      {nachweis && gross ? (
+        <span className="mikro absolute inset-x-0 bottom-0 truncate bg-black/50 px-1.5 py-0.5 text-center text-white">
+          {nachweis.length > 40 ? `${nachweis.slice(0, 38)}…` : nachweis}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/* ── Blech unten (Ablage) – Menü und Formular – nie abgeschnitten ───────── */
+
+export function Ablage({
+  offen,
+  titel,
+  schliessen,
+  children,
+  fuss,
+  fokus = false,
+}: {
+  offen: boolean;
+  titel: string;
+  schliessen: () => void;
+  children: React.ReactNode;
+  fuss?: React.ReactNode;
+  fokus?: boolean;
+}) {
+  const [koerper, setKoerper] = useState<HTMLElement | null>(null);
+  const randRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => setKoerper(document.body), []);
+
+  useEffect(() => {
+    if (!offen) return;
+    const taste = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') schliessen();
+    };
+    document.addEventListener('keydown', taste);
+    const vorher = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const zeit = window.setTimeout(() => {
+      const ziel = randRef.current?.querySelector<HTMLElement>(fokus ? 'input,select,textarea' : '[daten-erstes]');
+      (ziel ?? randRef.current)?.focus?.();
+    }, 60);
+    return () => {
+      document.removeEventListener('keydown', taste);
+      document.body.style.overflow = vorher;
+      window.clearTimeout(zeit);
+    };
+  }, [offen, schliessen, fokus]);
+
+  if (!offen || !koerper) return null;
+  return createPortal(
+    <div
+      className="boden-ablage"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) schliessen();
+      }}
+    >
+      <div className="ablage" role="dialog" aria-modal="true" aria-label={titel} tabIndex={-1} ref={randRef}>
+        <div className="ablage-kopf">
+          <h2 className="min-w-0 flex-1 truncate">{titel}</h2>
+          <IconKnopf titel="schließen" onClick={schliessen}>
+            ✕
+          </IconKnopf>
+        </div>
+        <div className="ablage-inhalt">{children}</div>
+        {fuss ? (
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t p-3" style={{ borderColor: 'var(--rand)' }}>
+            {fuss}
+          </div>
+        ) : null}
+      </div>
+    </div>,
+    koerper,
+  );
+}
+
+export interface MenuePunkt {
+  label: string;
+  zeichen?: string;
+  onClick?: () => void;
+  href?: string;
+  gefahr?: boolean;
+  deaktiviert?: boolean;
+}
+
+export function Menue({ punkte, titel = 'Aktionen', knopfTitel = 'mehr' }: { punkte: MenuePunkt[]; titel?: string; knopfTitel?: string }) {
+  const [offen, setOffen] = useState(false);
+  const zu = punkte.filter((p) => !p.deaktiviert).length;
+  if (zu === 0) return null;
+  return (
+    <>
+      <IconKnopf titel={knopfTitel} onClick={() => setOffen(true)}>
+        ⋯
+      </IconKnopf>
+      <Ablage offen={offen} titel={titel} schliessen={() => setOffen(false)}>
+        <ul className="list-none space-y-1.5 p-0">
+          {punkte.map((p) =>
+            p.href ? (
+              <li key={p.label}>
+                <a
+                  href={p.href}
+                  target={p.href.startsWith('http') ? '_blank' : undefined}
+                  rel={p.href.startsWith('http') ? 'noreferrer' : undefined}
+                  onClick={() => setOffen(false)}
+                  className="flex min-h-11 items-center gap-3 rounded-xl border px-3 text-[15px]"
+                  style={{ borderColor: 'var(--rand)', color: p.gefahr ? 'var(--gefahr)' : 'var(--text)' }}
+                >
+                  {p.zeichen ? <span aria-hidden>{p.zeichen}</span> : null}
+                  <span className="min-w-0 flex-1">{p.label}</span>
+                  {p.href.startsWith('http') ? <span aria-hidden className="text-[13px] text-[var(--text3)]">↗</span> : null}
+                </a>
+              </li>
+            ) : (
+              <li key={p.label}>
+                <button
+                  type="button"
+                  data-erstes=""
+                  disabled={p.deaktiviert}
+                  onClick={() => {
+                    setOffen(false);
+                    p.onClick?.();
+                  }}
+                  className="flex min-h-11 w-full items-center gap-3 rounded-xl border px-3 text-left text-[15px] disabled:opacity-40"
+                  style={{ borderColor: 'var(--rand)', color: p.gefahr ? 'var(--gefahr)' : 'var(--text)' }}
+                >
+                  {p.zeichen ? <span aria-hidden>{p.zeichen}</span> : null}
+                  <span className="min-w-0 flex-1">{p.label}</span>
+                </button>
+              </li>
+            ),
+          )}
+        </ul>
+      </Ablage>
+    </>
+  );
+}
+
+/* ── Zustände ───────────────────────────────────────────────────────────── */
+
+export function Leer({
+  zeichen = '🧭',
+  titel,
+  text,
+  knopf,
+}: {
+  zeichen?: string;
+  titel: string;
+  text?: React.ReactNode;
+  knopf?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-2 px-4 py-9 text-center">
+      <span aria-hidden className="text-[30px] leading-none">
+        {zeichen}
+      </span>
+      <h3 className="text-[16px] font-semibold">{titel}</h3>
+      {text ? <p className="max-w-[34ch] text-[14px] leading-relaxed text-[var(--text2)]">{text}</p> : null}
+      {knopf ? <div className="mt-2 flex flex-wrap justify-center gap-2">{knopf}</div> : null}
+    </div>
+  );
+}
+
+export function Hinweis({ children, ton = 'info', className }: { children: React.ReactNode; ton?: 'info' | 'warnt' | 'gut'; className?: string }) {
+  return (
+    <p
+      className={cx('rounded-xl px-3 py-2.5 text-[13.5px] leading-relaxed', className)}
+      style={{
+        background: ton === 'warnt' ? 'var(--warnt-fläche)' : ton === 'gut' ? 'var(--gut-fläche)' : 'var(--akzent-fläche)',
+        color: ton === 'warnt' ? 'var(--warnt)' : ton === 'gut' ? 'var(--gut)' : 'var(--akzent-text)',
+      }}
+    >
+      {children}
+    </p>
   );
 }

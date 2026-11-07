@@ -1,25 +1,32 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useStore } from '../../../lib/store';
-import { Card } from '../../../components/ui';
+import { useRouter, useParams } from 'next/navigation';
+import { useStore } from '../../../lib/daten';
+import { heuteIso } from '../../../lib/dates';
+import { heutigerTag } from '../../../lib/plan';
+import { SeitenKopf } from '../../../components/ui';
 
-/**
- * Eine Reise öffnen heißt: dorthin, wo man gerade steht.
- * ▶️ läuft die Reise → der Tag. 🗓️ sonst → der Tagesplan.
- */
-export default function TripIndexPage() {
+/** `/t/<reise>` landet beim heutigen Tag, sonst beim ersten der Reise. */
+export default function ReiseZeiger() {
   const params = useParams<{ tripId: string }>();
-  const tripId = String(params?.tripId ?? '');
   const store = useStore();
   const router = useRouter();
-  const started = store.trips.find((t) => t.id === tripId)?.started === true;
+  const reise = store.reisen.find((r) => r.id === params.tripId);
 
   useEffect(() => {
-    if (!store.ready) return;
-    router.replace?.(`/t/${tripId}/${started ? 'heute' : 'tage'}`);
-  }, [store.ready, started, tripId, router]);
+    if (!store.bereit) return;
+    if (!reise) {
+      router.replace('/reisen');
+      return;
+    }
+    const tag = heutigerTag(reise, heuteIso());
+    router.replace(tag ? `/t/${reise.id}/tag/${tag}` : `/t/${reise.id}/daten`);
+  }, [reise, router, store.bereit]);
 
-  return <Card className="p-8 text-center text-sm text-slate-400">lädt …</Card>;
+  return (
+    <main className="seite">
+      <SeitenKopf titel={reise?.name ?? 'Reise'} untertitel="Tag wird geöffnet …" />
+    </main>
+  );
 }
