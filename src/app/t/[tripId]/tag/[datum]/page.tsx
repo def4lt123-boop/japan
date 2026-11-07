@@ -8,7 +8,7 @@ import { gilt, tagLang, tagNackt } from '../../../../../lib/dates';
 import { chronologisch, eintragVersetzen, reiseTage, tagesPlan } from '../../../../../lib/plan';
 import { MODI, kartenLink } from '../../../../../lib/karten';
 import { routeZwischen, type RoutenInfo } from '../../../../../lib/routen';
-import { geld } from '../../../../../lib/format';
+import { geld, wieVorher } from '../../../../../lib/format';
 import { kategorie } from '../../../../../lib/kategorien';
 import type { Eintrag, EintragArt } from '../../../../../lib/types';
 import { TagesLeiste } from '../../../../../components/Kalender';
@@ -45,7 +45,7 @@ export default function Reisetag() {
   useEffect(() => {
     let abbruch = false;
     if (!paare.length) {
-      setRouten({});
+      setRouten((vorher) => wieVorher(vorher, {}));
       return;
     }
     void (async () => {
@@ -53,7 +53,7 @@ export default function Reisetag() {
       for (const paar of paare) {
         ergebnis[paar.schluessel] = await routeZwischen(paar.von, paar.nach, modus);
       }
-      if (!abbruch) setRouten(ergebnis);
+      if (!abbruch) setRouten((vorher) => wieVorher(vorher, ergebnis));
     })();
     return () => {
       abbruch = true;

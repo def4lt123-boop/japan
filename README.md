@@ -50,7 +50,7 @@ Stehen `NEXT_PUBLIC_SUPABASE_URL` und `NEXT_PUBLIC_SUPABASE_ANON_KEY`, liegt all
 npm install
 npm run dev            # http://localhost:3000
 npm run build
-npm run test:all       # Typen, Rechenblatt, Suche und Bild, Layout, alle Seiten
+npm run test:all       # Typen, Rechenblatt, Suche und Bild, Layout, Listen im Speicher, alle Seiten
 ```
 
 Auf Vercel reicht das Projekt verbinden; die vier Umgebungswerte sind optional. Region `fra1` in `vercel.json`.

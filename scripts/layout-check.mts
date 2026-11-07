@@ -167,4 +167,24 @@ assert.match(stores, /window\.addEventListener\('focus'/, 'wer zurückkommt, sie
 assert.match(text('src/components/Huelle.tsx'), /<StatusAnzeige variant="zeile" pruefen \/>/, 'auf dem Rechner steht der Status in der Spalte');
 assert.match(text('src/app/profil/page.tsx'), /<StatusAnzeige pruefen \/>/, 'auf dem Handy steht er im Profil');
 
+/* ── 7 · Listen und Zustände, die dieselben bleiben ───────────────────── */
+
+assert.match(stores, /const eintraegeVon = useCallback\(/, 'die Einträge einer Reise kommen aus einem gemerkten Index');
+assert.match(stores, /eintraegeVon = useCallback\(\(reiseId: string\) => nachReise\.get\(reiseId\) \?\? OHNE_EINTRAEGE/, 'die Liste kommt aus dem gemerkten Index, nicht aus einem Filter');
+assert.ok(!/eintraegeVon: \(reiseId\) =>/.test(stores), 'der Speicher darf bei jedem Aufruf keine neue Liste bauen');
+assert.match(stores, /\[bereit, eintraege, eintraegeVon,/, 'der Index hängt an den gemerkten Werten');
+assert.match(stores, /\?\? OHNE_EINTRAEGE/, 'ohne Treffer gilt dieselbe leere Liste');
+const eintragFormat = text('src/lib/format.ts');
+assert.match(eintragFormat, /export function wieVorher</, 'der gleiche Stand behält seinen Zeiger');
+for (const [blatt, setter] of [
+  ['src/app/t/[tripId]/tag/[datum]/page.tsx', 'setRouten'],
+  ['src/app/t/[tripId]/karte/page.tsx', 'setRoute'],
+] as [string, string][]) {
+  const inhalt = text(blatt);
+  assert.ok(!inhalt.includes(`${setter}({})`), `${blatt}: ein leerer Stand wird nicht blind gesetzt`);
+  assert.ok(!inhalt.includes(`${setter}(null)`), `${blatt}: dasselbe gilt für das Wegnehmen`);
+}
+const ablage = text('src/components/ui.tsx');
+assert.match(ablage, /\[offen, fokus\]\);/, 'Sperre und Fokus der Ablage hängen am Öffnen, nicht am Schließen');
+
 console.log(`🎉 Neues Fundament hält – ${dateien.length} Dateien (${dateien.reduce((s, d) => s + text(d).split('\n').length, 0)} Zeilen), ${seiten.length} Seiten, ${blätter.length} Reiseblätter, kein Rest von früher`);

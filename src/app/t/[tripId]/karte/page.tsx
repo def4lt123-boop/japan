@@ -10,6 +10,7 @@ import { chronologisch, reiseTage, tagEintraege } from '../../../../lib/plan';
 import { kategorie } from '../../../../lib/kategorien';
 import { kartenLink, punktVorhanden } from '../../../../lib/karten';
 import { routeZwischen } from '../../../../lib/routen';
+import { wieVorher } from '../../../../lib/format';
 import { Chip, Karten, KartenKopf, Punkt, Segment, cx } from '../../../../components/ui';
 import type { KartenPunkt } from '../../../../components/KartenAnsicht';
 
@@ -63,7 +64,7 @@ export default function ReiseKarte() {
   useEffect(() => {
     let abbruch = false;
     if (tag === 'alle' || punkte.length < 2) {
-      setRoute(null);
+      setRoute((vorher) => wieVorher(vorher, null));
       return;
     }
     void (async () => {
@@ -75,7 +76,7 @@ export default function ReiseKarte() {
           schnur.push([punkte[i]!.lat, punkte[i]!.lng], [punkte[i + 1]!.lat, punkte[i + 1]!.lng]);
         }
       }
-      if (!abbruch) setRoute(schnur);
+      if (!abbruch) setRoute((vorher) => wieVorher(vorher, schnur));
     })();
     return () => {
       abbruch = true;

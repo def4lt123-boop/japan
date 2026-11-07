@@ -17,6 +17,9 @@ const EINSTELLUNGS_SCHLUESSEL = 'reiseplan.einstellungen.v1';
 
 const LEER: Schnappschuss = { reisen: [], eintraege: [] };
 
+/** Die eine leere Liste: wer keine Treffer hat, bekommt dieselbe wie beim letzten Mal. */
+const OHNE_EINTRAEGE: Eintrag[] = [];
+
 const EINSTELLUNGS_LEER: Einstellungen = { name: null, waehrung: 'EUR', personen: 2, bilder: true, aktive_reise: null };
 
 function lies<T>(schluessel: string, fallback: T): T {
@@ -90,6 +93,20 @@ export function useReise(id: string | null | undefined): Reise | undefined {
 export function DatenProvider({ children }: { children: React.ReactNode }) {
   const [daten, setDaten] = useState<Schnappschuss>(LEER);
   const { reisen, eintraege } = daten;
+
+  /* Ein Index, gemerkt bis zum nächsten Schreiben. Ein `filter` bei jedem Aufruf gibt
+     jedes Mal eine frische Liste – und jede Seite, die etwas davon merkt oder in einem
+     Effekt danach fragt, fängt von vorn an und dreht sich, bis nichts mehr klickt. */
+  const nachReise = useMemo(() => {
+    const index = new Map<string, Eintrag[]>();
+    for (const e of eintraege) {
+      const liste = index.get(e.reise_id);
+      if (liste) liste.push(e);
+      else index.set(e.reise_id, [e]);
+    }
+    return index;
+  }, [eintraege]);
+  const eintraegeVon = useCallback((reiseId: string) => nachReise.get(reiseId) ?? OHNE_EINTRAEGE, [nachReise]);
   const [bereit, setBereit] = useState(false);
   const [meldung, setMeldung] = useState<string | null>(null);
   const [einstellungen, setEinstellungen] = useState<Einstellungen>(EINSTELLUNGS_LEER);
@@ -334,7 +351,7 @@ export function DatenProvider({ children }: { children: React.ReactNode }) {
       reisen,
       eintraege,
       reise: (id) => reisen.find((r) => r.id === id),
-      eintraegeVon: (reiseId) => eintraege.filter((e) => e.reise_id === reiseId),
+      eintraegeVon,
       reiseAnlegen,
       reiseAendern,
       reiseLoeschen,
@@ -349,7 +366,7 @@ export function DatenProvider({ children }: { children: React.ReactNode }) {
       allesLoeschen,
       importieren,
     }),
-    [bereit, eintraege, eintragAendern, eintragAnlegen, eintragLoeschen, eintraegeRueckwaerts, einstellungen, reisen, reiseAendern, reiseAnlegen, reiseLoeschen, sagen, stellen, aktivSetzen, allesLoeschen, importieren, meldung, speicher, speichernPruefen],
+    [bereit, eintraege, eintraegeVon, eintragAendern, eintragAnlegen, eintragLoeschen, eintraegeRueckwaerts, einstellungen, reisen, reiseAendern, reiseAnlegen, reiseLoeschen, sagen, stellen, aktivSetzen, allesLoeschen, importieren, meldung, speicher, speichernPruefen],
   );
 
   return <Ctx.Provider value={wert}>{children}</Ctx.Provider>;
