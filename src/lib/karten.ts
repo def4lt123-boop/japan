@@ -80,3 +80,13 @@ export function kmText(km: number | null | undefined): string {
   if (km === null || km === undefined) return '';
   return km < 10 ? `${String(km).replace('.', ',')} km` : `${Math.round(km)} km`;
 }
+
+/**
+ * Die Nadel über einem Punkt: die Zahl im Körper, das Zeichen der Kategorie
+ * als Siegel daneben. Ein Bett trägt keine Zahl, sondern sein Zeichen – es
+ * steht außer der Reihe.
+ */
+export function nadelHtml(p: { nr: number | null; farbe: string; zeichen: string }): string {
+  const kern = p.nr === null ? `<i class="nadel-zeichen">${p.zeichen}</i>` : `<i>${p.nr}</i><b>${p.zeichen}</b>`;
+  return `<span class="nadel-koerper" style="--nadel:${p.farbe}">${kern}</span>`;
+}

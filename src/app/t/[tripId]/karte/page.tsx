@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useStore } from '../../../../lib/daten';
-import { tagKurz } from '../../../../lib/dates';
-import { chronologisch, reiseTage, tagEintraege } from '../../../../lib/plan';
-import { kategorie } from '../../../../lib/kategorien';
+import { abstandTage, tagKurz } from '../../../../lib/dates';
+import { kartenEintraege, reiseTage } from '../../../../lib/plan';
+import { artMeta, kategorie } from '../../../../lib/kategorien';
 import { kartenLink, punktVorhanden } from '../../../../lib/karten';
+import { uhrzeitText } from '../../../../lib/format';
 import { routeZwischen } from '../../../../lib/routen';
 import { wieVorher } from '../../../../lib/format';
 import { Chip, Karten, KartenKopf, Punkt, Segment, cx } from '../../../../components/ui';
@@ -40,40 +41,52 @@ export default function ReiseKarte() {
 
   const punkte = useMemo<KartenPunkt[]>(() => {
     if (!reise) return [];
-    const quelltext = tag === 'alle' ? eintraege.filter((e) => e.art !== 'unterkunft' && e.date).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '') || chronologisch(a, b)) : tagEintraege(eintraege, tag);
-    const zahlbar = quelltext.filter(punktVorhanden);
-    return zahlbar.map((e, i) => {
+    const zahlbar = kartenEintraege(eintraege, tag === 'alle' ? null : tag).filter(punktVorhanden);
+    let stelle = 0;
+    return zahlbar.map((e) => {
       const k = kategorie(e.kategorie);
+      const istBett = e.art === 'unterkunft';
+      const naechte = istBett && e.date && e.bis_date ? abstandTage(e.date, e.bis_date) : 0;
+      const zeit = [e.zeit ? `Check-in ${uhrzeitText(e.zeit)}` : null, e.bis_zeit ? `Check-out ${uhrzeitText(e.bis_zeit)}` : null, naechte ? `${naechte} ${naechte === 1 ? 'Nacht' : 'Nächte'}` : null].filter(Boolean).join(' · ');
       return {
         id: e.id,
-        nr: i + 1,
+        nr: istBett ? null : (stelle += 1),
         lat: e.lat as number,
         lng: e.lng as number,
         titel: e.titel,
-        farbe: e.art === 'unterkunft' ? kategorie('unterschlupf').farbe : k.farbe,
-        ort: e.ort,
-        zeit: e.zeit,
+        farbe: istBett ? kategorie('unterschlupf').farbe : k.farbe,
+        zeichen: istBett ? artMeta('unterkunft').Icon : e.art === 'fahrt' ? artMeta('fahrt').Icon : k.icon,
+        marke: istBett ? artMeta('unterkunft').wort : e.art === 'fahrt' ? artMeta('fahrt').wort : k.label,
+        untertitel: istBett
+          ? [zeit, e.ort].filter(Boolean).join(' · ')
+          : [e.zeit ? uhrzeitText(e.zeit) : null, e.ort].filter(Boolean).join(' · '),
         foto: e.foto_url,
         nachweis: e.foto_nachweis,
-        href: e.date ? `/t/${reise.id}/tag/${e.date}` : `/t/${reise.id}/liste`,
+        href: istBett ? `/t/${reise.id}/hotels` : e.date ? `/t/${reise.id}/tag/${e.date}` : `/t/${reise.id}/liste`,
         karten: kartenLink(e),
       };
     });
   }, [eintraege, reise, tag]);
 
+  const zahlPunkte = punkte.filter((p) => p.nr !== null).length;
+  const zahlBetten = punkte.length - zahlPunkte;
+  // ein eintrag ohne punkt liegt nirgends – das soll nicht unerklärt bleiben
+  const ohnePunkt = useMemo(() => (reise ? kartenEintraege(eintraege, tag === 'alle' ? null : tag).filter((e) => !punktVorhanden(e)).length : 0), [eintraege, reise, tag]);
+
   useEffect(() => {
     let abbruch = false;
-    if (tag === 'alle' || punkte.length < 2) {
+    const folge = punkte.filter((p) => p.nr !== null);
+    if (tag === 'alle' || folge.length < 2) {
       setRoute((vorher) => wieVorher(vorher, null));
       return;
     }
     void (async () => {
       const schnur: [number, number][] = [];
       for (let i = 0; i + 1 < punkte.length; i += 1) {
-        const info = await routeZwischen(punkte[i]!, punkte[i + 1]!, 'zu fuss', true);
+        const info = await routeZwischen(folge[i]!, folge[i + 1]!, 'zu fuss', true);
         if (info?.strecke?.length) schnur.push(...info.strecke);
         else {
-          schnur.push([punkte[i]!.lat, punkte[i]!.lng], [punkte[i + 1]!.lat, punkte[i + 1]!.lng]);
+          schnur.push([folge[i]!.lat, folge[i]!.lng], [folge[i + 1]!.lat, folge[i + 1]!.lng]);
         }
       }
       if (!abbruch) setRoute((vorher) => wieVorher(vorher, schnur));
@@ -95,9 +108,9 @@ export default function ReiseKarte() {
         />
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
           <span className="mikro">
-            {punkte.length ? `${punkte.length} ${punkte.length === 1 ? 'Punkt' : 'Punkte'}` : 'keine Punkte'}
+            {[zahlPunkte ? `${zahlPunkte} ${zahlPunkte === 1 ? 'Punkt' : 'Punkte'}` : null, zahlBetten ? `${zahlBetten} ${zahlBetten === 1 ? 'Unterkunft' : 'Unterkünfte'}` : null].filter(Boolean).join(' · ') || 'noch nichts'}
           </span>
-          {tag !== 'alle' && punkte.length > 1 ? <Chip>🚶 Weg an diesem Tag</Chip> : null}
+          {tag !== 'alle' && zahlPunkte > 1 ? <Chip>🚶 Weg an diesem Tag</Chip> : null}
           <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="mikro ml-auto no-underline hover:underline">
             Kartenmaterial © OpenStreetMap
           </a>
@@ -112,8 +125,8 @@ export default function ReiseKarte() {
             </div>
           ) : (
             <div className="p-4 text-center">
-              <p className="text-[15px] font-semibold">Noch kein Punkt</p>
-              <p className="mikro mt-1">Einen Ort anlegen und in der Suche einen Vorschlag antippen – dann steht er hier.</p>
+              <p className="text-[15px] font-semibold">Noch kein Punkt auf der Karte</p>
+              <p className="mikro mt-1">Einen Ort anlegen und in der Suche einen Vorschlag antippen – dann steht er hier. Auch das Bett erscheint auf der Karte, sobald es einen Punkt hat.</p>
               <Link href={`/t/${reise.id}/liste`} className="knopf knopf-klein mt-2.5 no-underline">
                 Ort anlegen
               </Link>
@@ -122,17 +135,23 @@ export default function ReiseKarte() {
         </Karten>
 
         <Karten className="overflow-hidden">
-          <KartenKopf titel={tag === 'alle' ? 'Alle Punkte' : tagKurz(tag)} untertitel="in der Reihenfolge" />
+          <KartenKopf titel={tag === 'alle' ? 'Alle Punkte' : tagKurz(tag)} untertitel="erst die Halte, dann die Betten" />
           <ul className="liste list-none m-0 max-h-[46dvh] overflow-y-auto p-0">
             {punkte.map((p) => (
               <li key={p.id} className="border-b last:border-0" style={{ borderColor: 'var(--rand)' }}>
                 <Link href={p.href} className="flex min-w-0 items-center gap-2.5 px-3 py-2 no-underline hover:bg-[var(--akzent-fläche)]">
-                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[13px] font-bold text-white tabular-nums" style={{ background: p.farbe }}>
-                    {p.nr}
-                  </span>
+                  {p.nr !== null ? (
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[13px] font-bold text-white tabular-nums" style={{ background: p.farbe }}>
+                      {p.nr}
+                    </span>
+                  ) : (
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#efeafe] text-[13px]" style={{ border: `1px solid ${p.farbe}` }} aria-hidden>
+                      🛏️
+                    </span>
+                  )}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[14.5px] font-medium">{p.titel}</span>
-                    <span className="mikro block truncate">{[p.zeit, p.ort].filter(Boolean).join(' · ')}</span>
+                    <span className="mikro block truncate">{p.untertitel}</span>
                   </span>
                   <span aria-hidden className="mikro shrink-0">⌄</span>
                 </Link>
@@ -140,14 +159,22 @@ export default function ReiseKarte() {
             ))}
             {!punkte.length ? <li className="p-3 mikro">Nichts zu zeigen – Punkte entstehen mit Datum und Ort.</li> : null}
           </ul>
+          {ohnePunkt ? (
+            <p className="mikro m-0 border-t px-3 py-2" style={{ borderColor: 'var(--rand)' }}>
+              {ohnePunkt} {ohnePunkt === 1 ? 'Eintrag' : 'Einträge'} ohne Punkt {ohnePunkt === 1 ? 'liegt' : 'liegen'} nicht auf der Karte – in der Zeile den Ort antippen und einen Vorschlag wählen.
+            </p>
+          ) : null}
           {punkte.length ? (
             <div className="flex flex-wrap items-center gap-2 border-t p-2.5" style={{ borderColor: 'var(--rand)' }}>
               <span className="mikro">Legende</span>
-              {Array.from(new Map(punkte.map((p) => [p.farbe, p])).values()).slice(0, 6).map((p) => (
-                <span key={p.id} className="mikro flex items-center gap-1">
-                  <Punkt farbe={p.farbe} groesse={8} /> {p.titel.length > 14 ? `${p.titel.slice(0, 13)}…` : p.titel}
-                </span>
-              ))}
+              {Array.from(new Map(punkte.map((p) => [p.farbe, p.marke])).values()).map((marke) => {
+                const p = punkte.find((q) => q.marke === marke)!;
+                return (
+                  <span key={marke} className="mikro flex items-center gap-1">
+                    <Punkt farbe={p.farbe} groesse={8} /> {p.zeichen} {marke}
+                  </span>
+                );
+              })}
             </div>
           ) : null}
         </Karten>

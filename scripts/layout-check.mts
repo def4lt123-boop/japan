@@ -240,4 +240,44 @@ assert.match(text('src/lib/karten.ts'), /openstreetmap\.org\/export\/embed\.html
 assert.ok(!/output=embed/.test(text('src/lib/karten.ts')), 'kein Google-Fenster, das einen Schlüssel will');
 
 
+/**
+ * Die Nadel und das Bett. Die karte zeigt, was der tag hergibt – und dazu die
+ * betten: ein urlaubsplan ohne schlafplatz ist halblebt. Die nadel selbst ist
+ * rechnung (in `lib/karten.ts`), ihr aussehn sitzt in der components-ebene.
+ */
+const scss = text('src/app/globals.css');
+/** nur der abschnitt, der die nadel angeht – kein blick ins ganze blatt */
+function nadelAbschnitt(css: string) {
+  const i = css.indexOf('Die Nadel über einem Punkt');
+  assert.ok(i >= 0, 'der nadel-abschnitt ist im stylesblatt gefunden worden');
+  return css.slice(i, css.indexOf('@keyframes', i));
+}
+const karte = text('src/app/t/[tripId]/karte/page.tsx');
+assert.match(karte, /kartenEintraege\(eintraege, tag === 'alle' \? null : tag\)/, 'Karte und Tage lesen denselben ausschnitt – keiner rätselt, was wo steht');
+assert.ok(!/e\.art !== 'unterkunft'/.test(karte), 'die karte wirft die betten nicht mehr raus');
+assert.match(karte, /nr: istBett \? null : \(stelle \+= 1\)/, 'ein bett zählt nicht mit, die halte laufen weiter');
+assert.match(karte, /const folge = punkte\.filter\(\(p\) => p\.nr !== null\)/, 'die schnur verbindet nur die halte – ein bett hängt nicht am weg');
+assert.match(karte, /artMeta\('unterkunft'\)\.Icon/, 'das bett zeigt sein zeichen, nicht eine zahl');
+assert.match(karte, /marke: istBett \? artMeta\('unterkunft'\)\.wort/, 'die legende nennt die art, nicht den ersten titel');
+assert.match(karte, /\{ohnePunkt \? \(([\s\S]{0,320})nicht auf der Karte/, 'was keinen punkt hat, erklärt sich, statt zu fehlen');
+assert.match(karte, /const ohnePunkt = useMemo\([\s\S]{0,140}punktVorhanden/, 'gezählt wird im rechenblatt – dasselbe, was auch die karte sieht');
+
+const kartenBlatt = text('src/components/KartenAnsicht.tsx');
+assert.match(kartenBlatt, /html: nadelHtml\(p\)/, 'die nadel kommt aus dem rechenblatt, nicht aus der ansicht');
+assert.match(kartenBlatt, /iconSize: \[44, 44\][\s\S]{0,80}iconAnchor: \[15, 34\]/, 'fingerbreite fläche, die spitze auf dem punkt');
+assert.match(kartenBlatt, /popupAnchor: \[0, -42\]/, 'das blatt öffnet über der kuppe, nicht hinter der nadel');
+
+const nadel = nadelAbschnitt(text('src/app/globals.css'));
+assert.match(nadel, /border-radius: 50% 50% 50% 6px/, 'ein körper mit zugespitzter ecke, kein kreis');
+assert.match(nadel, /transform: rotate\(-45deg\)/, 'und er steht auf der spitze');
+assert.match(nadel, /border: 2px solid #fff/, 'ein weißer ring hebt ihn von jeder kachel ab');
+assert.match(nadel, /box-shadow:/, 'ein schatten setzt ihn darauf');
+assert.ok(nadel.includes('rotate(45deg)'), 'zahl und zeichen stehen gegen die neigung des körpers');
+assert.ok(/\.nadel-koerper b \{[\s\S]{0,320}border-radius: 999px/.test(nadel), 'das zeichen sitzt in einem siegel, nicht auf dem kopf');
+assert.ok(/@media \(hover: hover\)[\s\S]{0,200}\.nadel-koerper:hover[\s\S]{0,120}scale\(1\.07\)/.test(scss), 'ein aufziehen nur für die maus');
+assert.match(scss, /@media \(prefers-reduced-motion: no-preference\)[\s\S]{0,120}\.nadel-koerper[\s\S]{0,80}transition/, 'die bewegung bleibt eine Bitte');
+assert.match(text('src/lib/karten.ts'), /export function nadelHtml/, 'die nadel ist reine rechnung und damit ohne karte prüfbar');
+assert.ok(!/p\.titel/.test(text('src/lib/karten.ts').split('nadelHtml')[1] ?? ''), 'fremder text wird nicht in die nadel gehoben');
+
+
 console.log(`🎉 Neues Fundament hält – ${dateien.length} Dateien (${dateien.reduce((s, d) => s + text(d).split('\n').length, 0)} Zeilen), ${seiten.length} Seiten, ${blätter.length} Reiseblätter, kein Rest von früher`);

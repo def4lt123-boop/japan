@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { abstandTage, addTage, gilt, monatsRaster, tagKurz, tagLang, wochenTage, zeitraum, zahlReisetage, heuteIso, WOCHEN_ANFANG } from '../src/lib/dates';
-import { chronologisch, eintragVersetzen, preisText, reiseTage, giltAm, naechte, offeneNachte, planFortschritt, sortierungTauschen, stadtDesTages, tagesPlan, tagEintraege, tagWechsel, uebernachtungAm, unterkuenfte, aufschluesselung, laufend, vergangen, inTagen, heutigerTag } from '../src/lib/plan';
+import { chronologisch, eintragVersetzen, kartenEintraege, preisText, reiseTage, giltAm, naechte, offeneNachte, planFortschritt, sortierungTauschen, stadtDesTages, tagesPlan, tagEintraege, tagWechsel, uebernachtungAm, unterkuenfte, aufschluesselung, laufend, vergangen, inTagen, heutigerTag } from '../src/lib/plan';
 import { ANDERE_KATEGORIEN, KATEGORIEN, kategorie, kategorieVorschlag, artMeta } from '../src/lib/kategorien';
 import { geld, plural, sauber, uid, zaehlen, minutenText } from '../src/lib/format';
-import { MODI, entfernungKm, kartenLink, kartenVorschau, schaetzungKm, schaetzungMinuten } from '../src/lib/karten';
+import { MODI, entfernungKm, kartenLink, kartenVorschau, nadelHtml, schaetzungKm, schaetzungMinuten } from '../src/lib/karten';
 import type { Eintrag, Reise } from '../src/lib/types';
 
 /** Rechenblatt der App: Datum, Kalender, Betten, Sortierung, Budget. */
@@ -86,6 +86,15 @@ assert.equal(uebernachtungAm(alle, '2027-10-26')?.titel, 'Hotel Prado');
 assert.equal(uebernachtungAm(alle, '2027-10-27'), null, 'in der Nacht nach dem Check-out gehört das Bett nicht mehr dazu');
 assert.equal(giltAm(bett, '2027-10-24'), true);
 assert.equal(giltAm(bett, '2027-10-28'), false);
+assert.deepEqual(
+  kartenEintraege(alle, null).map((e) => e.titel),
+  ['Alcázar', 'Flamenco', 'Kathedrale', 'Zug nach Granada', 'Hotel Prado'],
+  'auf der ganzen Reise stehen erst die Halte in ihrer Reihenfolge, dann das Bett',
+);
+assert.deepEqual(kartenEintraege(alle, '2027-10-24').map((e) => e.titel), ['Alcázar', 'Flamenco', 'Kathedrale', 'Hotel Prado'], 'am Anreisetag steht das Bett bei den Punkten des Tages');
+assert.deepEqual(kartenEintraege(alle, '2027-10-25').map((e) => e.titel), ['Hotel Prado'], 'ein Tag ohne Programm zeigt trotzdem, wo geschlafen wird');
+assert.deepEqual(kartenEintraege(alle, '2027-10-27').map((e) => e.titel), ['Zug nach Granada'], 'am Morgen der Abreise ist das Bett fort');
+assert.ok(!kartenEintraege(alle, '2027-10-28').some((e) => e.art === 'unterkunft'), 'in einer Nacht ohne Bett steht keins auf der Karte');
 assert.deepEqual(offeneNachte(reise, alle), ['2027-10-27'], 'eine Nacht ohne Bett');
 assert.deepEqual(naechte(reise, alle).map((n) => Boolean(n.bett)), [true, true, true, false]);
 assert.equal(stadtDesTages(alle, reise, '2027-10-28'), 'Granada', 'ohne Bett folgt die Stadt den Stationen');
@@ -150,6 +159,12 @@ assert.match(kartenLink({ titel: 'Alcázar', ort: 'Sevilla' }), /query=Alc%C3%A1
 assert.match(kartenVorschau(erste), /openstreetmap\.org\/export\/embed\.html/, 'die Vorschau bettet den offenen Dienst ein');
 assert.match(kartenVorschau(erste), /marker=37\.3833,-5\.99$/, 'und stellt den Punkt in die Mitte');
 assert.ok(!/key=|output=embed|google/.test(kartenVorschau(erste)), 'kein Schlüssel, kein Google-Fenster');
+assert.equal(
+  nadelHtml({ nr: 2, farbe: '#e08a2e', zeichen: '🍜' }),
+  '<span class="nadel-koerper" style="--nadel:#e08a2e"><i>2</i><b>🍜</b></span>',
+  'die Zahl im Körper, das Zeichen als Siegel daneben',
+);
+assert.equal(nadelHtml({ nr: null, farbe: '#6d5bd0', zeichen: '🛏️' }), '<span class="nadel-koerper" style="--nadel:#6d5bd0"><i class="nadel-zeichen">🛏️</i></span>', 'ein Bett trägt keine Zahl');
 
 /* ── Kategorien ───────────────────────────────────────────────────────── */
 assert.equal(kategorieVorschlag('Ramen Ichiran'), 'restaurant');
@@ -166,4 +181,6 @@ assert.equal(new Set(alleFarben).size, alleFarben.length, 'jede Kategorie hat ih
 assert.ok(alleLabels.includes('Unterkunft'));
 assert.equal(unterkuenfte(alle).length, 1);
 
-console.log(`🎉 Rechenblatt passt – ${reiseTage(reise).length} Reisetage, 4 Betten-Regeln, ${ANDERE_KATEGORIEN.length} Kategorien`);
+console.log(
+  `🎉 Rechenblatt passt – ${reiseTage(reise).length} Reisetage, 4 Betten-Regeln, ${kartenEintraege(alle, null).length} von ${alle.length} Einträgen auf der Karte, ${ANDERE_KATEGORIEN.length} Kategorien`,
+);

@@ -5,22 +5,28 @@ import L from 'leaflet';
 import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { kacheln } from '../lib/kacheln';
+import { nadelHtml } from '../lib/karten';
 
 /**
- * Die Karte der Reise: nummerierte Nadeln in Kategoriefarbe, antippen öffnet
- * das Blatt mit Bild, Zeit und dem Weg nach Google Maps. Die Kacheln kommen von
- * einem offenen Dienst – ausfällt einer, rückt der nächste nach.
+ * Die Karte der Reise: Nadeln in Kategoriefarbe mit der Zahl des Halts darin,
+ * die Betten ohne Zahl darunter. Antippen öffnet das Blatt mit Bild, Zeit und
+ * dem Weg nach Google Maps. Die Kacheln kommen von einem offenen Dienst –
+ * fällt einer aus, rückt der nächste nach.
  */
 
 export interface KartenPunkt {
   id: string;
-  nr: number;
+  /** Stelle auf der Route – ein Bett steht außer der Reihe und hat keine */
+  nr: number | null;
   lat: number;
   lng: number;
   titel: string;
   farbe: string;
-  ort?: string | null;
-  zeit?: string | null;
+  /** das Zeichen der Kategorie, beim Bett das Bett selbst */
+  zeichen: string;
+  /** kurzer Namen der Art – die Legende darunter */
+  marke: string;
+  untertitel?: string | null;
   foto?: string | null;
   nachweis?: string | null;
   href: string;
@@ -30,10 +36,12 @@ export interface KartenPunkt {
 function nadel(p: KartenPunkt) {
   return L.divIcon({
     className: 'kartennadel',
-    html: `<span style="background:${p.farbe}">${p.nr}</span>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    popupAnchor: [0, -14],
+    html: nadelHtml(p),
+    // die fläche ist eine fingerbreite, der körper darin 30px groß und oben
+    // links verankert: die spitze trifft den punkt, das blatt öffnet über ihr
+    iconSize: [44, 44],
+    iconAnchor: [15, 34],
+    popupAnchor: [0, -42],
   });
 }
 
@@ -100,8 +108,12 @@ export function KartenAnsicht({
             <Popup>
               <div className="min-w-[10rem] max-w-[15rem]">
                 {p.foto ? <img src={p.foto} alt="" className="mb-1.5 h-20 w-full rounded-lg object-cover" loading="lazy" /> : null}
-                <p className="text-[14px] font-semibold leading-snug">{p.titel}</p>
-                <p className="mikro">{[p.zeit, p.ort].filter(Boolean).join(' · ')}</p>
+                <p className="flex items-start gap-1.5 text-[14px] font-semibold leading-snug">
+                  <span aria-hidden>{p.zeichen}</span>
+                  <span className="min-w-0">{p.titel}</span>
+                </p>
+                <p className="mikro">{p.nr === null ? `${p.marke} · ohne Nummer` : `Halt ${p.nr} der Route`}</p>
+                {p.untertitel ? <p className="mikro">{p.untertitel}</p> : null}
                 <p className="mt-1.5 flex flex-wrap gap-2 text-[13.5px]">
                   <a href={p.href}>in der Reise</a>
                   {p.karten ? (
