@@ -35,10 +35,11 @@ function schlitz(): Promise<() => void> {
   });
 }
 
-async function holen(frage: string): Promise<Ortsbild | null> {
+async function holen(frage: string, frisch = false): Promise<Ortsbild | null> {
   const zumachen = await schlitz();
   try {
-    const antwort = await fetch(`/api/bild?q=${encodeURIComponent(frage)}`);
+    // ein „nochmal" darf nicht im netzvorrat der seite hängen bleiben
+    const antwort = await fetch(`/api/bild?q=${encodeURIComponent(frage)}`, frisch ? { cache: 'no-store' } : undefined);
     if (!antwort.ok) return null;
     const daten = (await antwort.json()) as { url?: string | null; nachweis?: string | null };
     if (!daten.url) return null;
@@ -86,13 +87,37 @@ export function bildFragen(
   return fragen.slice(0, 3);
 }
 
-/** Beim zweiten Mal dieselbe Antwort – aus dem Vorrat, ohne neue Suche. */
-export function ortsBild(frage: string): Promise<Ortsbild | null> {
+/**
+ * Beim zweiten Mal dieselbe Antwort – aus dem Vorrat, ohne neue Suche. Ein fund ist
+ * gemerkt, eine leere hand nicht: die nächste frage darf es noch einmal versuchen,
+ * sonst hinge ein einzelner ausfall für den ganzen seitenbesuch fest.
+ */
+export function ortsBild(frage: string, frisch = false): Promise<Ortsbild | null> {
   const sauber = frage.replace(/\s+/g, ' ').trim();
   if (sauber.length < 3) return Promise.resolve(null);
-  const vorhanden = vorrat.get(sauber);
+  const vorhanden = frisch ? undefined : vorrat.get(sauber);
   if (vorhanden) return vorhanden;
-  const lauf = holen(sauber);
+  const lauf = holen(sauber, frisch).then((bild) => {
+    if (!bild && vorrat.get(sauber) === lauf) vorrat.delete(sauber);
+    return bild;
+  });
   vorrat.set(sauber, lauf);
   return lauf;
+}
+
+/**
+ * Die staffel durchfragen, bis eine ein bild bringt – dieselbe folge wie an der reihe,
+ * damit „big ben" auch im formular reicht und nicht die halbe adresse mitgeht.
+ */
+export async function bildFuer(
+  e: { titel?: string | null; ort?: string | null; adresse?: string | null },
+  reise: { stationen?: string | null; land?: string | null },
+  opts: { frisch?: boolean; abgebrochen?: () => boolean } = {}
+): Promise<Ortsbild | null> {
+  for (const frage of bildFragen(e, reise)) {
+    const bild = await ortsBild(frage, opts.frisch ?? false);
+    if (opts.abgebrochen?.()) return null;
+    if (bild) return bild;
+  }
+  return null;
 }

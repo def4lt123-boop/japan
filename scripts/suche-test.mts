@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { ausCommons, ausGoogle, ausOpenStreetMap, ausPexels, ausUnsplash, ausPhoton, frageLohnt, punktAusText, stelleOrte, stadtAusAdresse, vergleichText } from '../src/lib/orte';
+import { ausCommons, ausGoogle, ausOpenStreetMap, ausPexels, ausUnsplash, ausPhoton, bestesBild, bildGrund, frageLohnt, punktAusText, stelleOrte, stadtAusAdresse, vergleichText } from '../src/lib/orte';
 import { kategorieVorschlag } from '../src/lib/kategorien';
 import { bestenPunkt, punktFuer, suchkandidaten } from '../src/lib/punktfindung';
 import type { Ortsvorschlag } from '../src/lib/types';
-import { frageLohnt as frageLohntAnbieter, orteSuchen, SIEHBT_BILDDIENST, SIEHBT_GOOGLE } from '../src/lib/anbieter';
+import { bildFinden, frageLohnt as frageLohntAnbieter, orteSuchen, SIEHBT_BILDDIENST, SIEHBT_GOOGLE } from '../src/lib/anbieter';
 import { kacheln } from '../src/lib/kacheln';
 import { bildFragen } from '../src/lib/ortsbild';
 import { kartenVorschau } from '../src/lib/karten';
@@ -277,3 +277,66 @@ const nichts = await orteSuchen('qwxvrtzz', null);
 assert.deepEqual(nichts, [], 'was niemand kennt, bleibt leer – ein fehler ist das nicht');
 
 console.log('🎉 Ortssuche wie im Kartendienst – kurze frage, beide quellen, der richtige ort vorn');
+
+/* ── das bild zum ort: dieselbe staffel, mehrere quellen, ein kern ─────── */
+
+assert.equal(bildGrund('Big Ben, Westminster, London, England'), 'Big Ben', 'was vor dem ersten komma steht, ist das objekt');
+assert.equal(bildGrund('Alcázar (Sevilla), 41004'), 'Alcázar', 'eine klammer gehört nicht zur frage');
+assert.equal(bildGrund('Rom'), '', 'zu kurzes wird nicht gefragt – „rom" malt sonst einen strand');
+assert.equal(bestesBild([null, { url: 'https://x/frei.jpg', nachweis: null, quelle: 'Wikimedia Commons' }])?.quelle, 'Wikimedia Commons', 'was nichts liefert, zählt nicht');
+assert.equal(
+  bestesBild([null, { url: 'https://x/curiert.jpg', nachweis: 'Foto: Cleo / Unsplash', quelle: 'Unsplash' }, { url: 'https://x/frei.jpg', nachweis: null, quelle: 'Wikimedia Commons' }])?.quelle,
+  'Unsplash',
+  'die kuratierte quelle steht über dem zufund',
+);
+assert.equal(bestesBild([]), null, 'ohne quelle kein bild');
+assert.equal(bestesBild([{ url: '', nachweis: null, quelle: 'Wo auch immer' }]), null, 'ein bild ohne adresse ist keins');
+
+const runden: string[] = [];
+const commonsFund = JSON.stringify({ query: { pages: { '1': { imageinfo: [{ thumburl: 'https://upload.example/turm.jpg', url: 'https://upload.example/turm.jpg', mime: 'image/jpeg', width: 1600, height: 900 }] } } } });
+const leerFund = JSON.stringify({ query: { pages: {} } });
+
+globalThis.fetch = ((url: string | URL) => {
+  const text = String(url);
+  runden.push(text);
+  if (text.includes('commons.wikimedia.org')) {
+    // commons findet einen langen adresssatz nicht – und soll ihn auch nicht finden müssen
+    const suche = new URL(text).searchParams.get('gsrsearch') ?? '';
+    return Promise.resolve(new Response(suche.includes(',') ? leerFund : commonsFund));
+  }
+  return Promise.resolve(new Response('keins', { status: 404 }));
+}) as typeof fetch;
+
+const bildFund = await bildFinden('Big Ben, Westminster, London, England');
+assert.equal(bildFund?.url, 'https://upload.example/turm.jpg', 'eine zu genaue frage wird auf ihren kern gekürzt');
+assert.equal(runden.length, 2, 'zwei runden: die ganze frage, dann der kern');
+assert.ok(runden[1]!.includes('filetype%3Abitmap+Big+Ben') || runden[1]!.includes('filetype:bitmap Big Ben'), 'die zweite frage nennt nur das objekt');
+
+const vorUnsplash = runden.length;
+process.env.UNSPLASH_ACCESS_KEY = 'probe';
+const kuratiert = JSON.stringify({ results: [{ urls: { regular: 'https://unsplash.example/curiert.jpg' }, user: { name: 'Cleo' } }] });
+globalThis.fetch = ((url: string | URL) => {
+  const text = String(url);
+  runden.push(text);
+  if (text.includes('api.unsplash.com')) return Promise.resolve(new Response(kuratiert));
+  return Promise.resolve(new Response(commonsFund));
+}) as typeof fetch;
+
+const beide = await bildFinden('Big Ben');
+assert.equal(runden.length - vorUnsplash, 2, 'bilddienst und commons laufen in derselben runde, nicht nacheinander');
+assert.equal(beide?.quelle, 'Unsplash', 'was kuratiert ist, gewinnt gegen den zufund');
+delete process.env.UNSPLASH_ACCESS_KEY;
+
+globalThis.fetch = ((url: string | URL) => {
+  const text = String(url);
+  runden.push(text);
+  if (text.includes('commons.wikimedia.org')) return Promise.resolve(new Response(commonsFund));
+  return Promise.resolve(new Response('dienst ausgefallen', { status: 500 }));
+}) as typeof fetch;
+process.env.UNSPLASH_ACCESS_KEY = 'probe';
+const bildEineHand = await bildFinden('Elizabeth Tower');
+assert.equal(bildEineHand?.quelle, 'Wikimedia Commons', 'eine quelle, die schweigt, ist kein fehlendes bild');
+delete process.env.UNSPLASH_ACCESS_KEY;
+assert.equal(await bildFinden(' Bi '), null, 'zu kurzes wird gar nicht erst gefragt');
+
+console.log('🎉 Bilder folgen derselben staffel – kurze frage, beide quellen, kern als rückhalt');

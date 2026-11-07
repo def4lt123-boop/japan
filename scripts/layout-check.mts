@@ -227,7 +227,7 @@ assert.match(css, /\.zeile-bild::after\s*\{[^}]*linear-gradient/, 'vor dem Text 
 assert.match(css, /\.zeile > :not\(\.zeile-bild\)\s*\{[^}]*z-index:\s*1/, 'Text und Knöpfe stehen über dem Bild');
 assert.match(css, /@media print[\s\S]*\.zeile-bild\s*\{\s*display:\s*none/, 'auf Papier bleibt die Reihe weiß');
 assert.match(text('src/app/api/bild/route.ts'), /max-age=86400/, 'ein Ort sieht den Tag über gleich aus');
-assert.match(text('src/components/EintragFormular.tsx'), /api\/bild\?q=\$\{encodeURIComponent\(frage\)\}`, \{ cache: 'no-store' \}/, 'wer selbst nach einem Bild sucht, fragt ohne Vorrat');
+assert.match(text('src/lib/ortsbild.ts'), /frisch \? \{ cache: 'no-store' \} : undefined/, 'wer selbst noch einmal sucht, hängt nicht im alten vorrat');
 
 
 /* ── 10 · die Karte ohne Schlüssel ────────────────────────────────────── */
@@ -363,6 +363,33 @@ assert.match(suchBlatt, /entfernungKm\(/, 'und was nahe an der reise liegt, sagt
 assert.match(text('src/lib/types.ts'), /'google' \| 'openstreetmap' \| 'photon'/, 'die quelle photon ist im typ bekannt');
 assert.match(text('src/components/ui.tsx'), /onKeyDown=\{onTaste\}/, 'das feld kennt die taste');
 assert.match(suchBlatt, /e\.key !== 'Enter'/, 'eintreten nimmt den ersten vorschlag');
+
+
+/* ── 14. das bild folgt denselben regeln wie die suche ───────────────────── */
+
+const bildLib = text('src/lib/anbieter.ts');
+const bildRoute = text('src/app/api/bild/route.ts');
+const bildVorrat = text('src/lib/ortsbild.ts');
+const bildFormular = text('src/components/EintragFormular.tsx');
+const bildReihe = text('src/components/ReihenBild.tsx');
+
+assert.equal((bildLib.match(/Promise\.allSettled/g) ?? []).length, 2, 'suche und bild laufen beide gleichzeitig, keines hintereinander');
+assert.match(bildLib, /bestesBild\(/, 'nicht die reihenfolge der antwort zählt, sondern die der quellen');
+assert.match(bildLib, /bildGrund\(suchwort\)/, 'findet die ganze frage nichts, bleibt ihr kern');
+assert.match(bildLib, /kern !== suchwort \? beiDenBildquellen\(kern\)/, 'und der kern wird wirklich noch einmal gefragt');
+assert.match(bildVorrat, /export async function bildFuer\(/, 'ein tor für die staffel – reihe und formular gehen durch dasselbe');
+assert.match(bildVorrat, /export function ortsBild\(frage: string, frisch = false\)/, 'wer will, kann eine frage auffrischen');
+assert.match(bildVorrat, /vorrat\.delete\(sauber\)/, 'eine leere hand wird nicht gemerkt');
+assert.match(bildVorrat, /cache: 'no-store'/, 'ein nochmal hängt nicht im netzvorrat der seite');
+assert.match(bildRoute, /'cache-control': 'no-store'/, 'und ein „nichts" wird nicht einen tag lang weitergereicht');
+assert.ok(!/bild \?\? \{ url: null \}/.test(bildRoute), 'der lange header hängt nur an einem fund');
+assert.match(bildFormular, /await bildFuer\(/, 'das feld fragt die staffel, nicht einen langen adresssatz');
+assert.ok(!/filter\(Boolean\)\.join\(', '\)/.test(bildFormular), 'keine zusammengeklebte adresse mehr als bildfrage');
+assert.match(bildFormular, /bildeins\(entwurf, true\)/, 'ein „nochmal suchen" ist da, wenn nichts kam');
+assert.match(bildFormular, /google\.com\/search\?tbm=isch/, 'und die suche führt weiter, wohin sie selbst nicht sieht');
+assert.match(bildFormular, /commons\.wikimedia\.org\/w\/index\.php\?search=/, 'bei commons ebenso');
+assert.match(bildReihe, /bildFuer\(eintrag, reise/, 'die reihe geht denselben weg');
+assert.ok(!/for \(const frage of fragen\)/.test(bildReihe), 'die staffel wird an einer stelle durchgegangen, nicht doppelt');
 
 
 

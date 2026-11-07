@@ -5,6 +5,8 @@ import {
   ausPexels,
   ausPhoton,
   ausUnsplash,
+  bestesBild,
+  bildGrund,
   stelleOrte,
   vergleichText,
   type CommonsInfo,
@@ -166,7 +168,6 @@ async function beiWikimedia(q: string): Promise<Bildvorschlag | null> {
   return ausCommons(roh);
 }
 
-/** Erst die Dienste mit Schlüssel, dann das freie Commons-Bild. */
 /**
  * Das Foto eines Ortes von Google: die places-api kennt es zu beinahe jedem
  * Hotel und jeder Sehenswürdigkeit. Der Schlüssel bleibt im Server – das Bild
@@ -202,14 +203,30 @@ export async function googleBild(name: string): Promise<Response | null> {
   return antwort && antwort.body ? antwort : null;
 }
 
+/**
+ * Eine frage an alle bildquellen, die etwas zu sagen haben – gleichzeitig, damit eine,
+ * die nicht antwortet, die anderen nicht aufhält. Was genommen wird, sagt die rangfolge
+ * der liste, nicht welche antwort zuerst eintrifft.
+ */
+async function beiDenBildquellen(suchwort: string): Promise<Bildvorschlag | null> {
+  const kandidaten: Array<Promise<Bildvorschlag | null>> = [];
+  if (SIEHBT_GOOGLE) kandidaten.push(beiGoogleFoto(suchwort));
+  kandidaten.push(process.env.UNSPLASH_ACCESS_KEY ? beiUnsplash(suchwort) : beiPexels(suchwort));
+  kandidaten.push(beiWikimedia(suchwort));
+  const ergebnisse = await Promise.allSettled(kandidaten);
+  return bestesBild(ergebnisse.map((r) => (r.status === 'fulfilled' ? r.value : null)));
+}
+
+/**
+ * Das bild zum ort. Findet die ganze frage nichts, wird sie auf ihren kern gekürzt –
+ * „big ben, Westminster, London, England" malt nirgends ein haus, „big ben" malt das
+ * falsche ufer, aber „big ben" allein steht an jeder quelle für genau diesen turm.
+ */
 export async function bildFinden(q: string): Promise<Bildvorschlag | null> {
-  const suchwort = q.trim();
+  const suchwort = (q ?? '').replace(/\s+/g, ' ').trim();
   if (suchwort.length < 3) return null;
-  if (SIEHBT_GOOGLE) {
-    const vonGoogle = await beiGoogleFoto(suchwort);
-    if (vonGoogle) return vonGoogle;
-  }
-  const bezahlt = process.env.UNSPLASH_ACCESS_KEY ? await beiUnsplash(suchwort) : await beiPexels(suchwort);
-  if (bezahlt) return bezahlt;
-  return beiWikimedia(suchwort);
+  const fund = await beiDenBildquellen(suchwort);
+  if (fund) return fund;
+  const kern = bildGrund(suchwort);
+  return kern && kern !== suchwort ? beiDenBildquellen(kern) : null;
 }

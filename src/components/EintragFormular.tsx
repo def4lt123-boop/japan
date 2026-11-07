@@ -13,6 +13,7 @@ import type { Eintrag, EintragArt, Reise } from '../lib/types';
 import { Ablage, Auswahl, Chip, Feld, Foto, IconKnopf, Karten, TextFeld, Umschalter, ZahlFeld, ZeitFeld, cx } from './ui';
 import { WAEHRUNGEN } from '../lib/format';
 import { OrtSuche, type Gewaehlt } from './OrtSuche';
+import { bildFragen, bildFuer } from '../lib/ortsbild';
 
 /**
  * Das eine Formular für Aktivität, Unterkunft und Fahrt. Kurz halten, was
@@ -87,11 +88,13 @@ export function EintragFormular({
   // an einer Unterkunft sind Adresse, Buchung und Notiz Kernangaben – das Fach bleibt dort offen
   const [mehr, setMehr] = useState(() => Boolean(bestehend?.notiz || bestehend?.buchung_url || bestehend?.buchung_nr) || art === 'unterkunft');
   const [bildLaeuft, setBildLaeuft] = useState(false);
+  const [bildlos, setBildlos] = useState(false);
 
   useEffect(() => {
     if (!offen) return;
     setEntwurf(leer(bestehend ?? vorlage, reise, datum));
     setBildLaeuft(false);
+    setBildlos(false);
   }, [offen, bestehend, vorlage, reise, datum]);
 
   const tage = useMemo(() => reiseTage(reise), [reise]);
@@ -104,32 +107,44 @@ export function EintragFormular({
   const set = (patch: Partial<Entwurf>) => setEntwurf((v) => ({ ...v, ...patch }));
 
   const uebernehmen = (v: Gewaehlt) => {
+    const orte = entwurf.ort || stadtAusAdresse(v.adresse, reise.land) || '';
     set({
       titel: v.titel,
       adresse: v.adresse ?? '',
       lat: v.lat,
       lng: v.lng,
       karten_stichwort: v.stichwort,
-      ort: entwurf.ort || stadtAusAdresse(v.adresse, reise.land) || '',
+      ort: orte,
       kategorie: entwurf.kategorie || (art === 'unterkunft' ? 'unterschlupf' : kategorieVorschlag(v.titel, v.adresse ?? '')),
     });
-    if (store.einstellungen.bilder && !entwurf.foto_url) void bildeins(v.titel, v.adresse);
+    // das bild folgt demselben weg wie an der reihe – mit dem namen, was gerade übernommen ist
+    if (store.einstellungen.bilder && !entwurf.foto_url) void bildeins({ titel: v.titel, adresse: v.adresse, ort: orte });
   };
 
-  async function bildeins(stichwortTitel: string, adresse?: string | null) {
-    const frage = [stichwortTitel, adresse ?? entwurf.ort ?? reise.land ?? ''].filter(Boolean).join(', ');
-    if (frage.length < 3) return;
+  /**
+   * Gefragt wird die staffel (name, name und ort, die reise), nie ein langer
+   * adresssatz: „big ben, Westminster, London, England" malt nirgends ein bild,
+   * „big ben" malt den turm. `frisch` wirft das gedächtnis weg.
+   */
+  async function bildeins(vorlage?: { titel?: string | null; ort?: string | null; adresse?: string | null }, frisch = false) {
+    const grundlage = vorlage ?? entwurf;
+    if ((grundlage.titel ?? '').trim().length < 3) {
+      setBildlos(true);
+      return;
+    }
     setBildLaeuft(true);
+    setBildlos(false);
     try {
-      const antwort = await fetch(`/api/bild?q=${encodeURIComponent(frage)}`, { cache: 'no-store' });
-      const daten = (await antwort.json()) as { url?: string; nachweis?: string | null };
-      if (daten.url) set({ foto_url: daten.url, foto_nachweis: daten.nachweis ?? null });
-    } catch {
-      /* ohne Bild läuft es genauso */
+      const bild = await bildFuer(grundlage, { stationen: reise.stationen, land: reise.land }, { frisch });
+      if (bild) set({ foto_url: bild.url, foto_nachweis: bild.nachweis });
+      else setBildlos(true);
     } finally {
       setBildLaeuft(false);
     }
   }
+
+  /** die erste frage der staffel – sie steht auch in den links, wenn nichts zu finden war */
+  const bildfrage = bildFragen(entwurf, { stationen: reise.stationen, land: reise.land })[0] ?? entwurf.titel.trim();
 
   async function eigenesBild(datei: File | null) {
     if (!datei) return;
@@ -325,7 +340,7 @@ export function EintragFormular({
           <div className="flex items-center gap-2">
             <Foto url={entwurf.foto_url} nachweis={entwurf.foto_nachweis} alt={entwurf.titel || 'Bild'} zeichen={istBett ? '🏨' : metadaten.Icon} hoehe={64} />
             <div className="flex min-w-0 flex-wrap gap-1.5">
-              <button type="button" className="knopf knopf-ghost knopf-klein" onClick={() => void bildeins(entwurf.titel, entwurf.adresse || entwurf.ort)} disabled={bildLaeuft}>
+              <button type="button" className="knopf knopf-ghost knopf-klein" onClick={() => void bildeins()} disabled={bildLaeuft || entwurf.titel.trim().length < 3}>
                 {bildLaeuft ? 'suche …' : 'Bild suchen'}
               </button>
               <label className="knopf knopf-ghost knopf-klein cursor-pointer">
@@ -341,6 +356,24 @@ export function EintragFormular({
           </div>
           {entwurf.foto_url && !entwurf.foto_url.startsWith('data:') ? (
             <p className="mikro mt-1">{entwurf.foto_nachweis || 'Bild von Wikimedia Commons – Nachweis bleibt am Bild stehen.'}</p>
+          ) : null}
+          {!bildLaeuft && bildlos && !entwurf.foto_url ? (
+            <div className="mikro mt-1 space-y-1.5">
+              <p>
+                Kein Bild gefunden –{' '}
+                <a href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(bildfrage)}`} target="_blank" rel="noreferrer" className="font-medium">
+                  in Google Bilder
+                </a>{' '}
+                oder{' '}
+                <a href={`https://commons.wikimedia.org/w/index.php?search=${encodeURIComponent(bildfrage)}`} target="_blank" rel="noreferrer" className="font-medium">
+                  in Wikimedia Commons
+                </a>{' '}
+                nachsehen und es über „eigenes“ herholen.
+              </p>
+              <button type="button" className="knopf knopf-ghost knopf-klein" onClick={() => void bildeins(entwurf, true)}>
+                nochmal suchen
+              </button>
+            </div>
           ) : null}
         </div>
 
