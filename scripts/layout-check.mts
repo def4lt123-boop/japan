@@ -322,5 +322,48 @@ assert.match(text('src/app/api/bild/route.ts'), /googleBild\(foto\)/, 'gereicht 
 assert.ok(/export const Fotopfad = \/.*places/.test(text('src/lib/anbieter.ts')), 'nur ein google-fotopfad – die tür bleibt kein offener verteiler');
 assert.match(text('src/components/EintragZeile.tsx'), /eintrag\.foto_url \?\? bild\?\.url/, 'auch die dichte reihe zeigt das bild, als vorschnitt');
 
+/* ── 13. ortssuche: kurz tippen, richtig treffen ────────────────────────── */
+
+const orteLib = text('src/lib/orte.ts');
+const anbieterLib = text('src/lib/anbieter.ts');
+const orteRoute = text('src/app/api/orte/route.ts');
+const suchBlatt = text('src/components/OrtSuche.tsx');
+
+assert.match(orteLib, /export function ausPhoton/, 'photon wird geformt wie die anderen quellen');
+assert.match(orteLib, /export function stelleOrte/, 'mischen und reihen steht im reinen teil, nicht im netzwerk');
+assert.match(orteLib, /export function frageLohnt/, 'dieselbe schwelle für blatt und server');
+assert.ok(orteLib.includes("'ss'"), 'ein ß wird für den vergleich zu ss');
+assert.match(anbieterLib, /photon\.komoot\.io\/api/, 'photon wird gefragt');
+assert.match(anbieterLib, /Promise\.allSettled/, 'keine quelle wartet auf die andere');
+assert.match(anbieterLib, /stelleOrte\(/, 'was beide liefern, wird gemischt');
+assert.match(anbieterLib, /const ABSTAND_UNTER_EINANDER = 1\d{3}/, 'nominatim wird höchstens einmal pro sekunde gefragt');
+assert.match(anbieterLib, /const gemerkte_fragen = new Map/, 'und eine frage wird sich eine weile gemerkt');
+for (const zweig of ['beiPhoton', 'beiOpenStreetMap']) {
+  const stelle = anbieterLib.indexOf(`async function ${zweig}`);
+  assert.ok(stelle > 0, `${zweig} ist da`);
+  const brocken = anbieterLib.slice(stelle, anbieterLib.indexOf('\n}', stelle));
+  assert.ok(/hole\(/.test(brocken), `${zweig}: durch dieselbe tür mit frist`);
+  assert.ok(!/process\.env/.test(brocken), `${zweig}: läuft ohne schlüssel`);
+  assert.ok(/FRAGEKOPF/.test(brocken), `${zweig}: sagt den freien quellen, wer fragt`);
+}
+assert.match(orteRoute, /s-maxage=\d+/, 'die antwort darf am rand liegen bleiben');
+assert.match(orteRoute, /frageLohnt\(q\)/, 'die tür kennt dieselbe schwelle wie das blatt');
+assert.match(orteRoute, /no-store/, 'wer frisch fragt, bekommt nichts aus dem gedächtnis');
+assert.match(suchBlatt, /const AB_KUERZE = 2/, 'zwei zeichen reichen zum suchen');
+assert.match(suchBlatt, /new AbortController\(\)/, 'und eine alte antwort wird weggeworfen');
+assert.match(suchBlatt, /signal: lauf\.signal/, 'der lauf selbst wird abgebrochen, nicht nur ignoriert');
+assert.match(suchBlatt, /reiseplan\.orte\.zuletzt\.v1/, 'die letzten orte liegen auf dem gerät');
+assert.match(suchBlatt, /const sitzung = new Map/, 'was schon gesucht wurde, wird nicht noch einmal gefragt');
+assert.match(suchBlatt, /if \(liste\.length\) sitzung\.set/, 'ein „nichts" wird nicht gemerkt');
+assert.match(suchBlatt, /google\.com\/maps/, 'ist nichts zu finden, führt die zeile zu google maps');
+assert.match(suchBlatt, /quellenName\(v\.quelle\)/, 'die quelle steht unter dem treffer');
+assert.match(orteLib, /export function quellenName/, 'eine benennung pro concept: photon und nominatim heißen beide openstreetmap');
+assert.match(text('src/lib/punktfindung.ts'), /quellenName\(treffer\.quelle\)/, 'auch ein nachgesuchter punkt nennt dieselbe quelle');
+assert.match(suchBlatt, /entfernungKm\(/, 'und was nahe an der reise liegt, sagt das');
+assert.match(text('src/lib/types.ts'), /'google' \| 'openstreetmap' \| 'photon'/, 'die quelle photon ist im typ bekannt');
+assert.match(text('src/components/ui.tsx'), /onKeyDown=\{onTaste\}/, 'das feld kennt die taste');
+assert.match(suchBlatt, /e\.key !== 'Enter'/, 'eintreten nimmt den ersten vorschlag');
+
+
 
 console.log(`🎉 Neues Fundament hält – ${dateien.length} Dateien (${dateien.reduce((s, d) => s + text(d).split('\n').length, 0)} Zeilen), ${seiten.length} Seiten, ${blätter.length} Reiseblätter, kein Rest von früher`);

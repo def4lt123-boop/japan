@@ -299,6 +299,7 @@ export function TextFeld({
   eingabeModus,
   hinweis,
   className,
+  onTaste,
 }: {
   label?: string;
   wert: string;
@@ -311,6 +312,8 @@ export function TextFeld({
   eingabeModus?: 'text' | 'decimal' | 'url' | 'email' | 'tel';
   hinweis?: React.ReactNode;
   className?: string;
+  /** tastatur am eingabefeld – hier für „eintreten = erster vorschlag" */
+  onTaste?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }) {
   const id = useId();
   return (
@@ -332,6 +335,7 @@ export function TextFeld({
           inputMode={eingabeModus}
           autoComplete={autoVeroellstaendigen}
           onChange={(e) => beimAendern(e.target.value)}
+          onKeyDown={onTaste}
         />
       )}
       {fehler ? (

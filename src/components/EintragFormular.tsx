@@ -224,7 +224,7 @@ export function EintragFormular({
           beiAuswahl={uebernehmen}
           platzhalter={istBett ? 'Hotel, Pension, Adresse' : art === 'fahrt' ? 'Zug Kyoto → Osaka, Flug …' : 'Was willst du dort tun?'}
           konzentriert={mittelpunkt}
-          hinweis="Einen Vorschlag antippen – Name, Adresse, Punkt und Bild wandern automatisch hinein."
+          hinweis="Einen Vorschlag antippen oder Enter drücken – Name, Adresse, Punkt und Bild wandern automatisch hinein."
         />
 
         {entwurf.lat !== null && entwurf.lng !== null ? (

@@ -1,4 +1,19 @@
-import { ausGoogle, ausOpenStreetMap, ausCommons, ausPexels, ausUnsplash, type CommonsInfo, type GoogleRoh, type NominatimRoh, type PexelsRoh, type UnsplashRoh } from '../lib/orte';
+import {
+  ausCommons,
+  ausGoogle,
+  ausOpenStreetMap,
+  ausPexels,
+  ausPhoton,
+  ausUnsplash,
+  stelleOrte,
+  vergleichText,
+  type CommonsInfo,
+  type GoogleRoh,
+  type NominatimRoh,
+  type PhotonFeature,
+  type PexelsRoh,
+  type UnsplashRoh,
+} from '../lib/orte';
 import type { Bildvorschlag, Ortsvorschlag } from '../lib/types';
 
 /**
@@ -37,6 +52,13 @@ async function beiGoogle(q: string, nah?: { lat: number; lng: number } | null): 
   return ausGoogle((await antwort.json()) as { places?: GoogleRoh[] });
 }
 
+/** beide freien Quellen wollen wissen, wer da fragt – ohne das antworten sie nicht */
+const FRAGEKOPF = {
+  'User-Agent': 'Reiseplan/1.0 (personliche Reiseplanung, urlaubs-plan.vercel.app)',
+  Referer: 'https://urlaubs-plan.vercel.app',
+  Accept: 'application/json',
+} as const;
+
 async function beiOpenStreetMap(q: string, nah?: { lat: number; lng: number } | null): Promise<Ortsvorschlag[]> {
   const url = new URL('https://nominatim.openstreetmap.org/search');
   url.searchParams.set('format', 'jsonv2');
@@ -45,21 +67,69 @@ async function beiOpenStreetMap(q: string, nah?: { lat: number; lng: number } | 
   url.searchParams.set('accept-language', 'de');
   url.searchParams.set('q', q);
   if (nah) {
-    url.searchParams.set('viewbox', `${nah.lng - 0.4} ${nah.lat + 0.4} ${nah.lng + 0.4} ${nah.lat - 0.4}`);
+    url.searchParams.set('viewbox', `${nah.lng - 2} ${nah.lat + 2} ${nah.lng + 2} ${nah.lat - 2}`);
     url.searchParams.set('bounded', '0');
   }
-  const antwort = await hole(url.toString(), { headers: { 'User-Agent': 'Reiseplan (personliche Reiseplanung)', Accept: 'application/json' } });
+  const antwort = await hole(url.toString(), { headers: FRAGEKOPF });
   if (!antwort) return [];
   return ausOpenStreetMap((await antwort.json()) as NominatimRoh[]);
 }
 
-export async function orteSuchen(q: string, nah?: { lat: number; lng: number } | null): Promise<Ortsvorschlag[]> {
-  const suchwort = q.trim();
-  if (suchwort.length < 2) return [];
-  const treffer = SIEHBT_GOOGLE ? await beiGoogle(suchwort, nah) : [];
-  if (treffer.length) return treffer;
-  return beiOpenStreetMap(suchwort, nah);
+/**
+ * Photon ist die Suche von OpenStreetMap: sie denkt bei kurzen, umgangssprachlichen
+ * fragen mit („big ben") und verzeiht kleinbuchstaben. Gleiche datenbank, anderer
+ * kopf – deshalb laufen beide, und einer von beiden reicht schon.
+ */
+async function beiPhoton(q: string, nah?: { lat: number; lng: number } | null): Promise<Ortsvorschlag[]> {
+  const url = new URL('https://photon.komoot.io/api/');
+  url.searchParams.set('q', q);
+  url.searchParams.set('lang', 'de');
+  url.searchParams.set('limit', '10');
+  if (nah) {
+    url.searchParams.set('lat', String(nah.lat));
+    url.searchParams.set('lon', String(nah.lng));
+  }
+  const antwort = await hole(url.toString(), { headers: FRAGEKOPF });
+  if (!antwort) return [];
+  return ausPhoton((await antwort.json()) as { features?: PhotonFeature[] });
 }
+
+/**
+ * Antworten bleiben eine weile hier stehen: dieselbe frage kostet nichts mehr, und
+ * die freien quellen werden nicht von jedem einzelnen buchstaben belästigt.
+ */
+const gemerkte_fragen = new Map<string, { orte: Ortsvorschlag[]; bis: number }>();
+const FRIST_TREFFER = 30 * 60 * 1000;
+const FRIST_LEER = 3 * 60 * 1000;
+const ABSTAND_UNTER_EINANDER = 1100; // gebrauchspolicy von nominatim: höchstens ~1 anfrage pro sekunde
+let anfrage_zuletzt = 0;
+
+export async function orteSuchen(q: string, nah?: { lat: number; lng: number } | null, frisch = false): Promise<Ortsvorschlag[]> {
+  const suchwort = q.trim();
+  const anfrage = vergleichText(suchwort);
+  if (anfrage.length < 2) return [];
+  const anker = nah ? `@${nah.lat.toFixed(2)},${nah.lng.toFixed(2)}` : '';
+  const schlüssel = `${anfrage}${anker}`;
+  const gemerkt = frisch ? undefined : gemerkte_fragen.get(schlüssel);
+  if (gemerkt && gemerkt.bis > Date.now()) return gemerkt.orte;
+  const leistungen: Array<Promise<Ortsvorschlag[]>> = [];
+  if (SIEHBT_GOOGLE) leistungen.push(beiGoogle(suchwort, nah));
+  leistungen.push(beiPhoton(suchwort, nah));
+  if (Date.now() - anfrage_zuletzt >= ABSTAND_UNTER_EINANDER) {
+    anfrage_zuletzt = Date.now();
+    leistungen.push(beiOpenStreetMap(suchwort, nah));
+  }
+  const ergebnisse = await Promise.allSettled(leistungen);
+  const orte = stelleOrte(
+    ergebnisse.map((r) => (r.status === 'fulfilled' ? r.value : [])),
+    { suchwort, nahe: nah ?? null },
+  ).slice(0, 8);
+  if (gemerkte_fragen.size > 300) gemerkte_fragen.clear();
+  gemerkte_fragen.set(schlüssel, { orte, bis: Date.now() + (orte.length ? FRIST_TREFFER : FRIST_LEER) });
+  return orte;
+}
+
+export { frageLohnt } from '../lib/orte';
 
 /* ── Bilder ───────────────────────────────────────────────────────────── */
 

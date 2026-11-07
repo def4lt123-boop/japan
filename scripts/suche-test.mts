@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { ausCommons, ausGoogle, ausOpenStreetMap, ausPexels, ausUnsplash, punktAusText, stadtAusAdresse } from '../src/lib/orte';
+import { ausCommons, ausGoogle, ausOpenStreetMap, ausPexels, ausUnsplash, ausPhoton, frageLohnt, punktAusText, stelleOrte, stadtAusAdresse, vergleichText } from '../src/lib/orte';
 import { kategorieVorschlag } from '../src/lib/kategorien';
 import { bestenPunkt, punktFuer, suchkandidaten } from '../src/lib/punktfindung';
 import type { Ortsvorschlag } from '../src/lib/types';
-import { SIEHBT_BILDDIENST, SIEHBT_GOOGLE } from '../src/lib/anbieter';
+import { frageLohnt as frageLohntAnbieter, orteSuchen, SIEHBT_BILDDIENST, SIEHBT_GOOGLE } from '../src/lib/anbieter';
 import { kacheln } from '../src/lib/kacheln';
 import { bildFragen } from '../src/lib/ortsbild';
 import { kartenVorschau } from '../src/lib/karten';
@@ -169,3 +169,111 @@ assert.deepEqual(bildFragen({ titel: '', ort: null, adresse: null }, { stationen
 
 console.log('🎉 Punkte, die sich selbst finden – Stadt muss passen, Nachweis bleibt dran');
 console.log('🎉 Bilder folgen der richtigen frage – name zuerst, land nie');
+
+/* ── die ortssuche: eine kurze frage, der richtige ort ────────────────── */
+
+const photonRoh = {
+  features: [
+    { geometry: { coordinates: [-0.1246, 51.5007] }, properties: { name: 'Big Ben', street: 'Westminster', city: 'London', state: 'England', country: 'Vereinigtes Königreich', countrycode: 'gb', type: 'historic' } },
+    { geometry: { coordinates: [6.9603, 50.9375] }, properties: { name: 'Big Ben', street: 'Kölner Straße 1', city: 'Köln', country: 'Deutschland', type: 'restaurant' } },
+    { geometry: { coordinates: [-0.1246, 51.5007] }, properties: { name: 'Big Ben', type: 'attraction' } },
+    { geometry: { coordinates: [] }, properties: { name: 'ohne Punkt' } },
+    { geometry: { coordinates: [1, 2] }, properties: {} },
+  ],
+};
+
+assert.equal(vergleichText('Big  Ben.'), 'big ben', 'zeichen und leeräume sind für den vergleich egal');
+assert.equal(vergleichText('Zürich'), 'zurich', 'ein umlaut ist derselbe buchstabe');
+
+const photonTreffer = ausPhoton(photonRoh);
+assert.equal(photonTreffer.length, 3, 'was keinen punkt oder keinen namen hat, fällt weg');
+assert.deepEqual(
+  { name: photonTreffer[0]!.name, adresse: photonTreffer[0]!.adresse, lat: photonTreffer[0]!.lat, lng: photonTreffer[0]!.lng, quelle: photonTreffer[0]!.quelle },
+  { name: 'Big Ben', adresse: 'Westminster, London, England, Vereinigtes Königreich', lat: 51.5007, lng: -0.1246, quelle: 'photon' },
+  'die adresszeile baut sich aus den teilen, ohne den namen zu wiederholen',
+);
+
+const turm = photonTreffer[0]!;
+const wirtshaus = photonTreffer[1]!;
+const uhr = photonTreffer[2]!;
+const flaeche = { name: 'England', adresse: 'England, Vereinigtes Königreich', lat: 52.8, lng: -1.2, stichwort: 'country', quelle: 'openstreetmap' as const };
+
+assert.deepEqual(stelleOrte([[wirtshaus, turm]], { suchwort: 'big ben' }).map((o) => o.name), ['Big Ben', 'Big Ben'], 'zwei städte, zwei treffernamen – beide bleiben stehen');
+assert.equal(stelleOrte([[wirtshaus, turm]], { suchwort: 'big ben' })[0]!.adresse?.includes('London'), true, 'der turm wird zuerst genommen, das wirtshaus in Köln dahinter');
+assert.equal(stelleOrte([[wirtshaus, turm]], { suchwort: 'big ben', nahe: { lat: 50.9375, lng: 6.9603 } })[0]!.adresse?.includes('Köln'), true, 'und wer in Köln plant, bekommt das wirtshaus zuerst');
+assert.equal(stelleOrte([[turm], [uhr]], { suchwort: 'big ben' }).length, 1, 'derselbe punkt von zwei diensten bleibt ein vorschlag');
+assert.equal(stelleOrte([[turm, uhr, wirtshaus]], { suchwort: 'big ben' }).length, 2, 'er wird nicht noch einmal gezeigt');
+assert.deepEqual(stelleOrte([[flaeche, turm]], { suchwort: 'big ben' }).map((o) => o.name), ['Big Ben'], 'ein land ist nicht der gesuchte turm');
+assert.equal(
+  stelleOrte([[{ name: 'Elizabeth Tower', adresse: 'Parliament Square, Big Ben, London', lat: 51.5007, lng: -0.1246, stichwort: 'historic', quelle: 'openstreetmap' }]], { suchwort: 'big ben' }).length,
+  1,
+  'wo der name nichts hergibt, hilft die adresse',
+);
+assert.deepEqual(stelleOrte([[]], { suchwort: 'big ben' }), [], 'eine leere hand bleibt leer');
+assert.deepEqual(stelleOrte([[turm]], { suchwort: ' ' }), [], 'was nichts fragt, bekommt nichts');
+
+const nominatimRoh = [{ display_name: 'Big Ben, Westminster, London, England', name: 'Big Ben', lat: '51.5007', lon: '-0.1246', type: 'clock_tower', addresstype: 'historic' }];
+const gefragte: string[] = [];
+const koepfe: Array<Record<string, string>> = [];
+const kopfVon = (init: unknown) => ((init as { headers?: Record<string, string> } | undefined)?.headers ?? {});
+const nominatimFragen = () => gefragte.filter((text) => text.includes('nominatim')).length;
+/** beide quellen antworten hier so, wie sie es tun: nur mit dem, was zur frage paßt */
+function fundZu(frage: string) {
+  const anfrage = vergleichText(frage);
+  const treffer = (text: string) => vergleichText(text).includes(anfrage);
+  return {
+    photon: { features: photonRoh.features.filter((f) => treffer(f.properties?.name ?? '')) },
+    nominatim: nominatimRoh.filter((d) => treffer(`${d.name} ${d.display_name}`)),
+  };
+}
+const beideQuellen = () =>
+  ((url: string | URL, init?: unknown) => {
+    const text = String(url);
+    gefragte.push(text);
+    koepfe.push(kopfVon(init));
+    const antwort = fundZu(new URL(text).searchParams.get('q') ?? '');
+    if (text.includes('photon.komoot.io')) return new Response(JSON.stringify(antwort.photon));
+    if (text.includes('nominatim.openstreetmap.org')) return new Response(JSON.stringify(antwort.nominatim));
+    return new Response('nicht gefunden', { status: 404 });
+  }) as typeof fetch;
+
+globalThis.fetch = beideQuellen();
+
+assert.equal(frageLohntAnbieter, frageLohnt, 'blatt und server kennen dieselbe schwelle');
+assert.equal(frageLohnt(' b '), false, 'ein buchstabe wird nicht gefragt');
+assert.equal(frageLohnt('bi'), true, 'zwei zeichen reichen');
+
+const erste = await orteSuchen('big ben');
+assert.equal(gefragte.length, 2, 'beide freien quellen laufen gleichzeitig, keins wartet auf das andere');
+assert.equal(nominatimFragen(), 1, 'nominatim wird einmal gefragt, nicht dreimal');
+assert.ok(erste.some((o) => o.adresse?.includes('London')), '„big ben" findet den turm in London');
+assert.equal(erste[0]!.adresse?.includes('London'), true, 'und er steht vorn');
+assert.ok(gefragte.every((text) => !/key=/.test(text)), 'die freien quellen werden nicht nach einem schlüssel gefragt');
+assert.equal(new URL(gefragte[0]!).hostname, 'photon.komoot.io', 'photon ist die erste quelle, nominatim die zweite');
+assert.ok(koepfe.every((kopf) => Boolean(kopf['User-Agent'])), 'jede freie quelle weiß, wer fragt – sonst antwortet sie nicht');
+assert.ok(koepfe.every((kopf) => Boolean(kopf.Referer)), 'und jede bekommt dazu eine heimat');
+assert.ok(new URL(gefragte[0]!).searchParams.get('q') === 'big ben', 'gefragt wird der getippte text');
+assert.ok(new URL(gefragte[0]!).searchParams.get('lang') === 'de', 'die namen kommen auf deutsch');
+
+const zweite = await orteSuchen('Big  Ben');
+assert.deepEqual(zweite, erste, 'dieselbe frage, dieselben treffer');
+assert.equal(gefragte.length, 2, 'zum zweiten mal geht nichts ins netz');
+
+// nominatim spielt jetzt nicht mehr mit – photon allein muss reichen
+globalThis.fetch = ((url: string | URL, init?: unknown) => {
+  const text = String(url);
+  gefragte.push(text);
+  koepfe.push(kopfVon(init));
+  if (text.includes('photon.komoot.io')) return new Response(JSON.stringify(fundZu(new URL(text).searchParams.get('q') ?? '').photon));
+  return new Response('zu viele anfragen', { status: 429 });
+}) as typeof fetch;
+
+const vorher = gefragte.length;
+const eineHand = await orteSuchen('big ben', null, true);
+assert.ok(eineHand.length >= 1, 'eine quelle, die schweigt, wirft niemanden um – die andere reicht');
+assert.ok(gefragte.length > vorher, 'und ein „frisch" geht noch einmal ins netz, obwohl die antwort gemerkt ist');
+assert.ok(nominatimFragen() <= 2, 'nominatim wird höchstens einmal pro sekunde gefragt');
+const nichts = await orteSuchen('qwxvrtzz', null);
+assert.deepEqual(nichts, [], 'was niemand kennt, bleibt leer – ein fehler ist das nicht');
+
+console.log('🎉 Ortssuche wie im Kartendienst – kurze frage, beide quellen, der richtige ort vorn');
