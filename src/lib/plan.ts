@@ -36,6 +36,11 @@ export function eintraegeDerReise(eintraege: Eintrag[], reiseId: string): Eintra
   return eintraege.filter((e) => e.reise_id === reiseId);
 }
 
+/** was notiert ist, aber noch auf einen Tag wartet – der einlauf für schnelle Eingaben */
+export function ohneTagEintraege(eintraege: Eintrag[]): Eintrag[] {
+  return eintraege.filter((e) => e.art !== 'unterkunft' && !e.date).sort(chronologisch);
+}
+
 /** Alles, was an einem Tag im Kalender steht – mehrtägige Unterkünfte aparte */
 export function tagEintraege(eintraege: Eintrag[], datum: string): Eintrag[] {
   return eintraege.filter((e) => e.art !== 'unterkunft' && e.date === datum).sort(chronologisch);

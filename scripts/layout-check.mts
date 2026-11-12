@@ -392,5 +392,26 @@ assert.match(bildReihe, /bildFuer\(eintrag, reise/, 'die reihe geht denselben we
 assert.ok(!/for \(const frage of fragen\)/.test(bildReihe), 'die staffel wird an einer stelle durchgegangen, nicht doppelt');
 
 
+/* ── 15. ein tag ist eine wahl, keine pflicht ───────────────────────────── */
+
+const formularText = text('src/components/EintragFormular.tsx');
+const zeilenText = text('src/components/EintragZeile.tsx');
+const listenSeite = text('src/app/t/[tripId]/liste/page.tsx');
+const planText = text('src/lib/plan.ts');
+
+assert.match(formularText, /art === 'unterkunft' \? reise\.start_date \?\? '' : ''/, 'ein tag wird nur am bett vorgemerkt, sonst bleibt das feld leer');
+assert.match(formularText, /\{ date: '' \}/, '„ohne Tag" ist ein chip im formular');
+assert.match(formularText, /\{istBett \? null : \(/, 'an einem bett wird er nicht angeboten – eine nacht ohne tag gibt es nicht');
+assert.match(formularText, /disabled=\{!entwurf\.titel\.trim\(\)\}/, 'ein name genügt zum speichern');
+assert.match(formularText, /ohne Tag\.`\);/, 'und das echo sagt, dass der punkt ohne tag liegt');
+assert.match(zeilenText, /ohneTag\(eintrag\.id\)/, 'zurück ohne tag ist ein tip in der zeile');
+assert.match(zeilenText, /eintragAendern\(id, \{ date: null \}\)/, 'ein tip, kein umweg über das datum');
+assert.ok(!/aus dem Kalender nehmen/.test(zeilenText), 'eine benennung für das eine concept: ohne tag');
+assert.ok(!/datum: tage\[0\]/.test(listenSeite), 'die liste zwingt keinem neuen punkt einen tag auf');
+assert.match(listenSeite, /ohneTagEintraege\(gefiltert\)/, 'die gruppe rechnet im plan, nicht auf der seite');
+assert.match(planText, /export function ohneTagEintraege/, 'und der einlauf ist eine regel im rechenblatt');
+assert.ok(/ohne Tag/.test(formularText) && /ohne Tag/.test(zeilenText) && /ohne Tag/.test(listenSeite), 'dieselben worte an allen drei stellen');
+
+
 
 console.log(`🎉 Neues Fundament hält – ${dateien.length} Dateien (${dateien.reduce((s, d) => s + text(d).split('\n').length, 0)} Zeilen), ${seiten.length} Seiten, ${blätter.length} Reiseblätter, kein Rest von früher`);

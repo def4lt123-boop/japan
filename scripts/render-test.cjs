@@ -172,6 +172,81 @@ async function reihenPrüfen() {
   });
 }
 
+/** in ein react-feld schreibt man über den echten setter, sonst sieht react nichts */
+function schreibe(feld, wert) {
+  const setze = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+  setze.call(feld, wert);
+  feld.dispatchEvent(new window.Event('input', { bubbles: true }));
+}
+
+/**
+ * Das Formular beim neuen Punkt: ein name genügt, ein tag ist eine wahl. Am bett
+ * ist die nacht dagegen der grund, warum es der eintrag gibt – dort bleibt sie
+ * vorgemerkt und „ohne tag" wird nicht einmal angeboten.
+ */
+async function formularPruefen() {
+  const { EintragFormular } = require('../src/components/EintragFormular.tsx');
+  const behaelter = document.createElement('div');
+  document.body.appendChild(behaelter);
+  const grund = createRoot(behaelter);
+  let geschlossen = 0;
+
+  await act(async () => {
+    grund.render(
+      React.createElement(
+        DatenProvider,
+        null,
+        React.createElement(EintragFormular, { reise: REISE, art: 'aktivitaet', offen: true, schliessen: () => { geschlossen += 1; } })
+      )
+    );
+  });
+
+  const knoepfe = () => Array.from(document.body.querySelectorAll('button'));
+  const ohneTag = knoepfe().find((b) => (b.textContent ?? '').includes('ohne Tag'));
+  assert.ok(ohneTag, 'das Formular bietet "ohne Tag" als chip');
+  assert.ok(ohneTag.className.includes('chip-aktiv'), 'und der chip ist gewaehlt, wo niemand einen tag gemeint hat');
+  const tage = knoepfe().filter((b) => /^\p{L}{2} \d{1,2}\.\d{1,2}\.$/u.test((b.textContent ?? '').trim()));
+  assert.equal(tage.length, 4, 'die reisetage stehen als chips daneben');
+  assert.ok(tage.every((b) => !b.className.includes('chip-aktiv')), 'keiner davon ist vorgemerkt');
+  assert.equal(document.body.querySelector('input[type="date"]').value, '', 'das datumsfeld bleibt leer');
+
+  const sparen = knoepfe().find((b) => (b.textContent ?? '').trim() === 'speichern');
+  assert.ok(sparen.disabled, 'ohne name wird nicht gespeichert');
+  await act(async () => {
+    schreibe(document.body.querySelector('input[type="text"]'), 'Sky Garden');
+  });
+  assert.equal(sparen.disabled, false, 'ein name genuegt zum speichern');
+  await act(async () => {
+    sparen.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  });
+  assert.equal(geschlossen, 1, 'und das blatt schliesst sich');
+
+  const stand = JSON.parse(window.localStorage.getItem('reiseplan.v1'));
+  const neu = stand.eintraege.find((e) => e.titel === 'Sky Garden');
+  assert.ok(neu, 'der punkt liegt im blatt');
+  assert.equal(neu.date, null, 'ohne tag gespeichert, nicht auf den ersten reisetag geschrieben');
+  assert.equal(neu.art, 'aktivitaet');
+  assert.equal(neu.reise_id, 'r-test');
+
+  await act(async () => {
+    grund.unmount();
+  });
+
+  const bettBehaelter = document.createElement('div');
+  document.body.appendChild(bettBehaelter);
+  const bettGrund = createRoot(bettBehaelter);
+  await act(async () => {
+    bettGrund.render(
+      React.createElement(DatenProvider, null, React.createElement(EintragFormular, { reise: REISE, art: 'unterkunft', offen: true, schliessen: () => {} }))
+    );
+  });
+  assert.ok(!knoepfe().some((b) => (b.textContent ?? '').includes('ohne Tag')), 'an einer unterkunft gibt es "ohne tag" nicht');
+  assert.equal(document.body.querySelector('input[type="date"]').value, '2027-10-24', 'das bett startet mit der ersten nacht');
+  await act(async () => {
+    bettGrund.unmount();
+  });
+}
+
 async function main() {
   const wurzel = createRoot(document.getElementById('wurzel'));
   await act(async () => {
@@ -207,11 +282,12 @@ async function main() {
   assert.equal(spur.store.eintraegeVon('r-test'), nachher, 'und bleibt es, bis wieder geschrieben wird');
 
   await reihenPrüfen();
+  await formularPruefen();
 
   await act(async () => {
     wurzel.unmount();
   });
-  console.log(`🎉 Speicherblatt hält – ${spur.render} Render, Listen bleiben dieselben, Schreiben wirkt genau einmal, Bilder bleiben Bilder`);
+  console.log(`🎉 Speicherblatt hält – ${spur.render} Render, Listen bleiben dieselben, Schreiben wirkt genau einmal, ein name ohne tag genügt, Bilder bleiben Bilder`);
 }
 
 main().catch((fehler) => {

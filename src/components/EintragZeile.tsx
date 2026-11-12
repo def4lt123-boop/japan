@@ -48,6 +48,11 @@ export function EintragZeile({
   const zeiten = [eintrag.zeit ? uhrzeitText(eintrag.zeit) : null, eintrag.bis_zeit ? `bis ${uhrzeitText(eintrag.bis_zeit)}` : null].filter(Boolean).join(' · ');
   const nacht = istBett && gilt(eintrag.date) && gilt(eintrag.bis_date) ? abstandTage(eintrag.date, eintrag.bis_date) : 0;
 
+  const ohneTag = async (id: string) => {
+    await store.eintragAendern(id, { date: null });
+    store.sagen(`${metadaten.wort} ohne Tag – in der Liste zu finden.`);
+  };
+
   const verschieben = async (id: string, datum: string) => {
     const liste = store.eintraege.filter((e) => e.reise_id === reise.id && e.art !== 'unterkunft' && e.date === datum);
     await store.eintragAendern(id, { date: datum, sortierung: liste.reduce((m, e) => Math.max(m, e.sortierung), 0) + 1 });
@@ -149,8 +154,21 @@ export function EintragZeile({
         </p>
       ) : null}
 
-      <Ablage offen={tagWaehlen} titel="Wann soll das stattinden?" schliessen={() => setTagWaehlen(false)}>
+      <Ablage offen={tagWaehlen} titel="Wann soll das stattfinden?" schliessen={() => setTagWaehlen(false)}>
         <div className="flex flex-wrap gap-2 pt-3">
+          {istBett ? null : (
+            <button
+              type="button"
+              onClick={() => {
+                setTagWaehlen(false);
+                void ohneTag(eintrag.id);
+              }}
+              className={cx('chip !px-3 !py-2 !text-[13.5px]', !eintrag.date && 'chip-aktiv')}
+              style={{ borderColor: !eintrag.date ? 'var(--akzent)' : 'var(--rand)', borderWidth: 1, borderStyle: 'solid' }}
+            >
+              🕓 ohne Tag
+            </button>
+          )}
           {reiseTage(reise).map((d) => (
             <button
               key={d}
@@ -165,17 +183,6 @@ export function EintragZeile({
               {tagKurz(d)}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => {
-              setTagWaehlen(false);
-              void store.eintragAendern(eintrag.id, { date: null });
-            }}
-            className="chip !px-3 !py-2 !text-[13.5px]"
-            style={{ borderColor: 'var(--rand)', borderWidth: 1, borderStyle: 'solid' }}
-          >
-            aus dem Kalender nehmen
-          </button>
         </div>
       </Ablage>
     </div>

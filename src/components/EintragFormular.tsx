@@ -42,10 +42,16 @@ interface Entwurf {
   foto_nachweis: string | null;
 }
 
-const leer = (vor: Partial<Eintrag> | null | undefined, reise: Reise, datum: string | null | undefined): Entwurf => ({
+/**
+ * Der leere Entwurf. Ein Tag wird nur vorgemerkt, wo einer gemeint ist: beim Aufruf
+ * aus einem Tag, aus dem Kalender, von einer Tagkarte – oder an einem Bett, das ohne
+ * Nacht keinen Sinn ergibt. Eine Aktivität darf ohne Tag bleiben und wartet in der
+ * Liste auf „Ohne Tag", bis sie einen Tag bekommt.
+ */
+const leer = (vor: Partial<Eintrag> | null | undefined, reise: Reise, datum: string | null | undefined, art: EintragArt = 'aktivitaet'): Entwurf => ({
   titel: vor?.titel ?? '',
   kategorie: vor?.kategorie ?? '',
-  date: vor?.date ?? datum ?? reise.start_date ?? '',
+  date: vor?.date ?? datum ?? (art === 'unterkunft' ? reise.start_date ?? '' : ''),
   zeit: vor?.zeit ?? (vor?.art === 'unterkunft' ? '15:00' : ''),
   bis_zeit: vor?.bis_zeit ?? (vor?.art === 'unterkunft' ? '11:00' : ''),
   dauer: vor?.dauer_min ? String(vor.dauer_min) : '',
@@ -84,7 +90,7 @@ export function EintragFormular({
   nachSpeichern?: (eintrag: Eintrag) => void;
 }) {
   const store = useStore();
-  const [entwurf, setEntwurf] = useState<Entwurf>(() => leer(bestehend ?? vorlage, reise, datum));
+  const [entwurf, setEntwurf] = useState<Entwurf>(() => leer(bestehend ?? vorlage, reise, datum, art));
   // an einer Unterkunft sind Adresse, Buchung und Notiz Kernangaben – das Fach bleibt dort offen
   const [mehr, setMehr] = useState(() => Boolean(bestehend?.notiz || bestehend?.buchung_url || bestehend?.buchung_nr) || art === 'unterkunft');
   const [bildLaeuft, setBildLaeuft] = useState(false);
@@ -92,7 +98,7 @@ export function EintragFormular({
 
   useEffect(() => {
     if (!offen) return;
-    setEntwurf(leer(bestehend ?? vorlage, reise, datum));
+    setEntwurf(leer(bestehend ?? vorlage, reise, datum, art));
     setBildLaeuft(false);
     setBildlos(false);
   }, [offen, bestehend, vorlage, reise, datum]);
@@ -211,7 +217,7 @@ export function EintragFormular({
       nachSpeichern?.(neu);
       if (werte.lat === null) void punktNachtragen(neu.id, quelltext);
     }
-    store.sagen(`${metadaten.wort} gespeichert.`);
+    store.sagen(werte.date ? `${metadaten.wort} gespeichert.` : `${metadaten.wort} gespeichert – ohne Tag.`);
     schliessen();
   };
 
@@ -254,6 +260,16 @@ export function EintragFormular({
         <div>
           <p className="label mb-1">{istBett ? 'Nächte' : 'Tag'}</p>
           <div className="gelenk">
+            {istBett ? null : (
+              <button
+                type="button"
+                onClick={() => set({ date: '' })}
+                className={cx('chip !px-3 !py-2 !text-[13.5px]', !entwurf.date && 'chip-aktiv')}
+                style={{ borderColor: !entwurf.date ? 'var(--akzent)' : 'var(--rand)', borderWidth: 1, borderStyle: 'solid' }}
+              >
+                🕓 ohne Tag
+              </button>
+            )}
             {punkte.map((d) => {
               const an = entwurf.date === d;
               return (
@@ -268,8 +284,9 @@ export function EintragFormular({
                 </button>
               );
             })}
-            {!punkte.length ? <span className="mikro self-center">Reise hat keinen Zeitraum – zuerst unten den Tag wählen.</span> : null}
+            {!punkte.length && !istBett ? <span className="mikro self-center">die Reise hat keinen Zeitraum – ohne Tag geht trotzdem, einen Tag kannst du unten selbst setzen.</span> : null}
           </div>
+          {!istBett && !entwurf.date ? <p className="mikro mt-1">ohne Tag genügt – der Punkt steht dann in der Liste unter „Ohne Tag", bis du ihn einem Tag gibst.</p> : null}
           <div className="mt-2 grid grid-cols-2 gap-2">
             <Feld label={istBett ? 'Check-in' : 'Am'}>
               <input type="date" className="eingabe" value={entwurf.date} onChange={(e) => set({ date: e.target.value })} />
