@@ -8,6 +8,8 @@ import { ohneTagEintraege, reiseTage, stadtDesTages, tagEintraege } from '../../
 import { ANDERE_KATEGORIEN, kategorie } from '../../../../lib/kategorien';
 import { EintragZeile } from '../../../../components/EintragZeile';
 import { EintragFormular } from '../../../../components/EintragFormular';
+import { MehrfachFormular } from '../../../../components/MehrfachFormular';
+import { OhneTagGruppen } from '../../../../components/OhneTagGruppen';
 import { Chip, Karten, KartenKopf, Segment, TextFeld, cx } from '../../../../components/ui';
 import type { Eintrag, EintragArt } from '../../../../lib/types';
 
@@ -20,6 +22,7 @@ export default function OrtsListe() {
   const [filter, setFilter] = useState<string | null>(null);
   const [ansicht, setAnsicht] = useState('tage');
   const [formular, setFormular] = useState<{ art: EintragArt; bestehend?: Eintrag | null; datum?: string | null } | null>(null);
+  const [sammeln, setSammeln] = useState(false);
 
   const alle = useMemo(() => (reise ? store.eintraegeVon(reise.id).filter((e) => e.art !== 'unterkunft') : []), [reise, store]);
   const kategorien = useMemo(() => {
@@ -56,7 +59,7 @@ export default function OrtsListe() {
           optionen={[
             { id: 'tage', label: 'Nach Tag', zeichen: '🗓️' },
             { id: 'liste', label: 'Alle', zeichen: '📚' },
-            ...(ohneTag.length ? [{ id: 'ohne', label: `Ohne Tag (${ohneTag.length})`, zeichen: '🕓' }] : []),
+            { id: 'ohne', label: ohneTag.length ? `Ohne Tag (${ohneTag.length})` : 'Ohne Tag', zeichen: '🕓' },
           ]}
         />
         {kategorien.length > 1 ? (
@@ -84,6 +87,17 @@ export default function OrtsListe() {
 
       {ansicht === 'liste' || ansicht === 'ohne' ? (
         <Karten className="mt-2.5 overflow-hidden">
+          {ansicht === 'ohne' ? (
+            <KartenKopf
+              titel="Ohne Tag"
+              untertitel={`${ohneTag.length} ${ohneTag.length === 1 ? 'Punkt' : 'Punkte'} – darunter in gruppen beieinander`}
+              seitlich={
+                <button type="button" className="chip !py-1" onClick={() => setSammeln(true)}>
+                  mehrere
+                </button>
+              }
+            />
+          ) : null}
           <ul className="liste list-none m-0 p-0">
             {(ansicht === 'ohne' ? ohneTag : gefiltert).map((e) => (
               <li key={e.id} className="border-b last:border-0" style={{ borderColor: 'var(--rand)' }}>
@@ -119,11 +133,16 @@ export default function OrtsListe() {
             <Karten className="overflow-hidden" >
               <KartenKopf
                 titel="Ohne Tag"
-                untertitel="schon notiert, noch keinem Tag gegeben – über das ⋯ in der Zeile kommt einer dazu"
+                untertitel="schon notiert, noch keinem Tag gegeben – darunter stehen sie in Gruppen beieinander"
                 seitlich={
-                  <button type="button" className="chip !py-1" onClick={() => setFormular({ art: 'aktivitaet' })}>
-                    + Punkt
-                  </button>
+                  <span className="flex shrink-0 gap-1.5">
+                    <button type="button" className="chip !py-1" onClick={() => setSammeln(true)}>
+                      mehrere
+                    </button>
+                    <button type="button" className="chip !py-1" onClick={() => setFormular({ art: 'aktivitaet' })}>
+                      + Punkt
+                    </button>
+                  </span>
                 }
               />
               <ul className="liste list-none m-0 p-0">
@@ -143,9 +162,13 @@ export default function OrtsListe() {
         </div>
       )}
 
+      {ansicht !== 'liste' && ohneTag.length ? <OhneTagGruppen reise={reise} /> : null}
+
       <button type="button" className="fab md:hidden" onClick={() => setFormular({ art: 'aktivitaet' })}>
         <span aria-hidden className="text-[19px] leading-none">+</span> Ort
       </button>
+
+      {sammeln && reise ? <MehrfachFormular reise={reise} offen schliessen={() => setSammeln(false)} /> : null}
 
       {formular && reise ? (
         <EintragFormular reise={reise} art={formular.art ?? 'aktivitaet'} bestehend={formular.bestehend} datum={formular.bestehend?.date ?? formular.datum ?? null} offen schliessen={() => setFormular(null)} />
