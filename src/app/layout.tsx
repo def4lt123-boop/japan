@@ -5,10 +5,10 @@ import { Huelle } from '../components/Huelle';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Reiseplan – dein digitaler Reiseassistent',
+    default: 'Reiseplan – dein digitaler Reiseassistent · made by Flo',
     template: '%s · Reiseplan',
   },
-  description: 'Reisen anlegen, Tage planen, Unterkünfte und Orte auf der Karte – unterwegs auf dem Handy, zu Hause am Rechner.',
+  description: 'Reisen anlegen, Tage planen, Unterkünfte und Orte auf der Karte – unterwegs auf dem Handy, zu Hause am Rechner. made by Flo',
   applicationName: 'Reiseplan',
 };
 

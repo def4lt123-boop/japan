@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useStore } from '../lib/daten';
 import { StatusAnzeige } from './StatusAnzeige';
 import { Einstellungen } from './Einstellungen';
+import { MadeByFlo } from './ui';
 
 /**
  * Die eine Hülle für Handy und Rechner: auf dem Smartphone die Leiste unten,
@@ -45,6 +46,7 @@ export function Huelle({ children }: { children: React.ReactNode }) {
           </span>
           Reiseplan
         </Link>
+        <MadeByFlo className="-mt-2 mb-2 px-1" />
         {BEREICHE.map((b) => (
           <Link
             key={b.id}

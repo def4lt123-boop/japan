@@ -42,11 +42,18 @@ export function kartenVorschau(p: Punkt, zoom = 15): string {
   return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${p.lat},${p.lng}`;
 }
 
+/**
+ * Die modi – und der server, der für diesen modus gebaut ist. Zu fuß und mit dem
+ * rad wird über dienste gerechnet, die treppen, fußwege und radwege kennen; der
+ * allgemeine kennt nur das auto und bleibt der rückhalt, wenn der erste nicht
+ * mitspielt. Die geschwindigkeit ist die untergrenze: eine zeit, die schneller
+ * wäre als das, was ein mensch gehen kann, ist keine genauigkeit.
+ */
 export const MODI = [
-  { id: 'zu fuss', label: 'zu Fuß', icon: '🚶', kmh: 4.6, osrm: 'foot' },
-  { id: 'rad', label: 'Rad', icon: '🚲', kmh: 16, osrm: 'bike' },
-  { id: 'auto', label: 'Auto', icon: '🚗', kmh: 42, osrm: 'driving' },
-  { id: 'bahn', label: 'Bahn', icon: '🚆', kmh: 78, osrm: 'driving' },
+  { id: 'zu fuss', label: 'zu Fuß', icon: '🚶', kmh: 4.6, osrm: 'foot', diener: 'https://routing.openstreetmap.de/routed-foot' },
+  { id: 'rad', label: 'Rad', icon: '🚲', kmh: 16, osrm: 'bike', diener: 'https://routing.openstreetmap.de/routed-bike' },
+  { id: 'auto', label: 'Auto', icon: '🚗', kmh: 42, osrm: 'driving', diener: 'https://router.project-osrm.org' },
+  { id: 'bahn', label: 'Bahn', icon: '🚆', kmh: 78, osrm: 'driving', diener: 'https://router.project-osrm.org' },
 ] as const;
 
 export type Modus = (typeof MODI)[number]['id'];

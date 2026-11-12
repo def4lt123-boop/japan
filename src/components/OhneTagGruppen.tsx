@@ -1,11 +1,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { kartenLink, kmText, punktVorhanden } from '../lib/karten';
+import { kartenLink, kmText, punktVorhanden, type Punkt } from '../lib/karten';
 import { minutenText } from '../lib/format';
-import { haufungen, nachbar, sortieren, tagAbstand, tagAenderung, wegLink, type Haufung, type Nahpunkt } from '../lib/naehe';
+import { haufungen, nachbar, routenvorschlag, sortieren, tagAbstand, tagAenderung, wegLink, type Haufung, type Nahpunkt } from '../lib/naehe';
 import { minutenAus, wegLaenge, wegText, wegTitel, type Fussweg } from '../lib/weg';
-import { useFussWege } from './Fussweg';
+import { useFussWege, useGruppenRouten } from './Fussweg';
 import { ohneTagEintraege, reiseTage } from '../lib/plan';
 import { tagKurz } from '../lib/dates';
 import { useStore } from '../lib/daten';
@@ -16,12 +16,25 @@ import { Karten, KartenKopf, cx } from './ui';
  * Die analyse über das, was noch keinen tag hat: punkte, die weniger als einen
  * spaziergang auseinander liegen, gehören an einen tag. gruppiert ist nur ein
  * vorschlag – welcher tag es wird, steht an jedem satz und wird angefasst.
+ *
+ * Die reihenfolge innerhalb einer gruppe ist der zweite vorschlag: sie folgt den
+ * wegen, nicht der reihenfolge des eintippens. Wo der wegdienst die tabelle
+ * beantwortet, sind es die echten minuten; die tage bleiben trotzdem leer, bis ein
+ * tag gewählt wird.
  */
 
 const SCHWELLEN = [1, 1.5, 2.5, 4] as const;
 
 /** der schlüssel eines schrittes – dieselbe paarung wie in der rechnung */
 const schrittId = (von: Nahpunkt, nach: Nahpunkt) => `${von.id}>${nach.id}`;
+
+interface Gang {
+  km: number;
+  minuten: number;
+  schrittKm: number;
+  /** die tabelle des wegdienstes hat geantwortet – dann stehen die zeilen ohne ≈ da */
+  gerechnet: boolean;
+}
 
 export function OhneTagGruppen({ reise }: { reise: Reise }) {
   const store = useStore();
@@ -33,35 +46,82 @@ export function OhneTagGruppen({ reise }: { reise: Reise }) {
   const { mit: punkte, ohne: ohnePunkt } = useMemo(() => sortieren(wartend), [wartend]);
   const gruppen = useMemo(() => haufungen(wartend, schwelle), [wartend, schwelle]);
 
-  // die schritte durch die gruppen: einer nach dem andern gerechnet, weil der
-  // wegdienst eine staffel nicht mag – bis dahin steht die überschlagene zahl da
+  // eine gruppe, eine anfrage: die tabelle bringt alle wege dazwischen auf einmal
+  const tabellen = useGruppenRouten(gruppen.map((g) => ({ id: g.id, punkte: g.punkte as unknown as Punkt[] })));
+
+  /** was die gruppe zu gehen hat, und in welcher reihenfolge – die tabelle zuerst */
+  const saetze = useMemo(
+    () =>
+      gruppen.map((gruppe) => {
+        const matrix = tabellen[gruppe.id];
+        if (!matrix) return { gruppe, gang: null as Gang | null, wege: {} as Record<string, Fussweg> };
+        const reihe = routenvorschlag(gruppe.punkte, (a, b) => matrix.minuten[a]![b]!);
+        const geordnete = reihe.map((i) => gruppe.punkte[i]!);
+        const wege: Record<string, Fussweg> = {};
+        let km = 0;
+        let minuten = 0;
+        let schritt = 0;
+        for (let i = 0; i + 1 < geordnete.length; i += 1) {
+          const zeit = matrix.minuten[reihe[i]!]![reihe[i + 1]!]!;
+          const strecke = matrix.km[reihe[i]!]![reihe[i + 1]!]!;
+          if (!Number.isFinite(zeit)) return { gruppe, gang: null, wege: {} };
+          wege[schrittId(geordnete[i]!, geordnete[i + 1]!)] = { km: strecke, minuten: zeit, quelle: 'gerechnet' };
+          km += strecke;
+          minuten += zeit;
+          schritt = Math.max(schritt, strecke);
+        }
+        return {
+          gruppe: { ...gruppe, punkte: geordnete, schrittKm: Math.round(schritt * 10) / 10 },
+          gang: { km: Math.round(km * 10) / 10, minuten: Math.round(minuten), schrittKm: Math.round(schritt * 10) / 10, gerechnet: true } as Gang,
+          wege,
+        };
+      }),
+    [gruppen, tabellen]
+  );
+
+  // die schritte, für die keine tabelle geantwortet hat: einer nach dem andern
+  // gerechnet, weil der wegdienst eine staffel nicht mag – bis dahin steht die
+  // überschlagene zahl da
   const schritte = useMemo(
     () =>
-      gruppen.flatMap((g) =>
-        g.punkte.slice(1).map((p, i) => ({ id: schrittId(g.punkte[i]!, p), von: g.punkte[i] as Nahpunkt, nach: p as Nahpunkt }))
+      saetze.flatMap(({ gruppe, wege }) =>
+        gruppe.punkte
+          .slice(1)
+          .map((p, i) => ({ id: schrittId(gruppe.punkte[i]!, p), von: gruppe.punkte[i] as Nahpunkt, nach: p as Nahpunkt }))
+          .filter((paar) => !wege[paar.id])
       ),
-    [gruppen]
+    [saetze]
   );
-  const wege = useFussWege(schritte);
+  const gerechnete = useFussWege(schritte);
 
   /** was eine gruppe zu gehen hat – die zeilen und die kopfzeile rechnen gleich */
-  const gang = useMemo(() => {
-    const fond: Record<string, { km: number; minuten: number; schrittKm: number }> = {};
-    for (const g of gruppen) {
+  const geschaetzt = useMemo(() => {
+    const fond: Record<string, Gang> = {};
+    for (const satz of saetze) {
+      if (satz.gang) {
+        fond[satz.gruppe.id] = satz.gang;
+        continue;
+      }
       let km = 0;
       let minuten = 0;
       let schritt = 0;
-      g.punkte.slice(1).forEach((p, i) => {
-        const fund: Fussweg | null | undefined = wege[schrittId(g.punkte[i]!, p)];
+      satz.gruppe.punkte.slice(1).forEach((p, i) => {
+        const vorher = satz.gruppe.punkte[i]!;
+        const fund: Fussweg | null | undefined = satz.wege[schrittId(vorher, p)] ?? gerechnete[schrittId(vorher, p)];
         const zahl = fund ?? null;
         km += zahl?.km ?? 0;
         minuten += zahl?.minuten ?? 0;
         schritt = Math.max(schritt, zahl?.km ?? 0);
       });
-      fond[g.id] = { km: Math.round(km * 10) / 10, minuten: Math.round(minuten), schrittKm: Math.round(schritt * 10) / 10 };
+      fond[satz.gruppe.id] = {
+        km: km ? Math.round(km * 10) / 10 : satz.gruppe.wegKm,
+        minuten: minuten ? Math.round(minuten) : satz.gruppe.minuten,
+        schrittKm: schritt ? Math.round(schritt * 10) / 10 : satz.gruppe.schrittKm,
+        gerechnet: false,
+      };
     }
     return fond;
-  }, [gruppen, wege]);
+  }, [saetze, gerechnete]);
 
   const tage = useMemo(() => {
     const fix = eintraege.filter((e) => e.date && punktVorhanden(e));
@@ -93,29 +153,36 @@ export function OhneTagGruppen({ reise }: { reise: Reise }) {
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span className="mikro">ein schritt in der gruppe</span>
         {SCHWELLEN.map((km) => (
-          <button key={km} type="button" className={cx('chip', schwelle === km && 'chip-aktiv')} onClick={() => setSchwelle(km)}>
+          <button
+            key={km}
+            type="button"
+            className={cx('chip', schwelle === km && 'chip-aktiv')}
+            title={`${minutenAus(km)} min zu Fuß – gruppiert wird über die wege, nicht über die linie`}
+            onClick={() => setSchwelle(km)}
+          >
             höchstens {kmText(km)}
           </button>
         ))}
       </div>
 
       <div className="mt-2 space-y-2.5">
-        {gruppen.map((gruppe) => (
+        {saetze.map((satz) => (
           <Satz
-            key={gruppe.id}
-            gruppe={gruppe}
+            key={satz.gruppe.id}
+            gruppe={satz.gruppe}
             alle={punkte}
-            abstand={tagAbstand(gruppe, tage)}
-            gang={gang[gruppe.id] ?? { km: gruppe.wegKm, minuten: gruppe.minuten, schrittKm: gruppe.schrittKm }}
-            wege={wege}
-            beschaftigt={am === gruppe.id}
-            aufTag={(datum) => void setzen(gruppe, datum)}
+            abstand={tagAbstand(satz.gruppe, tage)}
+            gang={geschaetzt[satz.gruppe.id] ?? { km: satz.gruppe.wegKm, minuten: satz.gruppe.minuten, schrittKm: satz.gruppe.schrittKm, gerechnet: false }}
+            wege={{ ...gerechnete, ...satz.wege }}
+            beschaftigt={am === satz.gruppe.id}
+            aufTag={(datum) => void setzen(satz.gruppe, datum)}
           />
         ))}
 
         {ohnePunkt.length ? (
           <p className="mikro">
-            {ohnePunkt.length} {ohnePunkt.length === 1 ? 'Punkt hat' : 'Punkte haben'} noch kein Google Maps – in der zeile den punkt suchen oder den Google-Maps-link einfügen, dann rechnet die analyse mit.
+            {ohnePunkt.length} {ohnePunkt.length === 1 ? 'Punkt hat' : 'Punkte haben'} noch kein Google Maps – in der zeile den punkt suchen oder den
+            Google-Maps-link einfügen, dann rechnet die analyse mit.
           </p>
         ) : null}
         {!tage.length ? <p className="mikro">Diese reise hat keine tage – im reiseblatt datum einsetzen, dann gibt es tage zum auswählen.</p> : null}
@@ -136,7 +203,7 @@ function Satz({
   gruppe: Haufung;
   alle: Nahpunkt[];
   abstand: { datum: string; km: number | null }[];
-  gang: { km: number; minuten: number; schrittKm: number };
+  gang: Gang;
   wege: Record<string, Fussweg | null>;
   beschaftigt: boolean;
   aufTag: (datum: string) => void;
@@ -154,12 +221,20 @@ function Satz({
             {viele
               ? gang.km < 0.05
                 ? 'zwei punkte, derselbe ort auf der karte'
-                : `${minutenText(gang.minuten)} zusammen · ${kmText(gang.km)}${gang.schrittKm ? ` · weitester schritt ${kmText(gang.schrittKm)}` : ''}`
+                : `${gang.gerechnet ? 'vorgeschlagene route · ' : ''}${minutenText(gang.minuten)} zusammen · ${kmText(gang.km)}${
+                    gang.schrittKm ? ` · weitester schritt ${kmText(gang.schrittKm)}` : ''
+                  }`
               : 'allein – der tag hier gilt nur diesem punkt'}
           </p>
         </div>
         {viele ? (
-          <a className="chip shrink-0" href={wegLink(gruppe)} target="_blank" rel="noreferrer">
+          <a
+            className="chip shrink-0"
+            href={wegLink(gruppe)}
+            target="_blank"
+            rel="noreferrer"
+            title={gang.gerechnet ? 'die stationen in der vorgeschlagenen reihenfolge' : 'die stationen in der überschlagenen reihenfolge'}
+          >
             Weg
           </a>
         ) : null}
@@ -168,7 +243,10 @@ function Satz({
       <ol className="m-0 mt-2 list-none space-y-1 p-0">
         {gruppe.punkte.map((p, index) => {
           const vorher = index ? gruppe.punkte[index - 1] : null;
-          const schritt = vorher ? wege[schrittId(vorher, p)] ?? null : null;
+          // die erste halte hat keinen weg hinter sich – ihr schritt ist der weg
+          // vorwärts, und es ist derselbe, den die zweite halte darunter liest
+          const vorwaerts = index ? null : wege[schrittId(p, gruppe.punkte[1] ?? p)] ?? null;
+          const schritt = (vorher ? wege[schrittId(vorher, p)] : vorwaerts) ?? null;
           const near = nachbar(p, alle);
           return (
             <li key={p.id} className="flex items-baseline gap-2">
@@ -178,7 +256,7 @@ function Satz({
               </a>
               <span className="mikro shrink-0 tabular-nums" title={schritt && schritt.km >= 0.05 ? wegTitel(schritt) : undefined}>
                 {schritt && schritt.km >= 0.05
-                  ? `🚶 ${wegText(schritt)} ${wegLaenge(schritt)}`
+                  ? `🚶 ${wegText(schritt)} ${wegLaenge(schritt)}${index ? '' : ' zum nächsten'}`
                   : near && near.km >= 0.05
                     ? `🚶 ${wegText({ km: near.km, minuten: minutenAus(near.km), quelle: 'geschätzt' })} zum nächsten`
                     : 'gleicher punkt'}

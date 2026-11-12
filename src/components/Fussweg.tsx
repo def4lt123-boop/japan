@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { Punkt } from '../lib/karten';
-import { routeBekannt, routeZwischen } from '../lib/routen';
+import { routeBekannt, routeZwischen, wegTabelle, type Wegmatrix } from '../lib/routen';
 import { gebremst, takt } from '../lib/suchtakt';
 import { FUSS, wegSchaetzen, type Fussweg } from '../lib/weg';
 
@@ -74,4 +74,48 @@ export function useFussWege(paare: FusswegPaar[], modus = FUSS): Record<string, 
     for (const paar of paare) if (!(paar.id in ergebnis)) ergebnis[paar.id] = null;
     return ergebnis;
   }, [liste, paare, gerechnet, modus]);
+}
+
+/**
+ * Die wege durch eine gruppe auf einmal: der wegdienst kennt die tabelle, und für
+ * eine gruppe von neun punkten ist das eine anfrage statt acht. Was die tabelle
+ * nicht beantwortet (zu viele halte, oder der dienst ist gerade zu), bleibt die
+ * einzelfrage unten im satz – die gruppe wartet nur nicht auf beide.
+ */
+const TabellenGefragt = new Set<string>();
+
+export interface GruppenPaar {
+  id: string;
+  punkte: Punkt[];
+}
+
+export function useGruppenRouten(gruppen: GruppenPaar[], modus = FUSS): Record<string, Wegmatrix | null> {
+  const [tabellen, setTabellen] = useState<Record<string, Wegmatrix | null>>({});
+  const anspruch = gruppen.map((g) => `${g.id}:${g.punkte.length}:${g.punkte.map((p) => `${String(p.lat)},${String(p.lng)}`).sort().join('|')}`).join('~');
+
+  useEffect(() => {
+    let abbruch = false;
+    let kette = Promise.resolve();
+    for (const gruppe of gruppen) {
+      if (gruppe.punkte.length < 3) continue; // zwei halte sind keine route
+      const schlussel = `${gruppe.id}|${gruppe.punkte.map((p) => `${String(p.lat)},${String(p.lng)}`).sort().join('|')}`;
+      if (tabellen[gruppe.id] !== undefined || TabellenGefragt.has(schlussel)) continue;
+      if (TabellenGefragt.size > 120) TabellenGefragt.clear();
+      TabellenGefragt.add(schlussel);
+      kette = kette.then(async () => {
+        await warten(takt());
+        if (abbruch) return;
+        const matrix = await wegTabelle(gruppe.punkte, modus).catch(() => null);
+        if (abbruch || !matrix) return;
+        setTabellen((vorher) => (vorher[gruppe.id] ? vorher : { ...vorher, [gruppe.id]: matrix }));
+      });
+    }
+    return () => {
+      abbruch = true;
+    };
+    // der anspruch hält die gruppen, nicht ihre objekte – sonst finge die kette von vorn an
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anspruch, modus]);
+
+  return tabellen;
 }
