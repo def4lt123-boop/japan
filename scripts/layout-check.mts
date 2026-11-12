@@ -412,6 +412,41 @@ assert.match(listenSeite, /ohneTagEintraege\(gefiltert\)/, 'die gruppe rechnet i
 assert.match(planText, /export function ohneTagEintraege/, 'und der einlauf ist eine regel im rechenblatt');
 assert.ok(/ohne Tag/.test(formularText) && /ohne Tag/.test(zeilenText) && /ohne Tag/.test(listenSeite), 'dieselben worte an allen drei stellen');
 
+/* ── 16. mehrere auf einmal, und was zusammengehört ─────────────────────── */
+
+const sammelLib = text('src/lib/sammel.ts');
+const naheLib = text('src/lib/naehe.ts');
+const sammelBlatt = text('src/components/MehrfachFormular.tsx');
+const gruppenBlatt = text('src/components/OhneTagGruppen.tsx');
+
+assert.match(sammelLib, /export function zeilenAusText/, 'der eingefügte text wird in einer regel gelesen, nicht im blatt');
+assert.match(sammelLib, /export function ohneDubletten/, 'und das doppeltprüfen gehört dazu');
+assert.match(sammelLib, /HOECHSTEN = 40/, 'eine obergrenze schützt die staffel danach');
+assert.match(sammelBlatt, /mehrzeilig/, 'das einfügen ist ein feld, in das einer seinen text legt');
+assert.match(sammelBlatt, /zeilenAusText\(/, 'das blatt rechnet nicht selbst');
+assert.match(sammelBlatt, /punktFuer\(/, 'jeder neue punkt sucht sein Google Maps');
+assert.match(sammelBlatt, /bildFuer\(/, 'und sein bild');
+assert.match(sammelBlatt, /date: null/, 'angelegt wird ohne tag');
+assert.match(sammelBlatt, /eintragAnlegen\(/, 'die reihe entsteht zuerst, das Suchen danach');
+assert.match(sammelBlatt, /const PAUSE = 240/, 'die staffel geht in ruhe, nicht auf einmal');
+assert.ok(!/input type="file"|FileReader|bild-?lesen/i.test(sammelBlatt), 'hier wird text eingefügt, kein bild hochgeladen');
+
+assert.match(naheLib, /export function haufungen/, 'die gruppen rechnet ein blatt, keine seite');
+assert.match(naheLib, /schaetzungKm\(/, 'der abstand ist ein weg, keine luftlinie allein');
+assert.match(naheLib, /unterkunft/, 'betten werden nicht mitgruppiert');
+assert.match(naheLib, /export function tagAenderung/, 'und der satz schreibt in der form von eintraegeRueckwaerts');
+assert.match(naheLib, /export function wegLink/, 'der weg durch die gruppe führt nach Google Maps');
+assert.match(gruppenBlatt, /haufungen\(/, 'die analyse zeigt die gruppen');
+assert.match(gruppenBlatt, /eintraegeRueckwaerts\(/, 'ein tag für die gruppe ist ein schritt, kein kilometer an klicken');
+assert.match(gruppenBlatt, /onClick=\{\(\) => aufTag\(tag\.datum\)\}/, 'der tag kommt aus einem tip – verteilt wird nichts von allein');
+assert.match(gruppenBlatt, /ohnePunkt\.length/, 'wer keinen punkt hat, bleibt eine zeile, kein fehler');
+assert.ok(!/Promise\.all\(/.test(gruppenBlatt + sammelBlatt), 'keine seite wirft zwanzig suchanfragen auf einmal');
+assert.ok(!/verteil|automatisch auf/.test(gruppenBlatt), 'keine automatische verteilung über die tage');
+assert.match(listenSeite, /MehrfachFormular/, 'das mehrfache liegt an der stelle, an der die punkte warten');
+assert.match(listenSeite, /OhneTagGruppen/, 'und die gruppen direkt darunter');
+assert.ok(/ohne Tag/.test(sammelBlatt) && /ohne Tag/.test(gruppenBlatt), 'dasselbe wort an allen stellen');
+assert.ok(!/min-h-0/.test(sammelBlatt + gruppenBlatt), 'auch in der vorschlagsliste ist ein feld fingerbreit');
+
 
 
 console.log(`🎉 Neues Fundament hält – ${dateien.length} Dateien (${dateien.reduce((s, d) => s + text(d).split('\n').length, 0)} Zeilen), ${seiten.length} Seiten, ${blätter.length} Reiseblätter, kein Rest von früher`);

@@ -17,10 +17,17 @@ for (const name of ['window', 'document', 'navigator', 'HTMLElement', 'Element',
 }
 global.IS_REACT_ACT_ENVIRONMENT = true;
 /** die bildersuche antwortet, der datenbestand nicht – ein fund soll zu sehn sein */
-global.fetch = async (url) =>
-  String(url ?? '').includes('/api/bild')
-    ? { ok: true, status: 200, json: async () => ({ url: 'https://beispiel.org/gefunden.jpg', nachweis: 'Foto: Mia Gurt / Wikimedia Commons' }) }
-    : { ok: true, status: 204, json: async () => ({ speicher: 'aus', erreichbar: false }) };
+const ORT = { 'borough market': { name: 'Borough market', adresse: 'Via Mazzini, Rom', lat: 41.8862, lng: 12.4679, stichwort: null, quelle: 'openstreetmap' }, castel: { name: 'Castel Sant’Angelo', adresse: 'Rom', lat: 41.8862, lng: 12.4679, stichwort: null, quelle: 'photon' } };
+global.fetch = async (url) => {
+  const weg = String(url ?? '');
+  if (weg.includes('/api/bild')) return { ok: true, status: 200, json: async () => ({ url: 'https://beispiel.org/gefunden.jpg', nachweis: 'Foto: Mia Gurt / Wikimedia Commons' }) };
+  if (weg.includes('/api/orte')) {
+    const frage = decodeURIComponent(weg.split('q=')[1] ?? '').toLowerCase();
+    const treffer = Object.values(ORT).find((o) => frage.includes(o.name.split(',')[0].toLowerCase().slice(0, 7)) || (frage.includes('castel') && o.name.includes('Castel')));
+    return { ok: true, status: 200, json: async () => ({ orte: treffer ? [treffer] : [] }) };
+  }
+  return { ok: true, status: 204, json: async () => ({ speicher: 'aus', erreichbar: false }) };
+};
 
 const REISE = {
   id: 'r-test',
@@ -174,7 +181,8 @@ async function reihenPrüfen() {
 
 /** in ein react-feld schreibt man über den echten setter, sonst sieht react nichts */
 function schreibe(feld, wert) {
-  const setze = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+  const traeger = feld.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+  const setze = Object.getOwnPropertyDescriptor(traeger, 'value').set;
   setze.call(feld, wert);
   feld.dispatchEvent(new window.Event('input', { bubbles: true }));
 }
@@ -247,6 +255,101 @@ async function formularPruefen() {
   });
 }
 
+/**
+ * Das Sammelblatt: ein text wird zu reihen. angelegt wird ohne tag, punkt und bild
+ * kommen nach – und was die reise schon hat, wird nicht noch einmal angelegt.
+ */
+async function sammelPruefen() {
+  const { MehrfachFormular } = require('../src/components/MehrfachFormular.tsx');
+  const behaelter = document.createElement('div');
+  document.body.appendChild(behaelter);
+  const grund = createRoot(behaelter);
+  let geschlossen = 0;
+
+  await act(async () => {
+    grund.render(
+      React.createElement(DatenProvider, null, React.createElement(MehrfachFormular, { reise: REISE, offen: true, schliessen: () => { geschlossen += 1; } }))
+    );
+  });
+
+  const feld = document.body.querySelector('textarea');
+  assert.ok(feld, 'das blatt ist ein feld, in das der text gehoert');
+
+  await act(async () => {
+    schreibe(feld, 'Ein Tag in Rom:\n- Borough market\nBorough market\n1. Castel Sant\u2019Angelo\n-');
+  });
+  const reihen = Array.from(document.body.querySelectorAll('.liste input'));
+  assert.equal(reihen.length, 2, 'zwei zeilen werden zwei punkte, die dublette nicht der dritte');
+  assert.equal(reihen[0].value, 'Borough market', 'und die ueberschrift ueber der liste bleibt eine ueberschrift');
+
+  const anlegen = Array.from(document.body.querySelectorAll('button')).find((b) => /anlegen$/.test((b.textContent ?? '').trim()));
+  assert.ok(anlegen, 'ein knopf zaehlt die punkte, die entstehen');
+  assert.equal(anlegen.textContent.trim(), '2 Punkte anlegen');
+  await act(async () => {
+    anlegen.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  });
+  await act(async () => {
+    await new Promise((warten) => setTimeout(warten, 900));
+  });
+
+  const stand = JSON.parse(window.localStorage.getItem('reiseplan.v1'));
+  const gemerkt = ['Borough market', 'Castel Sant’Angelo'].map((t) => stand.eintraege.find((e) => e.titel === t));
+  assert.ok(gemerkt.every(Boolean), 'beide punkte liegen im blatt');
+  assert.ok(gemerkt.every((e) => e.date === null), 'anglegt wird ohne tag');
+  assert.ok(gemerkt.every((e) => e.art === 'aktivitaet' && e.reise_id === 'r-test'), 'und als aktivitaet dieser reise');
+  assert.ok(gemerkt.every((e) => e.lat === 41.8862), 'punkt und ort wandern an den eintrag, nicht ins blatt');
+  assert.ok(gemerkt.every((e) => e.ort === 'Rom'), 'die stadt folgt aus der adresse');
+  assert.ok(gemerkt.every((e) => e.foto_url === 'https://beispiel.org/gefunden.jpg'), 'jeder punkt holt sich sein bild');
+  assert.ok(gemerkt.every((e) => e.foto_nachweis === 'Foto: Mia Gurt / Wikimedia Commons'), 'der nachweis bleibt am eintrag');
+  assert.equal(stand.eintraege.filter((e) => e.titel === 'Borough market').length, 1, 'was zweimal in der zeile stand, wird nicht zweimal angelegt');
+  assert.equal(stand.eintraege.filter((e) => e.titel === 'Ein Tag in Rom').length, 0, 'aus der ueberschrift wird kein punkt');
+
+  await act(async () => {
+    grund.unmount();
+  });
+  assert.ok(geschlossen >= 0, 'das blatt schliesst ueber den knopf, nicht ueber das schreiben');
+  return gemerkt;
+}
+
+/**
+ * Die analyse ueber das, was keinen tag hat: punkte beieinander werden ein satz,
+ * der tag wird an diesem satz gewaehlt – gesetzt wird nur, was angefasst ist.
+ */
+async function gruppenPruefen() {
+  const { OhneTagGruppen } = require('../src/components/OhneTagGruppen.tsx');
+  const behaelter = document.createElement('div');
+  document.body.appendChild(behaelter);
+  const grund = createRoot(behaelter);
+
+  await act(async () => {
+    grund.render(React.createElement(DatenProvider, null, React.createElement(OhneTagGruppen, { reise: REISE })));
+  });
+
+  const satz = behaelter.querySelector('article');
+  assert.ok(satz, 'die wartenden punkte stehen in saetzen');
+  assert.match(satz.textContent ?? '', /2 Punkte/, 'der satz zaehlt seine punkte');
+  assert.ok(!satz.textContent.includes('Markt'), 'was schon einen tag hat, steht in keinem satz');
+  assert.match(behaelter.textContent ?? '', /1 Punkt hat noch kein Google Maps/, 'wer keinen punkt hat, wird gezaehlt statt gerechnet');
+  assert.match(satz.textContent ?? '', /Weg/, 'und zeigt den weg in Google Maps');
+  const chips = Array.from(satz.querySelectorAll('button')).filter((b) => /^\p{L}{2} \d{1,2}\.\d{1,2}\./u.test((b.textContent ?? '').trim()));
+  assert.equal(chips.length, 4, 'jeder reisetag kann gewaehlt werden');
+  assert.ok(chips[0].textContent.includes('km'), 'der naechste tag traegt seinen abstand');
+
+  await act(async () => {
+    chips[1].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  });
+
+  const stand = JSON.parse(window.localStorage.getItem('reiseplan.v1'));
+  const gesetzt = ['Borough market', 'Castel Sant’Angelo'].map((t) => stand.eintraege.find((e) => e.titel === t));
+  assert.ok(gesetzt.every((e) => e.date === '2027-10-25'), 'der gewaehlte tag gilt dem ganzen satz');
+  assert.ok(gesetzt[0].sortierung < gesetzt[1].sortierung, 'die gangreihenfolge wird die reihenfolge am tag');
+  assert.equal(stand.eintraege.find((e) => e.titel === 'Markt').date, '2027-10-24', 'was schon einen tag hat, bleibt liegen');
+
+  await act(async () => {
+    grund.unmount();
+  });
+}
+
 async function main() {
   const wurzel = createRoot(document.getElementById('wurzel'));
   await act(async () => {
@@ -283,11 +386,13 @@ async function main() {
 
   await reihenPrüfen();
   await formularPruefen();
+  await sammelPruefen();
+  await gruppenPruefen();
 
   await act(async () => {
     wurzel.unmount();
   });
-  console.log(`🎉 Speicherblatt hält – ${spur.render} Render, Listen bleiben dieselben, Schreiben wirkt genau einmal, ein name ohne tag genügt, Bilder bleiben Bilder`);
+  console.log(`🎉 Speicherblatt hält – ${spur.render} Render, Listen bleiben dieselben, Schreiben wirkt genau einmal, ein name ohne tag genügt, Bilder bleiben Bilder, eingefügter text wird zu punkten und gruppen`);
 }
 
 main().catch((fehler) => {

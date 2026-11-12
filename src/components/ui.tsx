@@ -295,6 +295,7 @@ export function TextFeld({
   typ = 'text',
   fehler,
   mehrzeilig = false,
+  zeilen = 3,
   autoVeroellstaendigen,
   eingabeModus,
   hinweis,
@@ -308,6 +309,8 @@ export function TextFeld({
   typ?: string;
   fehler?: string;
   mehrzeilig?: boolean;
+  /** zeilen im mehrzeiligen feld – ein eingefügter text braucht höhe */
+  zeilen?: number;
   autoVeroellstaendigen?: string;
   eingabeModus?: 'text' | 'decimal' | 'url' | 'email' | 'tel';
   hinweis?: React.ReactNode;
@@ -324,7 +327,7 @@ export function TextFeld({
         </label>
       ) : null}
       {mehrzeilig ? (
-        <textarea id={id} className={feldKlasse(fehler)} value={wert} placeholder={platzhalter} onChange={(e) => beimAendern(e.target.value)} rows={3} />
+        <textarea id={id} className={feldKlasse(fehler)} value={wert} placeholder={platzhalter} onChange={(e) => beimAendern(e.target.value)} rows={zeilen} />
       ) : (
         <input
           id={id}
