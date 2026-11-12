@@ -7,7 +7,8 @@
  */
 import assert from 'node:assert/strict';
 import { HOECHSTEN, ohneDubletten, zeilenAusText } from '../src/lib/sammel';
-import { haufungen, nachbar, sortieren, tagAbstand, tagAenderung, wegLink } from '../src/lib/naehe';
+import { haufungen, naechsteFolge, nachbar, routenvorschlag, sortieren, tagAbstand, tagAenderung, wegLink } from '../src/lib/naehe';
+import { schaetzungKm } from '../src/lib/karten';
 import type { Eintrag } from '../src/lib/types';
 
 const LEER = {
@@ -84,23 +85,23 @@ assert.deepEqual(sortieren([bett]).mit, [], 'ein bett wird nicht gruppiert');
 assert.deepEqual(sortieren([bett]).ohne, [], 'und es gilt nicht als wartend');
 assert.deepEqual(haufungen([bett, westminster, auge], 2.5).map((h) => h.punkte.map((p) => p.id)), [['w1', 'w2']], 'die betten bleiben aus den gruppen draußen');
 
-const eng = haufungen([westminster, auge, markt, greenwich, irrend], 1.5);
-assert.deepEqual(eng.map((h) => h.punkte.map((p) => p.id)), [['w1', 'w2'], ['s1'], ['g1']], 'bei 1,5 km gehört der markt nicht dazu – große zuerst, einzelne nach namen');
-assert.equal(eng[0]!.wegKm, 0.7, `der weg durch die gruppe ist die schätzung über der luftlinie – ${eng[0]!.wegKm} km bei 0,5 km luftlinie`);
+const eng = haufungen([westminster, auge, markt, greenwich, irrend], 1);
+assert.deepEqual(eng.map((h) => h.punkte.map((p) => p.id)), [['w1', 'w2'], ['s1'], ['g1']], 'bei einem kilometer gehweite gehört der markt nicht dazu – große zuerst, einzelne nach namen');
+assert.equal(eng[0]!.wegKm, 0.7, `der weg durch die gruppe sind die wege, nicht die linie – ${eng[0]!.wegKm} km gehweite bei 0,5 km luftlinie`);
 assert.ok(eng[0]!.minuten >= 5 && eng[0]!.minuten <= 10, `und der weg ist ein fußweg – ${eng[0]!.minuten} min`);
 
-const mittel = haufungen([westminster, auge, markt, greenwich, irrend], 2.5);
+const mittel = haufungen([westminster, auge, markt, greenwich, irrend], 3);
 const ordnung = mittel.map((h) => [...h.punkte.map((p) => p.id)].sort());
-assert.deepEqual(ordnung, [['s1', 'w1', 'w2'], ['g1']], 'bei 2,5 km rückt der markt an den fluß');
-assert.ok(mittel[0]!.schrittKm <= 2.5, `kein schritt in der gruppe ist weiter als die schwelle – ${mittel[0]!.schrittKm} km`);
-assert.ok(mittel[0]!.wegKm <= 2 * 2.5, `der gang sind zwei schritte, kein hin und her – ${mittel[0]!.wegKm} km`);
+assert.deepEqual(ordnung, [['s1', 'w1', 'w2'], ['g1']], 'bei drei kilometern gehweite rückt der markt an den fluß');
+assert.ok(mittel[0]!.schrittKm <= 3, `kein schritt in der gruppe ist weiter als die schwelle – ${mittel[0]!.schrittKm} km`);
+assert.ok(mittel[0]!.wegKm <= 2 * 3, `der gang sind zwei schritte, kein hin und her – ${mittel[0]!.wegKm} km`);
 assert.equal(new Set(mittel[0]!.punkte.map((p) => p.id)).size, 3, 'und jeder punkt kommt genau einmal');
 
-const weit = haufungen([westminster, auge, markt, greenwich, irrend], 7);
-assert.equal(weit.length, 1, 'bei 7 km – über die thames zwei mal sechs – wird aus allem einer');
+const weit = haufungen([westminster, auge, markt, greenwich, irrend], 10);
+assert.equal(weit.length, 1, 'bei zehn kilometern gehweite – über die thames zwei mal sechs – wird aus allem einer');
 assert.equal(weit[0]!.punkte.length, 4, 'und greenwich kommt über die kette dazu');
 assert.ok(weit[0]!.schrittKm > 1.5, `der weiteste schritt verrät die kette – ${weit[0]!.schrittKm} km`);
-assert.equal(haufungen([westminster, auge, markt, greenwich], 2.5).length, 2, 'eine schwelle weniger, und greenwich bleibt draußen');
+assert.equal(haufungen([westminster, auge, markt, greenwich], 2.5).length, 3, 'eine schwelle weniger, und der markt fällt wieder raus');
 assert.deepEqual(haufungen([], 2.5), [], 'ohne wartende punkte keine gruppen');
 
 const einsam = haufungen([greenwich, irrend], 2.5);
@@ -114,7 +115,7 @@ assert.deepEqual(haufungen([irrend], 2.5), [], 'ohne punkte auf der karte gibt e
 
 /* ── 3. der tag, der dazu paßt ──────────────────────────────────────────── */
 
-const gruppe = haufungen([westminster, auge, markt], 2.5)[0]!;
+const gruppe = haufungen([westminster, auge, markt], 3)[0]!;
 const tage = [
   { datum: '2027-10-26', punkte: [{ lat: 41.38, lng: 2.17 }] },
   { datum: '2027-10-24', punkte: [{ lat: 51.508, lng: -0.076 }] },
@@ -139,5 +140,54 @@ assert.ok(änderung.every((a) => a.id !== 'n1'), 'wer keinen punkt hat, wird nic
 assert.ok(wegLink(gruppe).includes('google.com/maps/dir'), 'der weg durch die gruppe führt nach Google Maps');
 assert.ok(wegLink(gruppe).includes('travelmode=walking'), 'und zu fuß');
 assert.ok(wegLink(haufungen([westminster], 2.5)[0]!).includes('maps/search'), 'ein einzelner punkt hat keinen weg, nur eine nadel');
+
+/* ── 6. der vorschlag folgt den wegen ──────────────────────────────────── */
+
+const matrix = [
+  [0, 6, 40, 5],
+  [6, 0, 7, 30],
+  [40, 7, 0, 4],
+  [5, 30, 4, 0],
+];
+const ecke = (lat: number, lng: number) => ({ lat, lng });
+const viereck = [ecke(0, 0), ecke(0, 1), ecke(1, 1), ecke(1, 0)];
+const kosten = (reihe: number[]) => reihe.reduce((summe, p, i) => (i ? summe + matrix[reihe[i - 1]!]![p]! : summe), 0);
+const folgen = (liste: number[]): number[][] => {
+  if (liste.length <= 1) return [liste];
+  const fond: number[][] = [];
+  liste.forEach((wert, index) => {
+    const rest = [...liste.slice(0, index), ...liste.slice(index + 1)];
+    for (const folge of folgen(rest)) fond.push([wert, ...folge]);
+  });
+  return fond;
+};
+const alleFolgen = folgen([0, 1, 2, 3]);
+
+const vorschlag = routenvorschlag(viereck, (a, b) => matrix[a]![b]!);
+assert.deepEqual([...vorschlag].sort(), [0, 1, 2, 3], 'jeder punkt kommt genau einmal vor');
+assert.equal(
+  kosten(vorschlag),
+  Math.min(...alleFolgen.map(kosten)),
+  `der vorschlag ist die kürzeste route durch die vier – ${kosten(vorschlag)} gegen ${Math.min(...alleFolgen.map(kosten))}`
+);
+assert.ok(
+  kosten(vorschlag) <= kosten(naechsteFolge(4, (a, b) => matrix[a]![b]!, 0)),
+  'und nie teurer als der reine gang zum nächsten'
+);
+assert.deepEqual(routenvorschlag([ecke(1, 1)], () => 0), [0], 'ein einzelner punkt ist eine route');
+assert.deepEqual([...routenvorschlag([ecke(0, 0), ecke(0, 1)], () => 3)].sort(), [0, 1], 'zwei halte sind beide richtungen gleich');
+assert.deepEqual(routenvorschlag([], () => 0), [], 'ohne halte kein gang');
+assert.deepEqual(
+  [...routenvorschlag(viereck, (a, b) => (a === b ? 0 : Number.POSITIVE_INFINITY))].sort(),
+  [0, 1, 2, 3],
+  'was der dienst nicht beantwortet, wird nicht erfunden – es bleibt eine reihenfolge, keine rechnung'
+);
+
+const gruppenfolge = haufungen([westminster, auge, markt], 3)[0]!;
+assert.deepEqual(
+  gruppenfolge.punkte.map((p) => p.id),
+  routenvorschlag(gruppenfolge.punkte, (a, b) => schaetzungKm(gruppenfolge.punkte[a]!, gruppenfolge.punkte[b]!) ?? 0).map((i) => gruppenfolge.punkte[i]!.id),
+  'die gruppe steht schon in der reihenfolge des gangs – dasselbe gewicht, dieselbe folge'
+);
 
 console.log('🎉 eingefügter text wird zu punkten und gruppen');

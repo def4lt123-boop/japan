@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Karten, TextFeld } from './ui';
+import { Karten, MadeByFlo, TextFeld } from './ui';
 
 /**
  * Das feld vor der seite: ein passwort, sonst nichts. Nach einem namen wird nicht
- * gefragt, hier gibt es nichts anzulegen und nichts zu löschen – wer das wort hat,
- * liest den plan, und wer es nicht hat, sieht nur diese karte. Was ins feld
- * getippt wird, steht in diesem blatt nirgends, aus dem man es hätten ablesen können.
+ * gefragt, hier gibt es nichts anzulegen und nichts zu löschen – wer das wort von
+ * Flo hat, liest den plan, und wer es nicht hat, sieht nur diese karte. Was ins
+ * feld getippt wird, steht in diesem blatt nirgends, aus dem man es hätte ablesen
+ * können.
  */
 export function AnsichtSchloss({ von }: { von: string }) {
   const [wort, setWort] = useState('');
@@ -48,7 +49,7 @@ export function AnsichtSchloss({ von }: { von: string }) {
           🧭
         </span>
         <h1 className="mt-2.5 text-[19px] font-semibold leading-snug">Zum Ansehen</h1>
-        <p className="mikro mt-1">Ein Passwort, kein Konto – der Plan bleibt, wie er ist.</p>
+        <p className="mikro mt-1">Gib das Passwort ein, das du von Flo bekommen hast.</p>
         <form
           className="mt-3"
           onSubmit={(e) => {
@@ -74,6 +75,7 @@ export function AnsichtSchloss({ von }: { von: string }) {
           </button>
         </form>
       </Karten>
+      <MadeByFlo className="mt-3 w-full text-center" />
     </div>
   );
 }

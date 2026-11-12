@@ -47,38 +47,106 @@ export function sortieren(eintraege: Eintrag[]): { mit: Nahpunkt[]; ohne: Eintra
   return { mit, ohne };
 }
 
-const paarKm = (a: Nahpunkt, b: Nahpunkt) => entfernungKm(a, b) ?? Number.POSITIVE_INFINITY;
+// gruppiert wird nach dem weg, nicht nach der luftlinie: „höchstens 1 km“ soll
+// heißen, dass der schritt zu fuß unter einem kilometer liegt
+const paarKm = (a: Nahpunkt, b: Nahpunkt) => schaetzungKm(a, b) ?? Number.POSITIVE_INFINITY;
+
+/** einer der punkte, der am weitesten von der mitte absteht – der anfang des gangs */
+function weitesterPunkt(punkte: { lat: number; lng: number }[]): number {
+  if (punkte.length < 3) return 0;
+  const mitte = punkte.reduce((m, p) => ({ lat: m.lat + p.lat / punkte.length, lng: m.lng + p.lng / punkte.length }), { lat: 0, lng: 0 });
+  let fund = 0;
+  let weitester = -1;
+  punkte.forEach((p, i) => {
+    const km = entfernungKm(p, mitte) ?? 0;
+    if (km > weitester) {
+      weitester = km;
+      fund = i;
+    }
+  });
+  return fund;
+}
+
+/**
+ * Immer zum nächsten, das übrig ist – über beliebiges gewicht. Mit der tabelle des
+ * wegdienstes ist das gewicht die echte gehzeit, ohne sie die überschlagene strecke.
+ */
+export function naechsteFolge(anzahl: number, gewicht: (a: number, b: number) => number, anfang = 0): number[] {
+  if (anzahl <= 1) return anzahl === 1 ? [0] : [];
+  const ubrig: number[] = [];
+  for (let i = 0; i < anzahl; i += 1) if (i !== anfang) ubrig.push(i);
+  const reihe = [anfang];
+  let letzter = anfang;
+  while (ubrig.length) {
+    let index = 0;
+    let nachster = Number.POSITIVE_INFINITY;
+    ubrig.forEach((i, position) => {
+      const wert = gewicht(letzter, i);
+      if (wert < nachster) {
+        nachster = wert;
+        index = position;
+      }
+    });
+    letzter = ubrig.splice(index, 1)[0]!;
+    reihe.push(letzter);
+  }
+  return reihe;
+}
+
+/** die folie einer reihenfolge: was die schritte zusammen kosten */
+function kosten(reihe: number[], gewicht: (a: number, b: number) => number): number {
+  let summe = 0;
+  for (let i = 0; i + 1 < reihe.length; i += 1) summe += gewicht(reihe[i]!, reihe[i + 1]!);
+  return summe;
+}
+
+/**
+ * Der vorschlag für eine route durch eine handvoll halte: erst der gang zum
+ * nächsten, dann so lange ein stück umgedreht, bis kein tausch mehr einen schritt
+ * spart. Das gewicht ist das, was die seite für teuer hält – mit der tabelle des
+ * wegdienstes die echten minuten, ohne sie die überschlagene strecke.
+ */
+export function routenvorschlag(punkte: { lat: number; lng: number }[], gewicht: (a: number, b: number) => number): number[] {
+  let reihe = naechsteFolge(punkte.length, gewicht, weitesterPunkt(punkte));
+  if (punkte.length < 4) return reihe;
+  let summe = kosten(reihe, gewicht);
+  for (let versuch = 0; versuch < 12; versuch += 1) {
+    let besser = false;
+    // ein stück der folie umdrehen – das ist der schritt, der ein hin und her auflöst
+    for (let a = 0; a + 2 < reihe.length && !besser; a += 1) {
+      for (let b = a + 2; b < reihe.length && !besser; b += 1) {
+        const kandidat = [...reihe.slice(0, a + 1), ...reihe.slice(a + 1, b + 1).reverse(), ...reihe.slice(b + 1)];
+        const neu = kosten(kandidat, gewicht);
+        if (neu + 0.01 < summe) {
+          reihe = kandidat;
+          summe = neu;
+          besser = true;
+        }
+      }
+    }
+    // und einen einzigen halte woanders hinsetzen – eine offene route darf auch
+    // ihren anfang wechseln, sonst steht der erste punkt oft in der mitte
+    for (let a = 0; a < reihe.length && !besser; a += 1) {
+      const rest = [...reihe.slice(0, a), ...reihe.slice(a + 1)];
+      for (let b = 0; b < rest.length && !besser; b += 1) {
+        const kandidat = [...rest.slice(0, b), reihe[a]!, ...rest.slice(b)];
+        const neu = kosten(kandidat, gewicht);
+        if (neu + 0.01 < summe) {
+          reihe = kandidat;
+          summe = neu;
+          besser = true;
+        }
+      }
+    }
+    if (!besser) break;
+  }
+  return reihe;
+}
 
 /** von einem startpunkt aus immer zum nächsten – die reihenfolge für den tag */
 function rundgang(punkte: Nahpunkt[]): Nahpunkt[] {
   if (punkte.length < 3) return [...punkte];
-  const mitte = punkte.reduce((m, p) => ({ lat: m.lat + p.lat / punkte.length, lng: m.lng + p.lng / punkte.length }), { lat: 0, lng: 0 });
-  let start = punkte[0]!;
-  let weitester = -1;
-  for (const p of punkte) {
-    const km = entfernungKm(p, mitte) ?? 0;
-    if (km > weitester) {
-      weitester = km;
-      start = p;
-    }
-  }
-  const ubrig = punkte.filter((p) => p !== start);
-  const gang = [start];
-  let letzter = start;
-  while (ubrig.length) {
-    let index = 0;
-    let nachster = Number.POSITIVE_INFINITY;
-    ubrig.forEach((p, i) => {
-      const km = paarKm(letzter, p);
-      if (km < nachster) {
-        nachster = km;
-        index = i;
-      }
-    });
-    letzter = ubrig.splice(index, 1)[0]!;
-    gang.push(letzter);
-  }
-  return gang;
+  return naechsteFolge(punkte.length, (a, b) => paarKm(punkte[a]!, punkte[b]!), weitesterPunkt(punkte)).map((i) => punkte[i]!);
 }
 
 function stadtVon(punkte: Nahpunkt[]): string | null {

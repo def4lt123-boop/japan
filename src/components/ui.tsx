@@ -46,6 +46,19 @@ export function KartenKopf({
   );
 }
 
+/**
+ * Wer die seite gemacht hat – dieselbe zeile am schloss, in der seitenleiste und
+ * am ende des dashboards. Kurz, damit sie nirgends im weg steht und doch überall
+ * zu finden ist.
+ */
+export function MadeByFlo({ className }: { className?: string }) {
+  return (
+    <p className={cx('mikro', className)}>
+      made by <span className="font-semibold">Flo</span>
+    </p>
+  );
+}
+
 export function SeitenKopf({
   titel,
   untertitel,

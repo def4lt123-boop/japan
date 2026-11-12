@@ -7,7 +7,7 @@ import { begriessung, heuteIso, tagLang } from '../lib/dates';
 import { inTagen, laufend, reiseTage, vergangen } from '../lib/plan';
 import { plural } from '../lib/format';
 import { ReiseKarte } from '../components/ReiseKarte';
-import { Karten, KartenKopf, Chip, Fortschritt, Hinweis, Leer, SeitenKopf } from '../components/ui';
+import { Karten, KartenKopf, Chip, Fortschritt, Hinweis, Leer, MadeByFlo, SeitenKopf } from '../components/ui';
 import { Einstellungen } from '../components/Einstellungen';
 import { StatusAnzeige } from '../components/StatusAnzeige';
 import { planFortschritt } from '../lib/plan';
@@ -77,6 +77,7 @@ export default function Dashboard() {
               </p>
             ))}
           </div>
+          <MadeByFlo className="mt-4 text-center" />
         </Karten>
       </main>
     );
@@ -164,6 +165,8 @@ export default function Dashboard() {
           </div>
         </details>
       ) : null}
+
+      <MadeByFlo className="mt-5 text-center" />
     </main>
   );
 }

@@ -319,6 +319,30 @@ async function sammelPruefen() {
  */
 async function gruppenPruefen() {
   const { OhneTagGruppen } = require('../src/components/OhneTagGruppen.tsx');
+
+  // ein dritter wartender punkt, damit die gruppe eine route hat – und der
+  // brunnen liegt am naechsten an der einen ecke, der markt an der andern
+  const anfang = JSON.parse(window.localStorage.getItem('reiseplan.v1'));
+  if (!anfang.eintraege.some((e) => e.titel === 'Brunnen am Forum')) {
+    const grundEintrag = anfang.eintraege.find((e) => e.titel === 'Borough market');
+    anfang.eintraege.push({ ...grundEintrag, id: 'e-forum', titel: 'Brunnen am Forum', lat: 41.8905, lng: 12.474, sortierung: 5, foto_url: null, foto_nachweis: null });
+    window.localStorage.setItem('reiseplan.v1', JSON.stringify(anfang));
+  }
+
+  // die tabelle des wegdienstes, in der ankunftsordnung der halte: sekunden und
+  // meter, wie der dienst sie nennt. der markt ist zu fuss der naechste zum
+  // brunnen, und der weg vom brunnen zum schloss fuehrt ueber die bruuecke.
+  const vorher = global.fetch;
+  const TABELLE = {
+    durations: [[0, 360, 240], [360, 0, 180], [240, 180, 0]],
+    distances: [[0, 400, 300], [400, 0, 0], [300, 0, 0]],
+  };
+  global.fetch = async (url) => {
+    const weg = String(url ?? '');
+    if (!weg.includes('/table/v1/')) return vorher(url);
+    return { ok: true, status: 200, json: async () => ({ code: 'Ok', ...TABELLE }) };
+  };
+
   const behaelter = document.createElement('div');
   document.body.appendChild(behaelter);
   const grund = createRoot(behaelter);
@@ -326,14 +350,24 @@ async function gruppenPruefen() {
   await act(async () => {
     grund.render(React.createElement(DatenProvider, null, React.createElement(OhneTagGruppen, { reise: REISE })));
   });
+  await act(async () => {
+    await new Promise((loser) => setTimeout(loser, 900));
+  });
 
   const satz = behaelter.querySelector('article');
   assert.ok(satz, 'die wartenden punkte stehen in saetzen');
-  assert.match(satz.textContent ?? '', /2 Punkte/, 'der satz zaehlt seine punkte');
+  assert.match(satz.textContent ?? '', /3 Punkte/, 'der satz zaehlt seine punkte');
   assert.ok(!satz.textContent.includes('Markt'), 'was schon einen tag hat, steht in keinem satz');
   assert.match(behaelter.textContent ?? '', /1 Punkt hat noch kein Google Maps/, 'wer keinen punkt hat, wird gezaehlt statt gerechnet');
   assert.match(satz.textContent ?? '', /Weg/, 'und zeigt den weg in Google Maps');
   assert.match(satz.textContent ?? '', /gleicher punkt/, 'zwei punkte am selben ort werden kein weg genannt');
+  assert.match(satz.textContent ?? '', /vorgeschlagene route/, 'und die kopfzeile sagt, was sie vorschlaegt');
+  assert.match(satz.textContent ?? '', /7 Min zusammen/, 'die minuten kommen aus der tabelle, nicht aus der luftlinie');
+  assert.ok(!satz.querySelector('ol').textContent.includes('\u2248'), 'die schritte einer gruppe mit tabelle stehen ohne ungefaehr da');
+  const halte = Array.from(satz.querySelectorAll('ol li a')).map((a) => a.textContent);
+  assert.deepEqual(halte, ['Brunnen am Forum', 'Castel Sant\u2019Angelo', 'Borough market'], 'die vorgeschlagene reihenfolge folgt den wegen, nicht dem eintippen');
+  assert.match(satz.querySelector('ol li').textContent, /4 Min\. 300 m zum nächsten/, 'die erste halte liest denselben schritt, vorwärts');
+  assert.match(satz.querySelector('a.chip').getAttribute('href'), /origin=41\.8905,12\.474/, 'der weglink laeuft vom anfang des vorschlags los');
   const stufen = Array.from(behaelter.querySelectorAll('button')).filter((b) => /^höchstens /.test((b.textContent ?? '').trim()));
   assert.equal(stufen.length, 4, 'vier abstände – der engste ist ein kilometer');
   assert.match(stufen[0].textContent ?? '', /höchstens 1 km/, 'und er heißt höchstens 1 km');
@@ -341,7 +375,7 @@ async function gruppenPruefen() {
   await act(async () => {
     stufen[0].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   });
-  assert.match(behaelter.querySelector('article').textContent ?? '', /2 Punkte/, 'bei einem kilometer bleiben dieselben punkte zusammen');
+  assert.match(behaelter.querySelector('article').textContent ?? '', /3 Punkte/, 'bei einem kilometer bleiben dieselben punkte zusammen');
   await act(async () => {
     stufen[3].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   });
@@ -356,9 +390,14 @@ async function gruppenPruefen() {
   const stand = JSON.parse(window.localStorage.getItem('reiseplan.v1'));
   const gesetzt = ['Borough market', 'Castel Sant’Angelo'].map((t) => stand.eintraege.find((e) => e.titel === t));
   assert.ok(gesetzt.every((e) => e.date === '2027-10-25'), 'der gewaehlte tag gilt dem ganzen satz');
-  assert.ok(gesetzt[0].sortierung < gesetzt[1].sortierung, 'die gangreihenfolge wird die reihenfolge am tag');
+  const amTag = ['Brunnen am Forum', 'Castel Sant\u2019Angelo', 'Borough market']
+    .map((t) => stand.eintraege.find((e) => e.titel === t))
+    .sort((a, b) => a.sortierung - b.sortierung)
+    .map((e) => e.titel);
+  assert.deepEqual(amTag, ['Brunnen am Forum', 'Castel Sant\u2019Angelo', 'Borough market'], 'die vorgeschlagene route wird die reihenfolge am tag');
   assert.equal(stand.eintraege.find((e) => e.titel === 'Markt').date, '2027-10-24', 'was schon einen tag hat, bleibt liegen');
 
+  global.fetch = vorher;
   await act(async () => {
     grund.unmount();
   });

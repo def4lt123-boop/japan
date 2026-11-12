@@ -12,7 +12,7 @@ import { join } from 'node:path';
 
 import { TAKT_WERTE, bremsMelden, gebremst, takt, taktVergessen } from '../src/lib/suchtakt';
 import { bremsenVergessen, fragegedaechtnisVergessen, orteSuchen, bremsZuletzt, frageLohnt } from '../src/lib/anbieter';
-import { routeBekannt, routeZwischen } from '../src/lib/routen';
+import { routeBekannt, routeZwischen, wegTabelle } from '../src/lib/routen';
 import { FUSS, minutenAus, nahGenug, wegLaenge, wegSchaetzen, wegText, wegTitel, type Fussweg } from '../src/lib/weg';
 import { haufungen, nachbarn } from '../src/lib/naehe';
 import { ansichtWert, aufgesperrt, passtDas, wurzel, zielSichern } from '../src/lib/ansicht.server';
@@ -162,7 +162,7 @@ assert.equal(gerechnet?.km, 1.2, 'der weg wird auf einen dezimal gerundet');
 assert.equal(gerechnet?.minuten, 16, '940 sekunden sind sechzehn minuten');
 assert.equal(gerechnet?.quelle, 'gerechnet', 'und die zeile sagt, dass gerechnet ist');
 assert.deepEqual(gerechnet?.strecke, [[51.5081, -0.0759], [51.5014, -0.0745]], 'die linie für die karte kommt mit');
-assert.ok(/router\.project-osrm\.org\/route\/v1\/foot\//.test(gefragte[0]!), 'gerechnet wird über den offenen fußwegdienst');
+assert.ok(/routing\.openstreetmap\.de\/routed-foot\/route\/v1\/foot\//.test(gefragte[0]!), 'gerechnet wird über den offenen fußwegdienst');
 assert.ok(/overview=false/.test(gefragte[0]!), 'ohne zeichenauftrag bleibt die anfrage klein');
 assert.equal(routeBekannt(turm, bruecke, 'zu fuss')?.quelle, 'gerechnet', 'was gerechnet ist, liegt im kopf');
 assert.equal(routeBekannt(bruecke, turm, 'zu fuss'), null, 'das paar zurück ist eine eigne frage');
@@ -185,6 +185,63 @@ assert.equal(ausgefallen?.quelle, 'geschätzt', 'ein dienst, der ausfällt, wirf
 assert.equal(gebremst(), true, 'und er wird eine zeitlang nicht weiter gefragt – die zeilen bleiben trotzdem gefüllt');
 taktVergessen();
 assert.equal(gebremst(), false, 'nach der frist ist die rechnung wieder frei');
+
+/* ── 4b · der weg nach dem tempolimit des modus, und eine anfrage für viele ── */
+
+const steg = { lat: 51.5095, lng: -0.0984 };
+const ufer = { lat: 51.5046, lng: -0.0893 };
+const gefragtAuch: string[] = [];
+globalThis.fetch = (async (url: string | URL) => {
+  const text = String(url);
+  gefragtAuch.push(text);
+  if (text.includes('routed-foot')) return new Response('dienst ausgefallen', { status: 500 });
+  return new Response(
+    JSON.stringify({ code: 'Ok', routes: [{ distance: 570, duration: 60, geometry: { coordinates: [[-0.0984, 51.5095], [-0.0893, 51.5046]] } }] })
+  );
+}) as typeof fetch;
+
+const kurze = await routeZwischen(steg, ufer, 'zu fuss');
+assert.equal(kurze?.km, 0.6, 'sechshundert meter sind ein paar zehntel');
+assert.equal(kurze?.minuten, 8, `der dienst sagt eine minute für den weg – die untergrenze hebt ihn auf den gehschritt, sonst stünde ein fußweg von zwei minuten da, den niemand geht – ${kurze?.minuten}`);
+assert.ok(/router\.project-osrm\.org\/route\/v1\/driving\//.test(gefragtAuch[1]!), 'antwortet der fußwegdienst nicht, wird der allgemeine dienst gefragt');
+assert.equal(gefragtAuch.length, 2, 'die kette geht weiter, sie stirbt nicht am ersten widerwort');
+assert.equal(gebremst(), true, 'der dienst, der ausfiel, wird eine weile nicht weiter gefragt');
+taktVergessen();
+
+const vorher = gefragtAuch.length;
+const radweg = await routeZwischen({ lat: 48.2084, lng: 16.3733 }, { lat: 48.2141, lng: 16.3689 }, 'rad');
+assert.ok(gefragtAuch[vorher]?.includes('routed-bike'), 'das rad fragt den dienst, der für das rad gebaut ist');
+assert.ok(radweg === null || radweg.minuten >= 2, 'und für das rad ist eine minute nie eine minute');
+
+const halte = [
+  { lat: 51.5007, lng: -0.1246 },
+  { lat: 51.5033, lng: -0.1196 },
+  { lat: 51.5054, lng: -0.091 },
+];
+const gefragteTabelle: string[] = [];
+globalThis.fetch = (async (url: string | URL) => {
+  const text = String(url);
+  gefragteTabelle.push(text);
+  return new Response(
+    JSON.stringify({
+      code: 'Ok',
+      durations: [[0, 420, 1500], [420, 0, 900], [1500, 900, 0]],
+      distances: [[0, 700, 2400], [700, 0, 1300], [2400, 1300, 0]],
+    })
+  );
+}) as typeof fetch;
+
+const tabelle = await wegTabelle(halte, 'zu fuss');
+assert.ok(tabelle, 'die matrix kommt');
+assert.equal(gefragteTabelle.length, 1, 'drei halte sind eine anfrage, nicht drei');
+assert.ok(/\/table\/v1\/foot\//.test(gefragteTabelle[0]!), 'und sie geht an den dienst, der die wege kennt');
+assert.ok(/annotations=duration/.test(gefragteTabelle[0]!), 'gefragt sind zeiten und strecken');
+assert.equal(tabelle!.minuten[0]![2], 31, `fünfzehnhundert sekunden wären fünfundzwanzig minuten – der gehschritt hebt sie auf mehr, weil zwei kilometer in fünfundzwanzig minuten niemand geht – ${tabelle!.minuten[0]![2]}`);
+assert.equal(tabelle!.minuten[0]![0], 0, 'der weg zu sich selbst ist null');
+assert.equal(tabelle!.km[1]![2], 1.3, 'die strecke steht in der zweiten matrix');
+assert.equal(tabelle!.minuten[2]![0], 31, 'und die tabelle ist in beide richtungen lesbar');
+await wegTabelle(halte, 'zu fuss');
+assert.equal(gefragteTabelle.length, 1, 'dieselbe handvoll wird nicht noch einmal gefragt');
 
 console.log('🎉 Der Weg wird gerechnet, wo der Dienst antwortet, und überschlagen, wo nicht');
 

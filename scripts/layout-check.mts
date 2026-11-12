@@ -581,4 +581,51 @@ assert.ok(!/NEXT_PUBLIC|supabase|apikey/i.test(schlossWarte + schlossLib), 'das 
 assert.ok(!/passwort ist|so lautet|lautet das/i.test(schlossBlatt + schlossSeite), 'die seite rät das wort nicht');
 assert.ok(!/passwort[^\n]{0,12}\d{3,}/i.test(schlossBlatt + schlossSeite + orteAntwort), 'und schreibt es nirgends hin');
 
+/* ── 19. wer die seite gemacht hat, und was ein weg kosten darf ─────────── */
+
+const uiBlatt = text('src/components/ui.tsx');
+assert.match(uiBlatt, /export function MadeByFlo\(/, 'eine darstellung dafür, wer die seite gemacht hat');
+assert.match(uiBlatt, /made by <span className="font-semibold">Flo<\/span>/, 'und sie sagt es in denselben worten');
+const floStellen = dateien.filter((d) => text(d).includes('<MadeByFlo')).sort();
+assert.deepEqual(floStellen, ['src/app/page.tsx', 'src/components/AnsichtSchloss.tsx', 'src/components/Huelle.tsx'], 'sie steht am schloss, in der leiste und auf dem dashboard');
+const kopfBlatt = text('src/app/layout.tsx');
+assert.match(kopfBlatt, /made by Flo/, 'und im reiter steht dasselbe');
+for (const { pfad, inhalt } of texte(dateien)) {
+  assert.ok(!/gemacht von flo|impressum: flo|© flo/i.test(inhalt), `${pfad} sagt es nicht noch einmal in andern worten`);
+}
+
+assert.match(schlossBlatt, /Gib das Passwort ein, das du von Flo bekommen hast\./, 'am schloss steht, woher das wort kommt');
+assert.ok(!schlossBlatt.includes('kein Konto'), 'der satz über kontos steht nicht am schloss');
+assert.ok(!/(Ein|kein) Passwort, kein/i.test(schlossSeite + schlossBlatt), 'und er kommt auch nirgends sonst wieder');
+
+const routenQuelle = text('src/lib/routen.ts');
+assert.match(routenQuelle, /export function untergrenze\(km: number, modus: string\)/, 'jeder modus hat ein tempolimit, und es gilt als untergrenze');
+assert.match(routenQuelle, /Math\.max\(1, zeit, untergrenze\(km, modus\)\)/, 'keine dienstantwort ist schneller, als der modus laufen kann');
+assert.match(routenQuelle, /export function wegQuellen\(/, 'ein modus hat eine kette von diensten, nicht nur einen');
+assert.match(routenQuelle, /if \(diener !== ALLGEMEIN\)/, 'dahinter fragt der allgemeine dienst nach');
+assert.match(routenQuelle, /if \(gebremst\(\)\) return geschaetzteRoute\(von, nach, modus\);/, 'in der bremse wird niemand mehr gefragt – die zeile überschlägt sich');
+assert.match(routenQuelle, /export const TABELLE_MAX = 12/, 'eine gruppe fragt die wege auf einmal, und die anfrage hat ein maß');
+assert.match(routenQuelle, /\/table\/v1\/\$\{quelle\.osrm\}/, 'die tabelle fragt denselben diener wie das einzelpaar');
+assert.match(routenQuelle, /if \(a === b\) \{/, 'und sich selbst ist kein schritt');
+assert.match(routenQuelle, /const speicherTabellen = new Map<string, Wegmatrix>\(\)/, 'was gerechnet ist, wird nicht noch einmal gefragt');
+
+const kartenQuelle = text('src/lib/karten.ts');
+assert.match(kartenQuelle, /diener: 'https:\/\/routing\.openstreetmap\.de\/routed-foot'/, 'zu fuß wird der fußwegdienst gefragt');
+assert.match(kartenQuelle, /diener: 'https:\/\/routing\.openstreetmap\.de\/routed-bike'/, 'das rad den raddienst');
+assert.match(kartenQuelle, /diener: 'https:\/\/router\.project-osrm\.org'/, 'auto und bahn bleiben beim allgemeinen');
+
+const naeheQuelle = text('src/lib/naehe.ts');
+assert.match(naeheQuelle, /const paarKm = \(a: Nahpunkt, b: Nahpunkt\) => schaetzungKm\(a, b\)/, 'gruppiert wird über die wege, nicht über die linie');
+assert.match(naeheQuelle, /export function naechsteFolge\(/, 'der gang zum nächsten ist eine rechnung für sich');
+assert.match(naeheQuelle, /export function routenvorschlag\(/, 'und darüber liegt der vorschlag, der so lange umgedreht wird, bis nichts mehr spart');
+
+const gruppenRoutenBlatt = text('src/components/Fussweg.tsx');
+assert.match(gruppenRoutenBlatt, /export function useGruppenRouten\(/, 'eine gruppe ist eine anfrage an den wegdienst');
+assert.match(gruppenRoutenBlatt, /if \(gruppe\.punkte\.length < 3\) continue/, 'zwei halte sind noch keine route');
+assert.match(haufungsBlatt, /useGruppenRouten\(/, 'das gruppenblatt benutzt die tabelle');
+assert.match(haufungsBlatt, /routenvorschlag\(/, 'und ordnet die halte nach den minuten');
+assert.match(haufungsBlatt, /vorgeschlagene route ·/, 'die kopfzeile sagt, was sie vorschlägt');
+assert.match(haufungsBlatt, /tagAenderung\(eintraege, gruppe, datum\)/, 'auf den tag kommt nur, was einer angefaßt hat');
+assert.ok(!/eintragAendern\([^)]*date:/.test(haufungsBlatt), 'der vorschlag setzt keinen tag von selbst');
+
 console.log(`🎉 Neues Fundament hält – ${dateien.length} Dateien (${dateien.reduce((s, d) => s + text(d).split('\n').length, 0)} Zeilen), ${seiten.length} Seiten, ${blätter.length} Reiseblätter, kein Rest von früher`);
