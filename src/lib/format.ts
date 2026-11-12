@@ -5,6 +5,15 @@ export function uid(prefix = 'e'): string {
   return `${prefix}-${Date.now().toString(36).slice(-5)}${zufall}`;
 }
 
+/**
+ * Eine gradzahl zum Lesen: fünf stellen, komma statt punkt, nullen am ende weg.
+ * Das feld „Punkt“ zeigt damit, was es verstanden hat – mehr braucht niemand.
+ */
+export function gradText(wert: number | null | undefined): string {
+  if (wert === null || wert === undefined || !Number.isFinite(wert)) return '';
+  return wert.toFixed(5).replace('.', ',').replace(/,?0+$/, '');
+}
+
 const WORT = /^[^\d\W]/;
 /** Bindewörter, die in Namen klein bleiben – und Kürzel, die niemand groß schreibt */
 const KLEIN = new Set(['of', 'the', 'and', 'de', 'del', 'di', 'du', 'la', 'le', 'el', 'y', 'e', 'i', 'und', 'von', 'der', 'den', 'im', 'am', 'auf', 'en', 'da', 'das', 'nan', 'mont']);

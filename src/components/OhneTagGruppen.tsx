@@ -77,7 +77,7 @@ export function OhneTagGruppen({ reise }: { reise: Reise }) {
 
         {ohnePunkt.length ? (
           <p className="mikro">
-            {ohnePunkt.length} {ohnePunkt.length === 1 ? 'Punkt hat' : 'Punkte haben'} noch kein Google Maps – in der Liste den Punkt suchen und übernehmen, dann rechnet die analyse mit.
+            {ohnePunkt.length} {ohnePunkt.length === 1 ? 'Punkt hat' : 'Punkte haben'} noch kein Google Maps – in der zeile den punkt suchen oder den Google-Maps-link einfügen, dann rechnet die analyse mit.
           </p>
         ) : null}
         {!tage.length ? <p className="mikro">Diese reise hat keine tage – im reiseblatt datum einsetzen, dann gibt es tage zum auswählen.</p> : null}

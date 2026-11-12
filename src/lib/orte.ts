@@ -120,7 +120,11 @@ export function stadtAusAdresse(adresse: string | null, land?: string | null): s
 
 /** „35.0116, 135.7681" → Punkt; Unsinniges → kein Punkt */
 export function punktAusText(text: string): { lat: number | null; lng: number | null } {
-  const [lat, lng] = (text ?? '').split(/[,;\s]+/).filter(Boolean).map(Number);
+  const roh = (text ?? '').trim();
+  const leer = roh.split(/\s+/).filter(Boolean);
+  // zwei zahlen, die ein leerzeichen trennt: dann ist das komma der dezimaltrenner („51,5055 -0,0911“)
+  const teile = leer.length === 2 && leer.every((t) => /^-?\d+(?:[.,]\d+)?$/.test(t)) ? leer : roh.split(/[,;\s]+/).filter(Boolean);
+  const [lat, lng] = teile.map((t) => Number(t.replace(',', '.')));
   if (lat === undefined || lng === undefined || !Number.isFinite(lat) || !Number.isFinite(lng)) return { lat: null, lng: null };
   if (Math.abs(lat) > 90 || Math.abs(lng) > 180 || (lat === 0 && lng === 0)) return { lat: null, lng: null };
   return { lat, lng };

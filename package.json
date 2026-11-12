@@ -11,10 +11,11 @@
     "test:plan": "tsx scripts/plan-test.mts",
     "test:suche": "tsx scripts/suche-test.mts",
     "test:gruppen": "tsx scripts/gruppen-test.mts",
+    "test:kartenlink": "tsx scripts/kartenlink-test.mts",
     "test:layout": "tsx scripts/layout-check.mts",
     "test:sql": "tsx scripts/sql-check.mts",
     "test:render": "node -r tsx/cjs scripts/render-test.cjs",
-    "test:all": "npm run typecheck && npm run test:plan && npm run test:suche && npm run test:gruppen && npm run test:layout && npm run test:sql && npm run test:render"
+    "test:all": "npm run typecheck && npm run test:plan && npm run test:suche && npm run test:gruppen && npm run test:kartenlink && npm run test:layout && npm run test:sql && npm run test:render"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

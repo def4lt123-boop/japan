@@ -17,10 +17,12 @@ for (const name of ['window', 'document', 'navigator', 'HTMLElement', 'Element',
 }
 global.IS_REACT_ACT_ENVIRONMENT = true;
 /** die bildersuche antwortet, der datenbestand nicht – ein fund soll zu sehn sein */
+const KARTENLINK = 'https://www.google.com/maps/place/Sky+Garden/@51.515512,-0.081714,17z/data=!4m6!3m5!8m2!3d51.515512!4d-0.081714';
 const ORT = { 'borough market': { name: 'Borough market', adresse: 'Via Mazzini, Rom', lat: 41.8862, lng: 12.4679, stichwort: null, quelle: 'openstreetmap' }, castel: { name: 'Castel Sant’Angelo', adresse: 'Rom', lat: 41.8862, lng: 12.4679, stichwort: null, quelle: 'photon' } };
 global.fetch = async (url) => {
   const weg = String(url ?? '');
   if (weg.includes('/api/bild')) return { ok: true, status: 200, json: async () => ({ url: 'https://beispiel.org/gefunden.jpg', nachweis: 'Foto: Mia Gurt / Wikimedia Commons' }) };
+  if (weg.includes('/api/karte')) return { ok: true, status: 200, json: async () => ({ ziel: KARTENLINK }) };
   if (weg.includes('/api/orte')) {
     const frage = decodeURIComponent(weg.split('q=')[1] ?? '').toLowerCase();
     const treffer = Object.values(ORT).find((o) => frage.includes(o.name.split(',')[0].toLowerCase().slice(0, 7)) || (frage.includes('castel') && o.name.includes('Castel')));
@@ -350,6 +352,96 @@ async function gruppenPruefen() {
   });
 }
 
+/**
+ * Der punkt von hand: die suche hat nichts gefunden, also kommt der link herein –
+ * in das feld „punkt“ und in die suche, in der langen form und in der kurzen aus
+ * dem teilen-knopf. was keinen punkt hergibt, schreibt nichts.
+ */
+async function kartenlinkPruefen() {
+  const { EintragFormular } = require('../src/components/EintragFormular.tsx');
+  const behaelter = document.createElement('div');
+  document.body.appendChild(behaelter);
+  const grund = createRoot(behaelter);
+
+  await act(async () => {
+    grund.render(React.createElement(DatenProvider, null, React.createElement(EintragFormular, { reise: REISE, art: 'aktivitaet', offen: true, schliessen: () => {} })));
+  });
+
+  const felder = (wert) => Array.from(document.body.querySelectorAll('input')).filter((f) => (f.getAttribute('placeholder') ?? '').includes(wert));
+  const punktFeld = felder('Link aus Google Maps')[0];
+  assert.ok(punktFeld, 'das feld „punkt“ nimmt einen link an – es steht sichtbar, nicht versteckt');
+
+  // 1 · ein langer link: der punkt steht darin, übernommen wird per knopf
+  await act(async () => {
+    schreibe(punktFeld, KARTENLINK);
+  });
+  // die ablage hängt am körper, nicht im behälter – gesucht wird in ihrem rahmen
+  const blatt = () => document.body.querySelector('.ablage') ?? document.body;
+  const knoepfe = () => Array.from(blatt().querySelectorAll('button'));
+  const gelesen = () => Array.from(blatt().querySelectorAll('.chip')).map((c) => c.textContent ?? '');
+  assert.ok(gelesen().some((t) => t.includes('51,51551')), 'das feld zeigt, was es gelesen hat');
+  assert.ok(gelesen().some((t) => t.includes('Sky Garden')), 'und den namen aus dem link');
+  const uebernehmen = Array.from(document.body.querySelectorAll('button')).find((b) => (b.textContent ?? '').trim() === 'Punkt übernehmen');
+  assert.ok(uebernehmen, 'ein tip schreibt den punkt');
+  await act(async () => {
+    uebernehmen.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  });
+  assert.ok(gelesen().some((t) => t.includes('📍 51,51551')), 'der punkt steht am einwurf');
+  assert.ok(Array.from(blatt().querySelectorAll('a')).some((a) => (a.textContent ?? '').includes('Google Maps')), 'und der weg dorthin ist ein link');
+  assert.ok(!knoepfe().some((b) => (b.textContent ?? '').trim() === 'Punkt übernehmen'), 'und das feld ist leer, weil es nichts mehr anzubieten hat');
+  const vorschau = blatt().querySelector('iframe[title="Kartenvorschau"]');
+  assert.ok(vorschau && vorschau.getAttribute('src').includes('51.51551'), 'die kartenvorschau folgt dem manuellen punkt');
+
+  // 2 · der kurze link aus dem teilen-knopf wird nachgelesen
+  await act(async () => {
+    schreibe(punktFeld, 'https://maps.app.goo.gl/K3vQ9m2LyWonE9JP9');
+  });
+  await act(async () => {
+    await new Promise((warten) => setTimeout(warten, 30));
+  });
+  assert.ok(knoepfe().some((b) => (b.textContent ?? '').trim() === 'Punkt übernehmen'), 'der kurze link gibt seinen punkt, nachdem er vorgelegt wurde');
+
+  // 3 · ein link ohne punkt schreibt nichts
+  await act(async () => {
+    schreibe(punktFeld, 'https://www.google.com/maps/search/?api=1&query=Borough+Market');
+  });
+  assert.ok(Array.from(blatt().querySelectorAll('p')).some((p) => (p.textContent ?? '').includes('In diesem Link steht kein Punkt')), 'und das feld sagt, was fehlt');
+
+  // 4 · der link in der suche wird nicht gesucht, sondern angeboten
+  const suchFeld = blatt().querySelector('input[type="text"]');
+  await act(async () => {
+    schreibe(suchFeld, KARTENLINK);
+  });
+  assert.ok(knoepfe().some((b) => (b.textContent ?? '').includes('Punkt aus dem Link holen')), 'ein link in der suche wird zum punkt, nicht zum suchwort');
+  assert.ok(!Array.from(blatt().querySelectorAll('p')).some((p) => (p.textContent ?? '') === 'suche Orte …'), 'die suche bleibt zu, wenn ein link drinsteht');
+  await act(async () => {
+    knoepfe()
+      .find((b) => (b.textContent ?? '').includes('Punkt aus dem Link holen'))
+      .dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  });
+  assert.equal(suchFeld.value, 'Sky Garden', 'und der link wird kein titel – der name aus dem link tritt an seine stelle');
+
+  // 5 · und was hier steht, kommt so in den speicher
+  await act(async () => {
+    schreibe(suchFeld, 'Heron Tower');
+  });
+  await act(async () => {
+    knoepfe()
+      .find((b) => (b.textContent ?? '').trim() === 'speichern')
+      .dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  });
+  const gespeichert = JSON.parse(window.localStorage.getItem('reiseplan.v1')).eintraege.find((x) => x.titel === 'Heron Tower');
+  assert.ok(gespeichert, 'der punkt wird gespeichert wie jeder andere');
+  assert.equal(gespeichert.lat, 51.515512, 'der manuelle punkt bleibt der manuelle');
+  assert.equal(gespeichert.lng, -0.081714);
+  assert.equal(gespeichert.karten_stichwort, 'Sky Garden', 'der name aus dem link geht als stichwort mit');
+  assert.equal(gespeichert.date, null, 'und der tag bleibt, wo er war: offen');
+
+  await act(async () => {
+    grund.unmount();
+  });
+}
+
 async function main() {
   const wurzel = createRoot(document.getElementById('wurzel'));
   await act(async () => {
@@ -388,11 +480,12 @@ async function main() {
   await formularPruefen();
   await sammelPruefen();
   await gruppenPruefen();
+  await kartenlinkPruefen();
 
   await act(async () => {
     wurzel.unmount();
   });
-  console.log(`🎉 Speicherblatt hält – ${spur.render} Render, Listen bleiben dieselben, Schreiben wirkt genau einmal, ein name ohne tag genügt, Bilder bleiben Bilder, eingefügter text wird zu punkten und gruppen`);
+  console.log(`🎉 Speicherblatt hält – ${spur.render} Render, Listen bleiben dieselben, Schreiben wirkt genau einmal, ein name ohne tag genügt, Bilder bleiben Bilder, eingefügter text wird zu punkten und gruppen, ein kartenlink gibt den punkt`);
 }
 
 main().catch((fehler) => {
