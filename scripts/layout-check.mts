@@ -447,6 +447,34 @@ assert.match(listenSeite, /OhneTagGruppen/, 'und die gruppen direkt darunter');
 assert.ok(/ohne Tag/.test(sammelBlatt) && /ohne Tag/.test(gruppenBlatt), 'dasselbe wort an allen stellen');
 assert.ok(!/min-h-0/.test(sammelBlatt + gruppenBlatt), 'auch in der vorschlagsliste ist ein feld fingerbreit');
 
+/* ── 17. der punkt von hand: ein link, wenn die suche nichts findet ──────── */
+
+const kartenlinkLib = text('src/lib/kartenlink.ts');
+const punktFeldBlatt = text('src/components/PunktFeld.tsx');
+const sucheBlatt = text('src/components/OrtSuche.tsx');
+const karteRoute = text('src/app/api/karte/route.ts');
+
+assert.match(kartenlinkLib, /export function punktAusKartenLink/, 'der link wird in einer regel gelesen, nicht im feld');
+assert.match(kartenlinkLib, /!3d/, 'die datenklammer hinter dem platz wird gelesen');
+assert.match(kartenlinkLib, /const MITTE = paarweise\('@'/, 'die kartenmitte wird gelesen');
+assert.match(kartenlinkLib, /destination/, 'ein weg endet an einem punkt');
+assert.match(kartenlinkLib, /lat === 0 && lng === 0/, 'null/null ist kein ziel');
+assert.match(kartenlinkLib, /export function istKurzLink/, 'der kurze link aus dem teilen-knopf wird erkannt');
+assert.match(kartenlinkLib, /export async function punktAusLink/, 'und nur der wird nachgelesen');
+assert.match(karteRoute, /dynamic = 'force-dynamic'/, 'das nachlesen wird nicht zwischengespeichert');
+assert.match(karteRoute, /AbortSignal\.timeout/, 'das nachlesen hat eine frist');
+assert.match(karteRoute, /ERLAUBT/, 'angefasst werden nur kartenadressen');
+assert.ok(!/text\(\)|html\(/.test(karteRoute), 'zurückkommt die adresse, nie der seiteninhalt');
+assert.match(punktFeldBlatt, /label="Punkt"/, 'das feld heißt Punkt, nicht Koordinaten');
+assert.match(punktFeldBlatt, /hinweis="Wenn die Suche den Ort nicht findet/, 'und sagt, wofür es da ist');
+assert.match(punktFeldBlatt, /Punkt übernehmen/, 'geschrieben wird, wer übernimmt');
+assert.match(sucheBlatt, /istKartenText/, 'ein link in der suche bleibt eine frage erspart');
+assert.match(sucheBlatt, /beimKartenLink\?\.\(verweis\)|beimKartenLink\?\.\(link\)/, 'und wird als punkt angeboten');
+assert.match(formularText, /Keinen passenden Punkt gefunden – den Google-Maps-Link beim Punkt einfügen/, 'die nachsuche schickt an dasselbe feld');
+assert.ok(!/Koordinaten/.test(kartenlinkLib + punktFeldBlatt + sucheBlatt + formularText), 'ein punkt hat keinen zweiten namen');
+assert.ok(!/NEXT_PUBLIC|supabase|apikey/i.test(karteRoute), 'der dienst nennt keine umgebungswerte');
+assert.match(text('src/lib/orte.ts'), /dezimaltrenner/, 'und zwei zahlen mit komma gehen weiterhin');
+
 
 
 console.log(`🎉 Neues Fundament hält – ${dateien.length} Dateien (${dateien.reduce((s, d) => s + text(d).split('\n').length, 0)} Zeilen), ${seiten.length} Seiten, ${blätter.length} Reiseblätter, kein Rest von früher`);

@@ -233,7 +233,7 @@ function Ergebnis({ ergebnis, fertig, weiter }: { ergebnis: MehrfachErgebnis; fe
         {uebrig
           ? `Die ${uebrig} ${uebrig === 1 ? 'Zeile' : 'Zeilen'} über ${HOECHSTEN} hinaus bleiben liegen – für die zweite Runde den text einfach neu einfügen.`
           : angelegt > punkt
-            ? `${angelegt - punkt} ${angelegt - punkt === 1 ? 'Punkt bleibt' : 'Punkte bleiben'} ohne Google Maps – in der Liste suchen und übernehmen.`
+            ? `${angelegt - punkt} ${angelegt - punkt === 1 ? 'Punkt bleibt' : 'Punkte bleiben'} ohne Google Maps – in der Liste öffnen und den Google-Maps-Link einfügen.`
             : 'Alle Punkte liegen auf der Karte. In der Liste unter „Ohne Tag“ lassen sie sich auf die Tage setzen.'}
       </p>
       <div className="flex gap-1.5 pt-1">

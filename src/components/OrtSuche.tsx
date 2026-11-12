@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { entfernungKm } from '../lib/karten';
+import { gradText } from '../lib/format';
+import { istKartenText, punktAusKartenLink } from '../lib/kartenlink';
 import { quellenName, vergleichText } from '../lib/orte';
 import type { Ortsvorschlag } from '../lib/types';
 import { TextFeld, cx } from './ui';
@@ -11,6 +13,10 @@ import { TextFeld, cx } from './ui';
  * Punkt und Name zusammen mit – das Formular braucht danach kaum mehr. Kurz und
  * umgangssprachlich ist erwünscht („big ben“), deshalb antwortet zuerst, was der
  * Rechner schon weiß, und die Suche läuft ruhig daneben mit.
+ *
+ * Wer einen Google-Maps-link hier hineinklebt, sucht keinen namen: der link wird
+ * nicht befragt, sondern als punkt angeboten – über das feld „Punkt“, wenn die
+ * suche sonst nichts findet.
  */
 
 export interface Gewaehlt {
@@ -66,6 +72,30 @@ function passtZu(t: Ortsvorschlag, anfrage: string): boolean {
   return anfrage.split(' ').every((wort) => wort.length === 0 || zeile.includes(wort));
 }
 
+/**
+ * Ein hereingklebter karten-link: keine frage an die suche, sondern ein punkt, der
+ * geholt werden kann. was im link schon steht, wird gezeigt – der kurze link aus
+ * dem teilen-knopf trägt nichts, der wird beim holen aufgelöst.
+ */
+function KartenLink({ zeile, beimUebernehmen }: { zeile: string; beimUebernehmen: () => void }) {
+  const fund = punktAusKartenLink(zeile);
+  return (
+    <div className="mb-1 rounded-xl border p-2" style={{ borderColor: 'var(--rand)' }}>
+      <p className="mikro">Das ist ein Link aus Google Maps, kein Name, den ich suchen kann.</p>
+      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+        <button type="button" className="knopf knopf-klein" onClick={beimUebernehmen}>
+          {fund ? 'Punkt aus dem Link holen' : 'Link auflösen und Punkt holen'}
+        </button>
+        {fund ? (
+          <span className="mikro min-w-0 truncate">
+            {[fund.name, `${gradText(fund.lat)}, ${gradText(fund.lng)}`].filter(Boolean).join(' · ')}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function ausDemVorrat(anfrage: string, listen: Iterable<Ortsvorschlag[]>): Ortsvorschlag[] {
   const gefunde = new Map<string, Ortsvorschlag>();
   for (const liste of listen) {
@@ -82,6 +112,7 @@ export function OrtSuche({
   wert,
   beimAendern,
   beiAuswahl,
+  beimKartenLink,
   platzhalter = 'auch kurz: „big ben“ oder „museum in siena“',
   fehler,
   hinweis,
@@ -90,6 +121,8 @@ export function OrtSuche({
   wert: string;
   beimAendern: (text: string) => void;
   beiAuswahl: (vorschlag: Gewaehlt) => void;
+  /** ein link, der hereinkopiert wurde – der punkt kommt daraus, nicht aus der suche */
+  beimKartenLink?: (link: string) => void;
   platzhalter?: string;
   fehler?: string;
   hinweis?: React.ReactNode;
@@ -101,6 +134,7 @@ export function OrtSuche({
   const [offen, setOffen] = useState(false);
   const [zuletzt, setZuletzt] = useState<Ortsvorschlag[]>([]);
   const [beruehrt, setBeruehrt] = useState(false);
+  const [verweis, setVerweis] = useState<string | null>(null);
   const abbruch = useRef<AbortController | null>(null);
 
   useEffect(() => setZuletzt(liesZuletzt()), []);
@@ -108,11 +142,22 @@ export function OrtSuche({
   // der mittelpunkt als zeile: ein neues objekt pro render soll keine suche neu starten
   const anker = konzentriert ? `${konzentriert.lat},${konzentriert.lng}` : '';
 
+  const kartenlink = istKartenText(wert) ? wert.trim() : null;
+
   useEffect(() => {
     const text = wert.trim();
     const anfrage = vergleichText(text);
     abbruch.current?.abort();
     abbruch.current = null;
+    setVerweis(kartenlink);
+    if (kartenlink) {
+      // ein verweis ist keine frage – die suche bleibt zu, der link wird angeboten
+      setVorschlaege([]);
+      setSucht(false);
+      setLeer(false);
+      setOffen(true);
+      return;
+    }
     if (anfrage.length < AB_KUERZE) {
       setVorschlaege([]);
       setSucht(false);
@@ -159,7 +204,7 @@ export function OrtSuche({
       vorrat.length ? 420 : 170,
     );
     return () => window.clearTimeout(zeit);
-  }, [wert, anker, zuletzt.length]);
+  }, [wert, anker, zuletzt.length, kartenlink]);
 
   const annehmen = (v: Ortsvorschlag) => {
     setBeruehrt(false);
@@ -179,7 +224,13 @@ export function OrtSuche({
   };
 
   const aufTaste = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== 'Enter' || !vorschlaege.length) return;
+    if (e.key !== 'Enter') return;
+    if (verweis) {
+      e.preventDefault();
+      beimKartenLink?.(verweis);
+      return;
+    }
+    if (!vorschlaege.length) return;
     e.preventDefault();
     annehmen(vorschlaege[0]!);
   };
@@ -200,17 +251,18 @@ export function OrtSuche({
       />
       {offen && (beruehrt || !wert.trim()) ? (
         <div className="mt-1.5">
-          {sucht ? <p className="mikro">{zeilen.length ? 'ich sehe noch genauer nach …' : 'suche Orte …'}</p> : null}
-          {!sucht && leer ? (
+          {verweis ? <KartenLink zeile={verweis} beimUebernehmen={() => beimKartenLink?.(verweis)} /> : null}
+          {sucht && !verweis ? <p className="mikro">{zeilen.length ? 'ich sehe noch genauer nach …' : 'suche Orte …'}</p> : null}
+          {!sucht && !verweis && leer ? (
             <p className="mikro">
               Kein Ort gefunden –{' '}
               <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(wert.trim())}`} target="_blank" rel="noreferrer" className="font-medium">
                 in Google Maps ansehen
               </a>{' '}
-              und den Punkt von dort übernehmen. Der Name bleibt hier trotzdem stehen.
+              und den Link daraus beim Punkt einfügen. Der Name bleibt hier trotzdem stehen.
             </p>
           ) : null}
-          {!sucht && !zeilen.length && zuletzt.length ? (
+          {!sucht && !verweis && !zeilen.length && zuletzt.length ? (
             <>
               <p className="mikro mb-0.5">zuletzt verwendet</p>
               <ul className="liste list-none m-0 flex flex-wrap gap-1.5 p-0">

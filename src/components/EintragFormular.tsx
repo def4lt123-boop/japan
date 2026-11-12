@@ -4,15 +4,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { tagKurz } from '../lib/dates';
 import { reiseTage } from '../lib/plan';
 import { ANDERE_KATEGORIEN, kategorie, kategorieVorschlag, artMeta } from '../lib/kategorien';
-import { kartenLink, kartenVorschau } from '../lib/karten';
-import { punktAusText, stadtAusAdresse } from '../lib/orte';
+import { kartenVorschau } from '../lib/karten';
+import { stadtAusAdresse } from '../lib/orte';
 import { punktFuer, suchkandidaten, type Punktquelle } from '../lib/punktfindung';
 import { geld } from '../lib/format';
 import { useStore } from '../lib/daten';
 import type { Eintrag, EintragArt, Reise } from '../lib/types';
+import { istKartenText, punktAusLink, type Kartenpunkt } from '../lib/kartenlink';
 import { Ablage, Auswahl, Chip, Feld, Foto, IconKnopf, Karten, TextFeld, Umschalter, ZahlFeld, ZeitFeld, cx } from './ui';
 import { WAEHRUNGEN } from '../lib/format';
 import { OrtSuche, type Gewaehlt } from './OrtSuche';
+import { PunktFeld } from './PunktFeld';
 import { bildFragen, bildFuer } from '../lib/ortsbild';
 
 /**
@@ -128,6 +130,34 @@ export function EintragFormular({
   };
 
   /**
+   * Der punkt aus einem hereinkopierten Google-Maps-link: die suche hat ihn nicht
+   * gefunden, jetzt kommt er von woanders her. der name aus dem link geht als
+   * stichwort mit, ein link allein wird kein titel – wer in die suche klebt, hat
+   * keinen namen gemeint, und den punkt hat die zeile dann trotzdem.
+   */
+  const ausDemLink = (punkt: Kartenpunkt) => {
+    const geklebt = istKartenText(entwurf.titel);
+    const titel = geklebt ? (punkt.name ?? '') : entwurf.titel;
+    set({ titel, lat: punkt.lat, lng: punkt.lng, ...(punkt.name ? { karten_stichwort: punkt.name } : {}) });
+    store.sagen(`Punkt aus dem ${punkt.quelle}-Link übernommen.`);
+    if (store.einstellungen.bilder && !entwurf.foto_url) void bildeins({ titel: titel || punkt.name || '', ort: entwurf.ort, adresse: entwurf.adresse });
+  };
+
+  /** derselbe weg für den link, der in die suche geraten ist – auch der kurze */
+  const ausDerSuche = async (link: string) => {
+    const { punkt, grund } = await punktAusLink(link);
+    if (!punkt) {
+      store.sagen(
+        grund === 'zu kurz'
+          ? 'Der kurze Link ließ sich nicht auflösen – in Google Maps den Ort antippen und die Adresszeile einfügen.'
+          : 'In diesem Link steht kein Punkt.'
+      );
+      return;
+    }
+    ausDemLink(punkt);
+  };
+
+  /**
    * Gefragt wird die staffel (name, name und ort, die reise), nie ein langer
    * adresssatz: „big ben, Westminster, London, England" malt nirgends ein bild,
    * „big ben" malt den turm. `frisch` wirft das gedächtnis weg.
@@ -174,7 +204,7 @@ export function EintragFormular({
     if (!suchkandidaten(quelltext).length) return;
     const treffer = await punktFuer(quelltext, reise.land);
     if (!treffer) {
-      store.sagen('Keinen passenden Punkt gefunden – in der Zeile den Ort suchen.');
+      store.sagen('Keinen passenden Punkt gefunden – den Google-Maps-Link beim Punkt einfügen.');
       return;
     }
     await store.eintragAendern(eintragsId, treffer.patch);
@@ -245,17 +275,11 @@ export function EintragFormular({
           beiAuswahl={uebernehmen}
           platzhalter={istBett ? 'Hotel, Pension, Adresse' : art === 'fahrt' ? 'Zug Kyoto → Osaka, Flug …' : 'Was willst du dort tun?'}
           konzentriert={mittelpunkt}
-          hinweis="Einen Vorschlag antippen oder Enter drücken – Name, Adresse, Punkt und Bild wandern automatisch hinein."
+          beimKartenLink={(link) => void ausDerSuche(link)}
+          hinweis="Einen Vorschlag antippen oder Enter drücken – Name, Adresse, Punkt und Bild wandern automatisch hinein. Ein Link aus Google Maps wird zum Punkt, nicht zum Suchwort."
         />
 
-        {entwurf.lat !== null && entwurf.lng !== null ? (
-          <div className="flex items-center gap-2">
-            <Chip ton="gut">📍 Punkt übernommen</Chip>
-            <a href={kartenLink({ lat: entwurf.lat, lng: entwurf.lng, titel: entwurf.titel })} target="_blank" rel="noreferrer" className="text-[13.5px]">
-              auf Google Maps ansehen
-            </a>
-          </div>
-        ) : null}
+        <PunktFeld lat={entwurf.lat} lng={entwurf.lng} beimSetzen={(werte) => set(werte)} beimUebernehmen={ausDemLink} />
 
         <div>
           <p className="label mb-1">{istBett ? 'Nächte' : 'Tag'}</p>
@@ -407,10 +431,7 @@ export function EintragFormular({
         {mehr ? (
           <div className="space-y-3 rounded-xl border p-2.5" style={{ borderColor: 'var(--rand)' }}>
             <TextFeld label="Adresse" wert={entwurf.adresse} beimAendern={(t) => set({ adresse: t })} platzhalter="Straße und Hausnummer" />
-            <div className="grid grid-cols-2 gap-2">
-              <TextFeld label="Punkt" wert={entwurf.lat !== null ? `${entwurf.lat.toFixed(5)}, ${entwurf.lng?.toFixed(5)}` : ''} beimAendern={(t) => set(punktAusText(t))} platzhalter="35.0116, 135.7681" hinweis="Komma-getrennt – oder oben einen Ort suchen." />
-              <TextFeld label="Buchungs-Nr." wert={entwurf.buchung_nr} beimAendern={(t) => set({ buchung_nr: t })} platzhalter="z. B. 4K2L9" />
-            </div>
+            <TextFeld label="Buchungs-Nr." wert={entwurf.buchung_nr} beimAendern={(t) => set({ buchung_nr: t })} platzhalter="z. B. 4K2L9" />
             <TextFeld label="Buchungslink" wert={entwurf.buchung_url} beimAendern={(t) => set({ buchung_url: t })} platzhalter="https://…" typ="url" eingabeModus="url" />
             <TextFeld label="Notiz" wert={entwurf.notiz} beimAendern={(t) => set({ notiz: t })} platzhalter="Ankunft 14:30, Schlüssel beim Automat …" mehrzeilig />
             <Umschalter an={store.einstellungen.bilder} beimUmschalten={(an) => store.einstellen({ bilder: an })} label="Bild automatisch suchen" hinweis="Beim nächsten Ort gleich mitmachen." />
