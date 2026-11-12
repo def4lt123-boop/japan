@@ -10,7 +10,8 @@ import { kartenEintraege, reiseTage } from '../../../../lib/plan';
 import { artMeta, kategorie } from '../../../../lib/kategorien';
 import { kartenLink, punktVorhanden } from '../../../../lib/karten';
 import { uhrzeitText } from '../../../../lib/format';
-import { punktFuer } from '../../../../lib/punktfindung';
+import { punktFuer, sucheDurchsuchen } from '../../../../lib/punktfindung';
+import { gebremst, takt } from '../../../../lib/suchtakt';
 import { routeZwischen } from '../../../../lib/routen';
 import { wieVorher } from '../../../../lib/format';
 import { Chip, Karten, KartenKopf, Punkt, Segment, cx } from '../../../../components/ui';
@@ -81,25 +82,52 @@ export default function ReiseKarte() {
    * ort angelegt hat, soll sie nicht noch einmal anfassen müssen, damit die
    * karte sie zeigt. Höchstens fünf auf einmal – die offene Suche will nicht
    * gemäht werden.
+   *
+   * Antworten die kartendienste nicht, kommt eine bremse dazwischen (suchtakt):
+   * von da an wird langsamer gefragt, und was in der zeit mit einer leeren hand
+   * zurückkam, fragt die seite ein zweites mal – sonst hängt über allem die
+   * meldung „kein punkt gefunden\", die gar keine war.
    */
   const punkteFinden = async () => {
     if (!reise) return;
     setPunkteSucht(true);
     let gesetzt = 0;
+    const leereHand: typeof ohnePunktListe = [];
+    const nach = (e: (typeof ohnePunktListe)[number]) => ({ titel: e.titel, ort: e.ort, adresse: e.adresse, karten_stichwort: e.karten_stichwort });
     for (const [stelle, e] of ohnePunktListe.slice(0, 5).entries()) {
-      // zwischen zwei anfragen liegt eine pause – die offene suche mag es nicht eilig
-      if (stelle) await new Promise((r) => window.setTimeout(r, 240));
-      const treffer = await punktFuer({ titel: e.titel, ort: e.ort, adresse: e.adresse, karten_stichwort: e.karten_stichwort }, reise.land);
-      if (!treffer) continue;
+      // zwischen zwei anfragen liegt eine pause – in einer bremse eine lange
+      if (stelle) await new Promise((r) => window.setTimeout(r, takt()));
+      const treffer = await punktFuer(nach(e), reise.land, undefined, { höchstens: gebremst() ? 1 : 3 });
+      if (!treffer) {
+        if (gebremst()) leereHand.push(e);
+        continue;
+      }
       await store.eintragAendern(e.id, treffer.patch);
       gesetzt += 1;
     }
+    let nachtrag = 0;
+    if (leereHand.length) {
+      await new Promise((r) => window.setTimeout(r, takt() * 2));
+      for (const e of leereHand) {
+        const treffer = await punktFuer(nach(e), reise.land, sucheDurchsuchen(true), { höchstens: 1 });
+        if (!treffer) continue;
+        await store.eintragAendern(e.id, treffer.patch);
+        nachtrag += 1;
+      }
+    }
     setPunkteSucht(false);
-    store.sagen(
-      gesetzt
-        ? `${gesetzt} ${gesetzt === 1 ? 'Punkt' : 'Punkte'} gesetzt · zum Nachprüfen in der Liste antippen`
-        : 'Keinen passenden Punkt gefunden – in der Zeile den Ort suchen.',
-    );
+    const offen = ohnePunktListe.length - 5 - gesetzt - nachtrag;
+    if (gesetzt + nachtrag) {
+      store.sagen(
+        `${gesetzt + nachtrag} ${gesetzt + nachtrag === 1 ? 'Punkt' : 'Punkte'} gesetzt · zum Nachprüfen in der Liste antippen${
+          offen > 0 ? ` · ${offen} ${offen === 1 ? 'Punkt bleibt' : 'Punkte bleiben'} noch ohne – noch einmal tippen` : ''
+        }`
+      );
+    } else if (gebremst()) {
+      store.sagen('Die Kartensuche war gerade zugemacht – in einer halben Minute noch einmal tippen, oder den Google-Maps-Link beim Punkt einfügen.');
+    } else {
+      store.sagen('Keinen passenden Punkt gefunden – in der Zeile den Ort suchen.');
+    }
   };
 
   useEffect(() => {

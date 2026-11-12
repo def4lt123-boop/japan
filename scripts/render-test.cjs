@@ -333,9 +333,21 @@ async function gruppenPruefen() {
   assert.ok(!satz.textContent.includes('Markt'), 'was schon einen tag hat, steht in keinem satz');
   assert.match(behaelter.textContent ?? '', /1 Punkt hat noch kein Google Maps/, 'wer keinen punkt hat, wird gezaehlt statt gerechnet');
   assert.match(satz.textContent ?? '', /Weg/, 'und zeigt den weg in Google Maps');
+  assert.match(satz.textContent ?? '', /gleicher punkt/, 'zwei punkte am selben ort werden kein weg genannt');
+  const stufen = Array.from(behaelter.querySelectorAll('button')).filter((b) => /^höchstens /.test((b.textContent ?? '').trim()));
+  assert.equal(stufen.length, 4, 'vier abstände – der engste ist ein kilometer');
+  assert.match(stufen[0].textContent ?? '', /höchstens 1 km/, 'und er heißt höchstens 1 km');
+
+  await act(async () => {
+    stufen[0].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  });
+  assert.match(behaelter.querySelector('article').textContent ?? '', /2 Punkte/, 'bei einem kilometer bleiben dieselben punkte zusammen');
+  await act(async () => {
+    stufen[3].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  });
   const chips = Array.from(satz.querySelectorAll('button')).filter((b) => /^\p{L}{2} \d{1,2}\.\d{1,2}\./u.test((b.textContent ?? '').trim()));
   assert.equal(chips.length, 4, 'jeder reisetag kann gewaehlt werden');
-  assert.ok(chips[0].textContent.includes('km'), 'der naechste tag traegt seinen abstand');
+  assert.match(chips[0].textContent ?? '', /· \d+ Min\./, 'der naechste tag traegt seine fußweg-minuten');
 
   await act(async () => {
     chips[1].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
@@ -346,6 +358,48 @@ async function gruppenPruefen() {
   assert.ok(gesetzt.every((e) => e.date === '2027-10-25'), 'der gewaehlte tag gilt dem ganzen satz');
   assert.ok(gesetzt[0].sortierung < gesetzt[1].sortierung, 'die gangreihenfolge wird die reihenfolge am tag');
   assert.equal(stand.eintraege.find((e) => e.titel === 'Markt').date, '2027-10-24', 'was schon einen tag hat, bleibt liegen');
+
+  await act(async () => {
+    grund.unmount();
+  });
+}
+
+/**
+ * Der schritt in der zeile: minuten zuerst, die länge dahinter. Und das schloss
+ * vorn an der seite: ein feld nach dem wort, kein formular mit namen.
+ */
+async function schrittPruefen() {
+  const { EintragZeile } = require('../src/components/EintragZeile.tsx');
+  const { AnsichtSchloss } = require('../src/components/AnsichtSchloss.tsx');
+  const behaelter = document.createElement('div');
+  document.body.appendChild(behaelter);
+  const grund = createRoot(behaelter);
+  const zeile = (weg) =>
+    React.createElement(DatenProvider, null, React.createElement(EintragZeile, { eintrag: PUNKT1, reise: REISE, kompakt: true, nachbarWeg: weg, nachbarName: 'Brunnen', bearbeiten: () => {} }));
+
+  await act(async () => {
+    grund.render(zeile({ km: 0.85, minuten: 11, quelle: 'geschätzt' }));
+  });
+  const ueberschlagen = Array.from(behaelter.querySelectorAll('p')).find((pt) => (pt.textContent ?? '').includes('zum nächsten'));
+  assert.ok(ueberschlagen, 'die zeile nennt den schritt zum nächsten punkt');
+  assert.match(ueberschlagen.textContent ?? '', /≈ 11 Min\./, 'minuten zuerst, mit ≈ wo nur überschlagen ist');
+  assert.match(ueberschlagen.textContent ?? '', /850 m/, 'die länge des weges dahinter');
+  assert.match(ueberschlagen.getAttribute('title') ?? '', /Wegdienst war nicht zu erreichen/, 'und die zeile sagt, woran die überschlagung liegt');
+
+  await act(async () => {
+    grund.render(zeile({ km: 0.85, minuten: 11, quelle: 'gerechnet' }));
+  });
+  const gerechnet = Array.from(behaelter.querySelectorAll('p')).find((pt) => (pt.textContent ?? '').includes('zum nächsten'));
+  assert.ok(!/≈/.test(gerechnet.textContent ?? ''), 'was gerechnet ist, steht ohne ≈ da');
+  assert.match(gerechnet.getAttribute('title') ?? '', /gerechnet$/);
+
+  await act(async () => {
+    grund.render(React.createElement(DatenProvider, null, React.createElement(AnsichtSchloss, { von: '/t/r-test/liste' })));
+  });
+  assert.ok(behaelter.querySelector('input[type="password"]'), 'das schloss fragt nach einem wort');
+  assert.ok(!behaelter.querySelector('input[type="text"], input[type="email"]'), 'und nach nichts weiter – kein name, keine post');
+  assert.match(Array.from(behaelter.querySelectorAll('button')).map((b) => b.textContent).join(' '), /ansehen/);
+  assert.ok(!behaelter.textContent.includes('170493'), 'das wort selbst steht nirgends im blatt');
 
   await act(async () => {
     grund.unmount();
@@ -481,11 +535,12 @@ async function main() {
   await sammelPruefen();
   await gruppenPruefen();
   await kartenlinkPruefen();
+  await schrittPruefen();
 
   await act(async () => {
     wurzel.unmount();
   });
-  console.log(`🎉 Speicherblatt hält – ${spur.render} Render, Listen bleiben dieselben, Schreiben wirkt genau einmal, ein name ohne tag genügt, Bilder bleiben Bilder, eingefügter text wird zu punkten und gruppen, ein kartenlink gibt den punkt`);
+  console.log(`🎉 Speicherblatt hält – ${spur.render} Render, Listen bleiben dieselben, Schreiben wirkt genau einmal, ein name ohne tag genügt, Bilder bleiben Bilder, eingefügter text wird zu punkten und gruppen, ein kartenlink gibt den punkt, der fußweg steht in minuten und die tür hat ein wort`);
 }
 
 main().catch((fehler) => {

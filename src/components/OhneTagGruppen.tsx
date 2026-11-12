@@ -1,8 +1,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { kartenLink, kmText, punktVorhanden, schaetzungKm } from '../lib/karten';
+import { kartenLink, kmText, punktVorhanden } from '../lib/karten';
+import { minutenText } from '../lib/format';
 import { haufungen, nachbar, sortieren, tagAbstand, tagAenderung, wegLink, type Haufung, type Nahpunkt } from '../lib/naehe';
+import { minutenAus, wegLaenge, wegText, wegTitel, type Fussweg } from '../lib/weg';
+import { useFussWege } from './Fussweg';
 import { ohneTagEintraege, reiseTage } from '../lib/plan';
 import { tagKurz } from '../lib/dates';
 import { useStore } from '../lib/daten';
@@ -15,7 +18,10 @@ import { Karten, KartenKopf, cx } from './ui';
  * vorschlag – welcher tag es wird, steht an jedem satz und wird angefasst.
  */
 
-const SCHWELLEN = [1.5, 2.5, 4] as const;
+const SCHWELLEN = [1, 1.5, 2.5, 4] as const;
+
+/** der schlüssel eines schrittes – dieselbe paarung wie in der rechnung */
+const schrittId = (von: Nahpunkt, nach: Nahpunkt) => `${von.id}>${nach.id}`;
 
 export function OhneTagGruppen({ reise }: { reise: Reise }) {
   const store = useStore();
@@ -26,6 +32,36 @@ export function OhneTagGruppen({ reise }: { reise: Reise }) {
   const wartend = useMemo(() => ohneTagEintraege(eintraege), [eintraege]);
   const { mit: punkte, ohne: ohnePunkt } = useMemo(() => sortieren(wartend), [wartend]);
   const gruppen = useMemo(() => haufungen(wartend, schwelle), [wartend, schwelle]);
+
+  // die schritte durch die gruppen: einer nach dem andern gerechnet, weil der
+  // wegdienst eine staffel nicht mag – bis dahin steht die überschlagene zahl da
+  const schritte = useMemo(
+    () =>
+      gruppen.flatMap((g) =>
+        g.punkte.slice(1).map((p, i) => ({ id: schrittId(g.punkte[i]!, p), von: g.punkte[i] as Nahpunkt, nach: p as Nahpunkt }))
+      ),
+    [gruppen]
+  );
+  const wege = useFussWege(schritte);
+
+  /** was eine gruppe zu gehen hat – die zeilen und die kopfzeile rechnen gleich */
+  const gang = useMemo(() => {
+    const fond: Record<string, { km: number; minuten: number; schrittKm: number }> = {};
+    for (const g of gruppen) {
+      let km = 0;
+      let minuten = 0;
+      let schritt = 0;
+      g.punkte.slice(1).forEach((p, i) => {
+        const fund: Fussweg | null | undefined = wege[schrittId(g.punkte[i]!, p)];
+        const zahl = fund ?? null;
+        km += zahl?.km ?? 0;
+        minuten += zahl?.minuten ?? 0;
+        schritt = Math.max(schritt, zahl?.km ?? 0);
+      });
+      fond[g.id] = { km: Math.round(km * 10) / 10, minuten: Math.round(minuten), schrittKm: Math.round(schritt * 10) / 10 };
+    }
+    return fond;
+  }, [gruppen, wege]);
 
   const tage = useMemo(() => {
     const fix = eintraege.filter((e) => e.date && punktVorhanden(e));
@@ -70,6 +106,8 @@ export function OhneTagGruppen({ reise }: { reise: Reise }) {
             gruppe={gruppe}
             alle={punkte}
             abstand={tagAbstand(gruppe, tage)}
+            gang={gang[gruppe.id] ?? { km: gruppe.wegKm, minuten: gruppe.minuten, schrittKm: gruppe.schrittKm }}
+            wege={wege}
             beschaftigt={am === gruppe.id}
             aufTag={(datum) => void setzen(gruppe, datum)}
           />
@@ -90,12 +128,16 @@ function Satz({
   gruppe,
   alle,
   abstand,
+  gang,
+  wege,
   beschaftigt,
   aufTag,
 }: {
   gruppe: Haufung;
   alle: Nahpunkt[];
   abstand: { datum: string; km: number | null }[];
+  gang: { km: number; minuten: number; schrittKm: number };
+  wege: Record<string, Fussweg | null>;
   beschaftigt: boolean;
   aufTag: (datum: string) => void;
 }) {
@@ -110,7 +152,9 @@ function Satz({
           </p>
           <p className="mikro mt-0.5">
             {viele
-              ? `${kmText(gruppe.wegKm)} zusammen · ${gruppe.minuten} min zu Fuß · weitester schritt ${kmText(gruppe.schrittKm)}`
+              ? gang.km < 0.05
+                ? 'zwei punkte, derselbe ort auf der karte'
+                : `${minutenText(gang.minuten)} zusammen · ${kmText(gang.km)}${gang.schrittKm ? ` · weitester schritt ${kmText(gang.schrittKm)}` : ''}`
               : 'allein – der tag hier gilt nur diesem punkt'}
           </p>
         </div>
@@ -124,7 +168,7 @@ function Satz({
       <ol className="m-0 mt-2 list-none space-y-1 p-0">
         {gruppe.punkte.map((p, index) => {
           const vorher = index ? gruppe.punkte[index - 1] : null;
-          const schritt = vorher ? schaetzungKm(vorher, p) : null;
+          const schritt = vorher ? wege[schrittId(vorher, p)] ?? null : null;
           const near = nachbar(p, alle);
           return (
             <li key={p.id} className="flex items-baseline gap-2">
@@ -132,8 +176,12 @@ function Satz({
               <a className="min-w-0 flex-1 truncate text-[14px]" href={kartenLink(p)} target="_blank" rel="noreferrer">
                 {p.titel}
               </a>
-              <span className="mikro shrink-0">
-                {schritt !== null ? `+ ${kmText(schritt)}` : near ? `${kmText(near.km)} zum nächsten` : 'kein zweiter punkt'}
+              <span className="mikro shrink-0 tabular-nums" title={schritt && schritt.km >= 0.05 ? wegTitel(schritt) : undefined}>
+                {schritt && schritt.km >= 0.05
+                  ? `🚶 ${wegText(schritt)} ${wegLaenge(schritt)}`
+                  : near && near.km >= 0.05
+                    ? `🚶 ${wegText({ km: near.km, minuten: minutenAus(near.km), quelle: 'geschätzt' })} zum nächsten`
+                    : 'gleicher punkt'}
               </span>
             </li>
           );
@@ -148,12 +196,12 @@ function Satz({
             type="button"
             className={cx('chip shrink-0', beschaftigt && 'opacity-60')}
             disabled={beschaftigt}
-            title={tag.km !== null ? `${kmText(tag.km)} von dieser gruppe` : 'dieser tag hat noch keinen punkt'}
+            title={tag.km !== null ? `${kmText(tag.km)} zu Fuß von dieser gruppe – überschlagen, weil der weg nicht gefragt wird` : 'dieser tag hat noch keinen punkt'}
             onClick={() => aufTag(tag.datum)}
             style={tag.datum === naechster?.datum ? { borderColor: 'var(--akzent)', color: 'var(--akzent)' } : undefined}
           >
             {tagKurz(tag.datum)}
-            {tag.km !== null ? ` · ${kmText(tag.km)}` : ''}
+            {tag.km !== null ? ` · ${minutenAus(tag.km)} Min.` : ''}
           </button>
         ))}
       </div>

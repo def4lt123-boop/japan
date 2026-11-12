@@ -106,7 +106,7 @@ for (const b of blätter) {
   assert.ok(existsSync(join(WURZEL, `${grund}/${b}/page.tsx`)), `Blatt „${b}“ hat keine Seite`);
 }
 for (const { pfad, inhalt } of texte(seiten)) {
-  assert.match(inhalt, /export default function/, `${pfad} zeigt nichts`);
+  assert.match(inhalt, /export default (async )?function/, `${pfad} zeigt nichts`);
   if (!inhalt.includes('use client') && !/redirect\(/.test(inhalt)) {
     assert.match(inhalt, /'use client'/, `${pfad} muss ein client-Blatt sein, sonst fehlt der Datenspeicher`);
   }
@@ -293,7 +293,7 @@ assert.match(text('src/components/EintragFormular.tsx'), /if \(werte\.lat === nu
 assert.match(text('src/components/EintragFormular.tsx'), /Punkt von \$\{treffer\.name\} · \$\{treffer\.quelle\} übernommen/, 'und es bleibt gesagt, woher der punkt kommt');
 assert.match(karte, /onClick=\{\(\) => void punkteFinden\(\)\}/, 'auf der karte liegt der knopf, nicht im formularversteck');
 assert.match(karte, /ohnePunktListe\.slice\(0, 5\)/, 'höchstens fünf auf einmal – die offene suche will nicht gemäht werden');
-assert.match(karte, /window\.setTimeout\(r, 240\)/, 'zwischen zwei anfragen liegt eine pause – die offene suche wird nicht gemäht');
+assert.match(karte, /window\.setTimeout\(r, takt\(\)\)/, 'zwischen zwei anfragen liegt eine pause – nach einer bremse eine lange');
 assert.match(karte, /ohne Punkt steht nichts auf der Karte/, 'die lücke ist am bild erklärt, nicht unterm knick');
 assert.ok(!/p\.titel/.test(text('src/lib/karten.ts').split('nadelHtml')[1] ?? ''), 'fremder text wird nicht in die nadel gehoben');
 
@@ -428,7 +428,7 @@ assert.match(sammelBlatt, /punktFuer\(/, 'jeder neue punkt sucht sein Google Map
 assert.match(sammelBlatt, /bildFuer\(/, 'und sein bild');
 assert.match(sammelBlatt, /date: null/, 'angelegt wird ohne tag');
 assert.match(sammelBlatt, /eintragAnlegen\(/, 'die reihe entsteht zuerst, das Suchen danach');
-assert.match(sammelBlatt, /const PAUSE = 240/, 'die staffel geht in ruhe, nicht auf einmal');
+assert.match(sammelBlatt, /const warten = \(zeit = takt\(\)\)/, 'die staffel geht in ruhe, nicht auf einmal');
 assert.ok(!/input type="file"|FileReader|bild-?lesen/i.test(sammelBlatt), 'hier wird text eingefügt, kein bild hochgeladen');
 
 assert.match(naheLib, /export function haufungen/, 'die gruppen rechnet ein blatt, keine seite');
@@ -476,5 +476,109 @@ assert.ok(!/NEXT_PUBLIC|supabase|apikey/i.test(karteRoute), 'der dienst nennt ke
 assert.match(text('src/lib/orte.ts'), /dezimaltrenner/, 'und zwei zahlen mit komma gehen weiterhin');
 
 
+
+/* ── 18. die staffel, der fußweg in minuten und das schloss ────────────── */
+
+const taktLib = text('src/lib/suchtakt.ts');
+assert.match(taktLib, /const TAKT_RUHIG = 240/, 'in ruhe liegt eine viertelsekunde zwischen zwei fragen');
+assert.match(taktLib, /const TAKT_GEBREMST = 1\d{3}/, 'nach einer bremse wird die pause eine sekunde und länger');
+assert.match(taktLib, /const BREMS_DAUER = 2\d_\d{3}/, 'und sie hält eine weile, nicht einen augenblick');
+assert.match(taktLib, /export function takt\(jetzt = Date\.now\(\)\)/, 'der takt ist eine rechnung, keine uhr – damit er prüfbar ist');
+assert.match(taktLib, /export function gebremst\(/, 'und das blatt kann nachsehen, ob gerade gebremst wird');
+
+const anbieterQuelle = text('src/lib/anbieter.ts');
+assert.match(anbieterQuelle, /const gebremst_bis = new Map<string, number>\(\)/, 'gebremst wird pro quelle, nicht für alle zusammen');
+assert.match(anbieterQuelle, /antwort\.status === 429 \|\| antwort\.status === 503/, 'eine absage macht die tür zu');
+assert.match(anbieterQuelle, /retry-after/, 'und die frist, die der dienst nennt, wird gehalten');
+assert.match(anbieterQuelle, /else if \(!brems_gemeldet\) gemerkte_fragen\.set/, 'eine leere hand mitten in der bremse wird nicht gemerkt');
+assert.match(anbieterQuelle, /export function bremsZuletzt\(\)/, 'die meldung geht an die antwort der api weiter');
+assert.match(anbieterQuelle, /!gebremst\('nominatim'/, 'in der eignen bremse wird nominatim gar nicht gefragt');
+
+const orteAntwort = text('src/app/api/orte/route.ts');
+assert.match(orteAntwort, /bremsZuletzt\(\)/, 'die suche sagt, ob sie gebremst wurde');
+assert.match(orteAntwort, /brems: true/, 'und zwar als feld in der antwort, nicht als fehler');
+assert.match(orteAntwort, /const lagern = orte\.length && !frisch && !gebremst/, 'eine leere hand wird nicht zwischengelagert');
+assert.ok(!/s-maxage=1800[^']*'[\s\S]{0,40}Cache-Control/.test(orteAntwort), 'das lagern hängt an einer bedingung, nicht am kopf');
+
+const sucheQuelle = text('src/lib/punktfindung.ts');
+assert.match(sucheQuelle, /export function sucheDurchsuchen\(frisch = false\)/, 'die suche hat ein tor, mit frage am zwischenspeicher vorbei');
+assert.match(sucheQuelle, /bremsMelden\(daten\.brems \?\? false\)/, 'die meldung der suche wird angenommen, nicht verschluckt');
+assert.match(sucheQuelle, /opts: \{ höchstens\?: number \} = \{\}/, 'in der bremse genügt eine frage pro eintrag');
+
+const wegQuelle = text('src/lib/weg.ts');
+assert.match(wegQuelle, /export function wegText\(/, 'der fußweg wird in minuten gesagt');
+assert.match(wegQuelle, /geschätzt' \? '≈ '/, 'und die überschlagung bleibt als solche lesbar');
+assert.match(wegQuelle, /export function wegLaenge\(/, 'die länge des weges steht dahinter');
+assert.match(wegQuelle, /export function nahGenug\(/, 'und derselbe wert öffnet den filter');
+assert.match(wegQuelle, /if \(!weg\) return true;/, 'ein punkt ohne Google Maps fällt nicht aus dem filter – ihm fehlt der punkt');
+assert.match(wegQuelle, /Wegdienst war nicht zu erreichen/, 'die wegZeile sagt, woran eine überschlagung liegt');
+
+const wegBlatt = text('src/components/Fussweg.tsx');
+assert.match(wegBlatt, /export function useFussWege\(/, 'die schritte holt ein blatt, keine seite');
+assert.match(wegBlatt, /await warten\(takt\(\)\)/, 'einer nach dem andern, mit der pause der staffel');
+assert.match(wegBlatt, /const gefragt = new Set<string>\(\)/, 'und dasselbe paar wird nicht zweimal gefragt');
+assert.match(wegBlatt, /if \(fund\.quelle !== 'gerechnet'\) return;/, 'die überschlagung wird nur durch eine rechung ersetzt');
+
+const wegZeile = text('src/components/EintragZeile.tsx');
+assert.match(wegZeile, /function Wegangabe\(/, 'eine darstellung für den weg, nicht zwei');
+assert.match(wegZeile, /wegText\(weg\)/, 'minuten zuerst');
+assert.match(wegZeile, /wegLaenge\(weg\)/, 'die länge dahinter');
+assert.ok(!/Math\.round\(verbinden\.km \* 1000\)/.test(wegZeile), 'die wegZeile formatiert kilometer nicht mehr selbst');
+assert.match(wegZeile, /nachbarWeg\?: Fussweg \| null/, 'und die liste darf denselben wert hineingeben');
+
+const haufungsBlatt = text('src/components/OhneTagGruppen.tsx');
+assert.match(haufungsBlatt, /const SCHWELLEN = \[1, 1\.5, 2\.5, 4\]/, 'ein schritt von höchstens einem kilometer ist die engste gruppe');
+assert.match(haufungsBlatt, /useFussWege\(schritte\)/, 'die gruppen rechnen ihre wege selbst');
+assert.match(haufungsBlatt, /minutenText\(gang\.minuten\)/, 'und die kopfwegZeile sagt minuten');
+assert.match(haufungsBlatt, /🚶 \$\{wegText\(schritt\)\}/, 'jede wegZeile ihren schritt');
+assert.ok(!/schaetzungKm\(/.test(haufungsBlatt), 'das blatt rechnet keine luftlinie nebenher');
+
+assert.match(listenSeite, /const NAHE_KM = 1/, 'der filter heißt höchstens ein kilometer');
+assert.match(listenSeite, /höchstens \{kmText\(NAHE_KM\)\} beieinander/, 'und das steht auf dem knopf');
+assert.match(listenSeite, /nachbarn\(wartend\)/, 'gemessen wird der nächste schritt');
+assert.ok((listenSeite.match(/wege\[e\.id\]/g) ?? []).length >= 2, 'filter und wegZeile lesen dieselbe zahl');
+assert.match(listenSeite, /weiter als \{kmText\(NAHE_KM\)\} zum nächsten/, 'und was fällt, wird gesagt');
+
+const kartenSeite = text('src/app/t/[tripId]/karte/page.tsx');
+assert.match(kartenSeite, /window\.setTimeout\(r, takt\(\) \* 2\)|window\.setTimeout\(r, takt\(\)\)/, 'die nachsuche hält die staffel ein');
+assert.match(kartenSeite, /sucheDurchsuchen\(true\)/, 'und fragt was leer blieb ein zweites mal, am zwischenspeicher vorbei');
+assert.match(kartenSeite, /Die Kartensuche war gerade zugemacht/, 'liegt die tür zu, steht das da – nicht „kein punkt\"');
+
+const sammelBlatt2 = text('src/components/MehrfachFormular.tsx');
+assert.match(sammelBlatt2, /const warten = \(zeit = takt\(\)\)/, 'die masse geht im takt der suche');
+assert.match(sammelBlatt2, /höchstens: gebremst\(\) \? 1 : 3/, 'und in der bremse mit einer frage pro eintrag');
+assert.match(sammelBlatt2, /async function nachholen\(/, 'der zweite durchgang holt, was die bremse verschluckt hat');
+assert.match(sammelBlatt2, /bremsMelden\(daten\?\.brems \?\? false\)/, 'die meldung der suche erreicht das blatt');
+
+const vorschlagsBlatt = text('src/components/OrtSuche.tsx');
+assert.match(vorschlagsBlatt, /Min\. zu Fuß/, 'die vorschläge sagen minuten, nicht kilometer');
+assert.match(vorschlagsBlatt, /gleich hier/, 'und was direkt daneben liegt, steht auch so da');
+assert.match(haufungsBlatt, /minutenAus\(tag\.km\)\} Min\./, 'auch der tag wird in minuten gelesen');
+assert.match(vorschlagsBlatt, /schaetzungKm\(anfrage, konzentriert\)/, 'der weg wird überschlagen, die luftlinie bleibt die sortierung');
+
+const schlossSeite = text('src/app/ansicht/page.tsx');
+const schlossBlatt = text('src/components/AnsichtSchloss.tsx');
+const schlossWarte = text('src/app/api/ansicht/route.ts');
+const schlossLib = text('src/lib/ansicht.server.ts');
+const mittel = text('src/middleware.ts');
+assert.match(mittel, /export async function middleware\(/, 'die tür sitzt vorn an der seite');
+assert.match(mittel, /aufgesperrt\(anfrage\.cookies\.get\(ANSICHT_COOKIE\)\?\.value\)/, 'geprüft wird der cookie, nie das wort im blatt');
+assert.match(mittel, /searchParams\.set\('von', /, 'und der weg, den einer wollte, bleibt gemerkt');
+assert.match(schlossSeite, /redirect\(zielSichern\(von\)\)/, 'wer hinein kann, kommt ohne fragen weiter');
+assert.match(schlossBlatt, /typ="password"/, 'das feld ist ein passwortfeld');
+assert.ok(!/benutzername|type="email"|konto anlegen/i.test(schlossBlatt), 'nach einem namen wird nicht gefragt');
+assert.match(schlossWarte, /export const dynamic = 'force-dynamic'/, 'die tür wird nicht zwischengespeichert');
+assert.match(schlossWarte, /httpOnly: true/, 'der schlüssel liegt nur beim browser, nicht im blatt');
+assert.match(schlossWarte, /VERSUCHE = 5/, 'fünf mal probieren, dann eine minute ruhe');
+assert.ok(!/json\(\{[^}]*eingegeben/.test(schlossWarte), 'was ins feld getippt wird, kommt nicht zurück');
+assert.match(schlossLib, /process\.env\.ANSICHT_PASSWORT \|\| '170493'/, 'das wort steht auf dem server, mit raum zum ändern');
+assert.match(schlossLib, /crypto\.subtle\.digest\('SHA-256'/, 'verglichen wird die wurzel');
+assert.match(schlossLib, /startsWith\('\/\/'\)/, 'und der weg nach dem aufschließen bleibt in der seite');
+for (const [name, inhalt] of [['das blatt', schlossBlatt], ['die seite', schlossSeite], ['die tür', schlossWarte], ['das mittel', mittel]] as [string, string][]) {
+  assert.ok(!inhalt.includes('170493'), `${name} kennt das ansehen-wort nicht`);
+}
+assert.ok(!/NEXT_PUBLIC|supabase|apikey/i.test(schlossWarte + schlossLib), 'das schloss nennt keine umgebungswerte');
+assert.ok(!/passwort ist|so lautet|lautet das/i.test(schlossBlatt + schlossSeite), 'die seite rät das wort nicht');
+assert.ok(!/passwort[^\n]{0,12}\d{3,}/i.test(schlossBlatt + schlossSeite + orteAntwort), 'und schreibt es nirgends hin');
 
 console.log(`🎉 Neues Fundament hält – ${dateien.length} Dateien (${dateien.reduce((s, d) => s + text(d).split('\n').length, 0)} Zeilen), ${seiten.length} Seiten, ${blätter.length} Reiseblätter, kein Rest von früher`);

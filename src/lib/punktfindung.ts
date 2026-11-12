@@ -1,4 +1,5 @@
 import { quellenName, stadtAusAdresse } from './orte';
+import { bremsMelden } from './suchtakt';
 import type { Eintrag, Ortsvorschlag } from './types';
 
 /**
@@ -68,24 +69,42 @@ export interface Punktuebernahme {
   quelle: string;
 }
 
-/** Was der Suchdienst zurückgibt – im Test eingesetzt, damit er nicht ins Netz muss */
-async function orteHol(text: string): Promise<Ortsvorschlag[]> {
-  try {
-    const antwort = await fetch(`/api/orte?q=${encodeURIComponent(text)}`);
-    if (!antwort.ok) return [];
-    const daten = (await antwort.json()) as { orte?: Ortsvorschlag[] };
-    return daten.orte ?? [];
-  } catch {
-    return [];
-  }
+/**
+ * Die suche, durch dasselbe tor wie das formular, damit eine masse auf einmal
+ * nicht an einer zweiten tür klopft. `frisch` geht am zwischenspeicher vorbei –
+ * für den zweiten durchgang nach einer bremse. Die meldung „gebremst" wird
+ * weitergegeben, nicht verschluckt: von da an halten alle aufrufer inne.
+ */
+export function sucheDurchsuchen(frisch = false): (text: string) => Promise<Ortsvorschlag[]> {
+  return async (text: string) => {
+    try {
+      const antwort = await fetch(`/api/orte?q=${encodeURIComponent(text)}${frisch ? '&neu=1' : ''}`);
+      if (!antwort.ok) return [];
+      const daten = (await antwort.json()) as { orte?: Ortsvorschlag[]; brems?: boolean };
+      bremsMelden(daten.brems ?? false);
+      return daten.orte ?? [];
+    } catch {
+      return [];
+    }
+  };
 }
+
+const orteHol = sucheDurchsuchen();
 
 /**
  * Punkt für einen Eintrag suchen. `holen` steht für den Test, im Ernstfall
  * spricht dasselbe `/api/orte` aus dem Formular.
  */
-export async function punktFuer(e: Punktquelle, land?: string | null, holen: (text: string) => Promise<Ortsvorschlag[]> = orteHol): Promise<Punktuebernahme | null> {
-  for (const text of suchkandidaten(e)) {
+export async function punktFuer(
+  e: Punktquelle,
+  land?: string | null,
+  holen: (text: string) => Promise<Ortsvorschlag[]> = orteHol,
+  opts: { höchstens?: number } = {}
+): Promise<Punktuebernahme | null> {
+  // in einer bremse genügt die eine frage – die nächsten kandidatinnen sind für
+  // denselben lauf doch nur weitere anfragen an dieselbe zugemachte tür
+  const kandidaten = suchkandidaten(e).slice(0, Math.max(1, opts.höchstens ?? 3));
+  for (const text of kandidaten) {
     const orte = await holen(text).catch(() => [] as Ortsvorschlag[]);
     const treffer = bestenPunkt(orte, text);
     if (!treffer) continue;
