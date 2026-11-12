@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { abstandTage, addTage, gilt, monatsRaster, tagKurz, tagLang, wochenTage, zeitraum, zahlReisetage, heuteIso, WOCHEN_ANFANG } from '../src/lib/dates';
-import { chronologisch, eintragVersetzen, kartenEintraege, preisText, reiseTage, giltAm, naechte, offeneNachte, planFortschritt, sortierungTauschen, stadtDesTages, tagesPlan, tagEintraege, tagWechsel, uebernachtungAm, unterkuenfte, aufschluesselung, laufend, vergangen, inTagen, heutigerTag } from '../src/lib/plan';
+import { chronologisch, eintragVersetzen, kartenEintraege, ohneTagEintraege, preisText, reiseTage, giltAm, naechte, offeneNachte, planFortschritt, sortierungTauschen, stadtDesTages, tagesPlan, tagEintraege, tagWechsel, uebernachtungAm, unterkuenfte, aufschluesselung, laufend, vergangen, inTagen, heutigerTag } from '../src/lib/plan';
 import { ANDERE_KATEGORIEN, KATEGORIEN, kategorie, kategorieVorschlag, artMeta } from '../src/lib/kategorien';
 import { geld, plural, sauber, uid, zaehlen, minutenText } from '../src/lib/format';
 import { MODI, entfernungKm, kartenLink, kartenVorschau, nadelHtml, schaetzungKm, schaetzungMinuten } from '../src/lib/karten';
@@ -82,7 +82,13 @@ const fahrt = ein({ titel: 'Zug nach Granada', art: 'fahrt', date: '2027-10-27',
 const alle = [erste, zweite, dritte, bett, fahrt];
 
 assert.deepEqual(tagEintraege(alle, '2027-10-24').map((e) => e.titel), ['Alcázar', 'Flamenco', 'Kathedrale'], 'erst die Uhrzeiten, dann was ohne Zeit am Ende steht');
-assert.deepEqual(chronologisch(erste, dritte) < 0 ? ['Alcázar'] : [], ['Alcázar'], 'ohne Zeit steht der Punkt am Ende des Tages');
+assert.deepEqual(chronologisch(erste, dritte) < 0 ? ['Alc\u00e1zar'] : [], ['Alc\u00e1zar'], 'ohne Zeit steht der Punkt am Ende des Tages');
+const vorgemerkt = ein({ titel: 'Sky Garden', date: null, zeit: '17:00', sortierung: 1 });
+const warten = ein({ titel: 'Borough market', date: null });
+assert.deepEqual(ohneTagEintraege([erste, warten, vorgemerkt, bett]).map((e) => e.titel), ['Sky Garden', 'Borough market'], 'was ohne tag gespeichert ist, sammelt sich im einlauf – zuerst das mit Uhrzeit');
+assert.deepEqual(ohneTagEintraege(alle), [], 'wer einen tag hat, wartet nicht im einlauf');
+assert.deepEqual(tagEintraege([erste, warten], '2027-10-24').map((e) => e.titel), ['Alc\u00e1zar'], 'ohne tag erscheint an keinem tag');
+assert.deepEqual(kartenEintraege([warten, bett], null).map((e) => e.titel), ['Hotel Prado'], 'ein punkt ohne tag und ohne punkt steht nicht auf der karte');
 assert.equal(uebernachtungAm(alle, '2027-10-26')?.titel, 'Hotel Prado');
 assert.equal(uebernachtungAm(alle, '2027-10-27'), null, 'in der Nacht nach dem Check-out gehört das Bett nicht mehr dazu');
 assert.equal(giltAm(bett, '2027-10-24'), true);

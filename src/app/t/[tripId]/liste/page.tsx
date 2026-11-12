@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useStore } from '../../../../lib/daten';
 import { tagKurz } from '../../../../lib/dates';
-import { reiseTage, stadtDesTages, tagEintraege } from '../../../../lib/plan';
+import { ohneTagEintraege, reiseTage, stadtDesTages, tagEintraege } from '../../../../lib/plan';
 import { ANDERE_KATEGORIEN, kategorie } from '../../../../lib/kategorien';
 import { EintragZeile } from '../../../../components/EintragZeile';
 import { EintragFormular } from '../../../../components/EintragFormular';
@@ -43,7 +43,7 @@ export default function OrtsListe() {
   if (!store.bereit || !reise) return null;
 
   const tage = reiseTage(reise);
-  const ohneTag = gefiltert.filter((e) => !e.date);
+  const ohneTag = ohneTagEintraege(gefiltert);
   const nachTag = tage.map((d) => ({ datum: d, liste: tagEintraege(gefiltert, d) })).filter((g) => g.liste.length);
 
   return (
@@ -117,7 +117,15 @@ export default function OrtsListe() {
           ))}
           {ohneTag.length ? (
             <Karten className="overflow-hidden" >
-              <KartenKopf titel="Ohne Tag" untertitel="schon notiert, noch keinem Tag gegeben" />
+              <KartenKopf
+                titel="Ohne Tag"
+                untertitel="schon notiert, noch keinem Tag gegeben – über das ⋯ in der Zeile kommt einer dazu"
+                seitlich={
+                  <button type="button" className="chip !py-1" onClick={() => setFormular({ art: 'aktivitaet' })}>
+                    + Punkt
+                  </button>
+                }
+              />
               <ul className="liste list-none m-0 p-0">
                 {ohneTag.map((e) => (
                   <li key={e.id} className="border-b last:border-0" style={{ borderColor: 'var(--rand)' }}>
@@ -135,7 +143,7 @@ export default function OrtsListe() {
         </div>
       )}
 
-      <button type="button" className="fab md:hidden" onClick={() => setFormular({ art: 'aktivitaet', datum: tage[0] ?? null })}>
+      <button type="button" className="fab md:hidden" onClick={() => setFormular({ art: 'aktivitaet' })}>
         <span aria-hidden className="text-[19px] leading-none">+</span> Ort
       </button>
 
@@ -150,7 +158,7 @@ function OhneTreffler({ suchwort }: { suchwort: string }) {
   return (
     <div className="p-4 text-center">
       <p className="mikro">{suchwort ? `Kein Ort passt zu „${suchwort}“.` : 'Noch keine Orte.'}</p>
-      <p className="mikro mt-1">Unten auf + tippen – oder einen Ort suchen und antippen.</p>
+      <p className="mikro mt-1">Unten auf + tippen – ein Name genügt, der Tag kommt später, wenn du ihn weißt.</p>
     </div>
   );
 }
