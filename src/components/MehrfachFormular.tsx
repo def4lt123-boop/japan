@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { kategorieVorschlag } from '../lib/kategorien';
+import { bremsMelden, gebremst, takt } from '../lib/suchtakt';
 import { punktFuer } from '../lib/punktfindung';
 import { bildFuer } from '../lib/ortsbild';
 import { HOECHSTEN, ohneDubletten, zeilenAusText } from '../lib/sammel';
@@ -20,8 +21,9 @@ import { Ablage, Chip, IconKnopf, TextFeld, cx } from './ui';
  * zwanzig zeilen nicht zwanzig suchanfragen gleichzeitig lostritt.
  */
 
-const PAUSE = 240;
-const warten = (zeit = PAUSE) => new Promise((loser) => window.setTimeout(loser, zeit));
+/** so viele punkte werden im zweiten durchgang noch einmal gefragt */
+const NACHHOLEN = 24;
+const warten = (zeit = takt()) => new Promise((loser) => window.setTimeout(loser, zeit));
 
 export function MehrfachFormular({ reise, offen, schliessen }: { reise: Reise; offen: boolean; schliessen: () => void }) {
   const store = useStore();
@@ -32,6 +34,8 @@ export function MehrfachFormular({ reise, offen, schliessen }: { reise: Reise; o
   const [legen, setLegen] = useState(false);
   const [ergebnis, setErgebnis] = useState<MehrfachErgebnis | null>(null);
   const abbruch = useRef(false);
+  /** wie viele nachträge der zweite durchgang noch holt – für den zähler oben */
+  const zusaetzlich = useRef(0);
 
   useEffect(() => {
     if (!offen) return;
@@ -39,6 +43,7 @@ export function MehrfachFormular({ reise, offen, schliessen }: { reise: Reise; o
     setAm(0);
     setErgebnis(null);
     abbruch.current = false;
+    zusaetzlich.current = 0;
   }, [offen]);
 
   const eintraege = store.eintraegeVon(reise.id);
@@ -67,10 +72,11 @@ export function MehrfachFormular({ reise, offen, schliessen }: { reise: Reise; o
   );
 
   const holen = useMemo(() => {
-    return async (frage: string): Promise<Ortsvorschlag[]> => {
-      const antwort = await fetch(`/api/orte?q=${encodeURIComponent(frage)}${nahe}`).catch(() => null);
+    return async (frage: string, frisch = false): Promise<Ortsvorschlag[]> => {
+      const antwort = await fetch(`/api/orte?q=${encodeURIComponent(frage)}${nahe}${frisch ? '&neu=1' : ''}`).catch(() => null);
       if (!antwort || !antwort.ok) return [];
-      const daten = (await antwort.json().catch(() => null)) as { orte?: Ortsvorschlag[] } | null;
+      const daten = (await antwort.json().catch(() => null)) as { orte?: Ortsvorschlag[]; brems?: boolean } | null;
+      bremsMelden(daten?.brems ?? false);
       return daten?.orte ?? [];
     };
   }, [nahe]);
@@ -82,6 +88,7 @@ export function MehrfachFormular({ reise, offen, schliessen }: { reise: Reise; o
     let punkt = 0;
     let bild = 0;
     const angelegt: Eintrag[] = [];
+    const ohnePunkt: { eintrag: Eintrag; name: string }[] = [];
     for (const [index, vorlage] of gehalten.entries()) {
       if (abbruch.current) break;
       setAm(index + 1);
@@ -95,10 +102,14 @@ export function MehrfachFormular({ reise, offen, schliessen }: { reise: Reise; o
       angelegt.push(neu);
       await warten(90);
       const patch: Partial<Eintrag> = {};
-      const treffer = await punktFuer({ titel: vorlage.name, ort: null, adresse: null, karten_stichwort: null }, reise.land, holen);
+      // in einer bremse reicht die eine frage – die andern kandidatinnen gehen an
+      // dieselbe tür, die gerade zu ist, und kosten nur zeit
+      const treffer = await punktFuer({ titel: vorlage.name, ort: null, adresse: null, karten_stichwort: null }, reise.land, holen, { höchstens: gebremst() ? 1 : 3 });
       if (treffer) {
         Object.assign(patch, treffer.patch);
         punkt += 1;
+      } else {
+        ohnePunkt.push({ eintrag: neu, name: vorlage.name });
       }
       const fund = await bildFuer({ titel: vorlage.name, ort: patch.ort ?? null, adresse: patch.adresse ?? null }, { stationen: reise.stationen, land: reise.land });
       if (fund?.url) {
@@ -109,9 +120,33 @@ export function MehrfachFormular({ reise, offen, schliessen }: { reise: Reise; o
       if (Object.keys(patch).length) await store.eintragAendern(neu.id, patch);
       if (index + 1 < gehalten.length && !abbruch.current) await warten();
     }
-    setErgebnis({ angelegt: angelegt.length, punkt, bild, dubletten, uebrig });
+    // was in der bremse leer zurückkam, wird ein zweites mal gefragt – die suche hat
+    // in der zeit luft geholt, und die frage geht am zwischenspeicher vorbei
+    const nachlesen = ohnePunkt.length && !abbruch.current ? await nachholen(ohnePunkt) : 0;
+    punkt += nachlesen;
+    zusaetzlich.current = 0;
+    setErgebnis({ angelegt: angelegt.length, punkt, bild, dubletten, uebrig, ohne: ohnePunkt.length - nachlesen, gebremst: gebremst() });
     setLegen(false);
     store.sagen(angelegt.length ? `${angelegt.length} ${angelegt.length === 1 ? 'Punkt' : 'Punkte'} angelegt – ohne Tag.` : 'Nichts angelegt.');
+  }
+
+  /** der zweite durchgang über die punkte ohne fund */
+  async function nachholen(liste: { eintrag: Eintrag; name: string }[]) {
+    zusaetzlich.current = Math.min(liste.length, NACHHOLEN);
+    await warten(takt() * 2);
+    let gefunden = 0;
+    const anzahl = Math.min(liste.length, NACHHOLEN);
+    for (const [index, posten] of liste.slice(0, anzahl).entries()) {
+      if (abbruch.current) break;
+      setAm(gehalten.length + index + 1);
+      const treffer = await punktFuer({ titel: posten.name, ort: null, adresse: null, karten_stichwort: null }, reise.land, (frage) => holen(frage, true), { höchstens: 1 });
+      if (treffer) {
+        await store.eintragAendern(posten.eintrag.id, treffer.patch);
+        gefunden += 1;
+      }
+      if (index + 1 < anzahl && !abbruch.current) await warten();
+    }
+    return gefunden;
   }
 
   const zeilenText = gehalten.length === 1 ? '1 Punkt' : `${gehalten.length} Punkte`;
@@ -168,7 +203,7 @@ export function MehrfachFormular({ reise, offen, schliessen }: { reise: Reise; o
             />
             {legen ? (
               <p className="mikro" role="status">
-                {am} von {gehalten.length} – {fortschritt(am, gehalten.length)}
+                {am} von {gehalten.length + zusaetzlich.current} – {fortschritt(am, gehalten.length + zusaetzlich.current)}
               </p>
             ) : null}
             {zeilen.length ? (
@@ -214,10 +249,10 @@ export function MehrfachFormular({ reise, offen, schliessen }: { reise: Reise; o
   );
 }
 
-type MehrfachErgebnis = { angelegt: number; punkt: number; bild: number; dubletten: number; uebrig: number };
+type MehrfachErgebnis = { angelegt: number; punkt: number; bild: number; dubletten: number; uebrig: number; ohne: number; gebremst: boolean };
 
 function Ergebnis({ ergebnis, fertig, weiter }: { ergebnis: MehrfachErgebnis; fertig: () => void; weiter: () => void }) {
-  const { angelegt, punkt, bild, dubletten, uebrig } = ergebnis;
+  const { angelegt, punkt, bild, dubletten, uebrig, ohne, gebremst: zugemacht } = ergebnis;
   return (
     <div className="space-y-2">
       <p className="text-[15px] font-medium">
@@ -228,12 +263,14 @@ function Ergebnis({ ergebnis, fertig, weiter }: { ergebnis: MehrfachErgebnis; fe
         <Chip ton={bild ? 'gut' : undefined}>{bild} mit Bild</Chip>
         {dubletten ? <Chip>{dubletten} schon in der Reise</Chip> : null}
         {uebrig ? <Chip ton="warnt">{uebrig} nicht angelegt</Chip> : null}
+        {ohne ? <Chip ton="warnt" titel="Für diese punkte hat die suche nichts gefunden – ein Google-Maps-link im feld „punkt“ reicht.">{ohne} ohne Google Maps</Chip> : null}
+        {zugemacht ? <Chip titel="Die Kartensuche war kurz zugemacht – was nichts brachte, wurde ein zweites Mal gefragt.">Suche zweimal gefragt</Chip> : null}
       </div>
       <p className="mikro">
         {uebrig
           ? `Die ${uebrig} ${uebrig === 1 ? 'Zeile' : 'Zeilen'} über ${HOECHSTEN} hinaus bleiben liegen – für die zweite Runde den text einfach neu einfügen.`
           : angelegt > punkt
-            ? `${angelegt - punkt} ${angelegt - punkt === 1 ? 'Punkt bleibt' : 'Punkte bleiben'} ohne Google Maps – in der Liste öffnen und den Google-Maps-Link einfügen.`
+            ? `${angelegt - punkt} ${angelegt - punkt === 1 ? 'Punkt bleibt' : 'Punkte bleiben'} ohne Google Maps${zugemacht ? ' – die Kartensuche war gerade zugemacht, auch nach dem zweiten Durchgang' : ''}. In der Liste öffnen und den Google-Maps-Link einfügen.`
             : 'Alle Punkte liegen auf der Karte. In der Liste unter „Ohne Tag“ lassen sie sich auf die Tage setzen.'}
       </p>
       <div className="flex gap-1.5 pt-1">

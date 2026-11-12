@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { entfernungKm } from '../lib/karten';
+import { entfernungKm, schaetzungKm } from '../lib/karten';
+import { minutenAus } from '../lib/weg';
 import { gradText } from '../lib/format';
 import { istKartenText, punktAusKartenLink } from '../lib/kartenlink';
 import { quellenName, vergleichText } from '../lib/orte';
@@ -284,9 +285,20 @@ export function OrtSuche({
           {zeilen.length ? (
             <ul className="liste list-none m-0 max-h-[13rem] overflow-y-auto rounded-xl border p-1" style={{ borderColor: 'var(--rand)' }}>
               {zeilen.map((v, i) => {
-                const km = konzentriert ? entfernungKm({ lat: v.lat, lng: v.lng }, konzentriert) : null;
+                const anfrage = { lat: v.lat, lng: v.lng };
+                const km = konzentriert ? entfernungKm(anfrage, konzentriert) : null;
+                const fuß = konzentriert ? schaetzungKm(anfrage, konzentriert) : null;
                 const genau = vergleichText(v.name) === vergleichText(wert);
-                const nahe = km !== null && km <= 500 ? `${km < 10 ? km.toFixed(1) : Math.round(km)} km` : '';
+                // was zu fuß zu erreichen ist, wird in minuten gesagt – kilometer
+                // sagen einem auf dem handy nichts, wenn drei gleiche namen stehen
+                const nahe =
+                  km === null || km > 500
+                    ? ''
+                    : km < 0.05
+                      ? 'gleich hier'
+                      : km < 5
+                        ? `${minutenAus(fuß ?? km)} Min. zu Fuß`
+                        : `${km < 10 ? km.toFixed(1) : Math.round(km)} km`;
                 const rechts = [genau ? 'gemeint' : '', nahe].filter(Boolean).join(' · ');
                 return (
                   <li key={`${v.lat}-${v.lng}-${i}`}>

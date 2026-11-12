@@ -1,4 +1,5 @@
 import { entfernungKm, kartenLink, punktVorhanden, schaetzungKm, schaetzungMinuten, type Punkt } from './karten';
+import { FUSS, minutenAus, type Fussweg } from './weg';
 import { naechsteSortierung } from './plan';
 import type { Eintrag } from './types';
 
@@ -171,6 +172,22 @@ export function nachbar(punkt: Nahpunkt, alle: Nahpunkt[]): { nachbar: Nahpunkt;
     .map((p) => ({ p, km: schaetzungKm(punkt, p) ?? Number.POSITIVE_INFINITY }))
     .sort((a, b) => a.km - b.km)[0];
   return treffer && Number.isFinite(treffer.km) ? { nachbar: treffer.p, km: treffer.km } : null;
+}
+
+/**
+ * Der nächste schritt für jeden punkt einer liste – dieselbe zahl, die in der zeile
+ * steht und nach der die liste gefiltert wird. Punkte ohne Google Maps fehlen: für
+ * sie gibt es keine entfernung, also auch kein urteil.
+ */
+export function nachbarn(liste: Eintrag[], modus = FUSS): Map<string, { partner: Nahpunkt; weg: Fussweg }> {
+  const { mit } = sortieren(liste);
+  const funde = new Map<string, { partner: Nahpunkt; weg: Fussweg }>();
+  for (const p of mit) {
+    const fund = nachbar(p, mit);
+    if (!fund) continue;
+    funde.set(p.id, { partner: fund.nachbar, weg: { km: fund.km, minuten: minutenAus(fund.km, modus), quelle: 'geschätzt' } });
+  }
+  return funde;
 }
 
 /** was in google maps zu sehn ist, wenn die gruppe als weg gegangen wird */

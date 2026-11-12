@@ -5,6 +5,10 @@ import { useParams } from 'next/navigation';
 import { useStore } from '../../../../lib/daten';
 import { tagKurz } from '../../../../lib/dates';
 import { ohneTagEintraege, reiseTage, stadtDesTages, tagEintraege } from '../../../../lib/plan';
+import { nachbarn } from '../../../../lib/naehe';
+import { kmText } from '../../../../lib/karten';
+import { nahGenug } from '../../../../lib/weg';
+import { useFussWege } from '../../../../components/Fussweg';
 import { ANDERE_KATEGORIEN, kategorie } from '../../../../lib/kategorien';
 import { EintragZeile } from '../../../../components/EintragZeile';
 import { EintragFormular } from '../../../../components/EintragFormular';
@@ -12,6 +16,9 @@ import { MehrfachFormular } from '../../../../components/MehrfachFormular';
 import { OhneTagGruppen } from '../../../../components/OhneTagGruppen';
 import { Chip, Karten, KartenKopf, Segment, TextFeld, cx } from '../../../../components/ui';
 import type { Eintrag, EintragArt } from '../../../../lib/types';
+
+/** die grenze des spaziergangs – so weit, dass zwei punkte noch an einen tag gehören */
+const NAHE_KM = 1;
 
 /** Alle Orte der Reise an einer Stelle: suchen, filtern, einem Tag geben. */
 export default function OrtsListe() {
@@ -23,6 +30,8 @@ export default function OrtsListe() {
   const [ansicht, setAnsicht] = useState('tage');
   const [formular, setFormular] = useState<{ art: EintragArt; bestehend?: Eintrag | null; datum?: string | null } | null>(null);
   const [sammeln, setSammeln] = useState(false);
+  /** nur, was zu fuß höchstens so weit vom nächsten punkt entfernt liegt */
+  const [schritt, setSchritt] = useState<number | null>(null);
 
   const alle = useMemo(() => (reise ? store.eintraegeVon(reise.id).filter((e) => e.art !== 'unterkunft') : []), [reise, store]);
   const kategorien = useMemo(() => {
@@ -43,10 +52,30 @@ export default function OrtsListe() {
     });
   }, [alle, filter, suche]);
 
+  const tage = useMemo(() => (reise ? reiseTage(reise) : []), [reise]);
+  const wartend = useMemo(() => ohneTagEintraege(gefiltert), [gefiltert]);
+
+  // der schritt zum nächsten wartenden punkt: dieselbe zahl, die in der zeile steht
+  // und nach der die liste gefiltert wird – zwei messwerte wären ein widerspruch
+  const funde = useMemo(() => nachbarn(wartend), [wartend]);
+  const paare = useMemo(() => {
+    const wartende = new Map(wartend.map((e) => [e.id, e]));
+    return [...funde.entries()].map(([id, fund]) => ({
+      id,
+      von: { lat: fund.partner.lat, lng: fund.partner.lng, titel: fund.partner.titel },
+      nach: wartende.get(id) ?? null,
+    }));
+  }, [funde, wartend]);
+  const wege = useFussWege(paare);
+
+  const ohneTag = useMemo(
+    () => (schritt === null ? wartend : wartend.filter((e) => nahGenug(wege[e.id] ?? funde.get(e.id)?.weg ?? null, schritt))),
+    [wartend, schritt, wege, funde]
+  );
+  const versteckt = wartend.length - ohneTag.length;
+
   if (!store.bereit || !reise) return null;
 
-  const tage = reiseTage(reise);
-  const ohneTag = ohneTagEintraege(gefiltert);
   const nachTag = tage.map((d) => ({ datum: d, liste: tagEintraege(gefiltert, d) })).filter((g) => g.liste.length);
 
   return (
@@ -83,6 +112,27 @@ export default function OrtsListe() {
             </button>
           </div>
         ) : null}
+        {wartend.length > 1 ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setSchritt(schritt === NAHE_KM ? null : NAHE_KM)}
+              className={cx('chip !py-1.5 !text-[13px]', schritt === NAHE_KM && 'chip-aktiv')}
+              style={{ borderColor: schritt === NAHE_KM ? 'var(--akzent)' : 'var(--rand)', borderWidth: 1, borderStyle: 'solid' }}
+              title={`Nur punkte, deren nächster nachbar höchstens ${kmText(NAHE_KM)} zu fuß entfernt ist – gerechnet wird über den weg, nicht über die luftlinie.`}
+            >
+              🚶 höchstens {kmText(NAHE_KM)} beieinander
+            </button>
+            {versteckt ? (
+              <span className="mikro">
+                {versteckt} {versteckt === 1 ? 'Punkt liegt' : 'Punkte liegen'} weiter als {kmText(NAHE_KM)} zum nächsten{' '}
+                <button type="button" className="chip !py-1" onClick={() => setSchritt(null)}>
+                  wieder zeigen
+                </button>
+              </span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {ansicht === 'liste' || ansicht === 'ohne' ? (
@@ -101,7 +151,7 @@ export default function OrtsListe() {
           <ul className="liste list-none m-0 p-0">
             {(ansicht === 'ohne' ? ohneTag : gefiltert).map((e) => (
               <li key={e.id} className="border-b last:border-0" style={{ borderColor: 'var(--rand)' }}>
-                <EintragZeile eintrag={e} reise={reise} kompakt bearbeiten={() => setFormular({ art: e.art, bestehend: e })} />
+                <EintragZeile eintrag={e} reise={reise} kompakt nachbarWeg={wege[e.id] ?? funde.get(e.id)?.weg ?? null} nachbarName={funde.get(e.id)?.partner.titel ?? null} bearbeiten={() => setFormular({ art: e.art, bestehend: e })} />
               </li>
             ))}
           </ul>
@@ -148,7 +198,7 @@ export default function OrtsListe() {
               <ul className="liste list-none m-0 p-0">
                 {ohneTag.map((e) => (
                   <li key={e.id} className="border-b last:border-0" style={{ borderColor: 'var(--rand)' }}>
-                    <EintragZeile eintrag={e} reise={reise} kompakt bearbeiten={() => setFormular({ art: e.art, bestehend: e })} />
+                    <EintragZeile eintrag={e} reise={reise} kompakt nachbarWeg={wege[e.id] ?? funde.get(e.id)?.weg ?? null} nachbarName={funde.get(e.id)?.partner.titel ?? null} bearbeiten={() => setFormular({ art: e.art, bestehend: e })} />
                   </li>
                 ))}
               </ul>

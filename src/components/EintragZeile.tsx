@@ -5,7 +5,8 @@ import { tagKurz, gilt, abstandTage } from '../lib/dates';
 import { preisText, reiseTage } from '../lib/plan';
 import { artMeta, kategorie } from '../lib/kategorien';
 import { kartenLink } from '../lib/karten';
-import { geld, minutenText, uhrzeitText } from '../lib/format';
+import { wegLaenge, wegText, wegTitel, type Fussweg } from '../lib/weg';
+import { geld, uhrzeitText } from '../lib/format';
 import { useStore } from '../lib/daten';
 import type { RoutenInfo } from '../lib/routen';
 import type { Eintrag, Reise } from '../lib/types';
@@ -23,6 +24,8 @@ export function EintragZeile({
   oben,
   unten,
   verbinden,
+  nachbarWeg = null,
+  nachbarName = null,
   bearbeiten,
   kompakt = false,
 }: {
@@ -32,6 +35,9 @@ export function EintragZeile({
   unten?: () => void;
   /** Weg zum nächsten Punkt des Tages */
   verbinden?: RoutenInfo | null;
+  /** schritt zum nächsten wartenden punkt – in der liste ohne tag */
+  nachbarWeg?: Fussweg | null;
+  nachbarName?: string | null;
   bearbeiten: () => void;
   kompakt?: boolean;
 }) {
@@ -142,17 +148,8 @@ export function EintragZeile({
         </div>
       </div>
 
-      {verbinden ? (
-        <p className="mikro flex flex-wrap items-center gap-x-1.5 pb-1 pl-[calc(12px+52px)] text-[13px]">
-          <span aria-hidden>{verbinden.quelle === 'gerechnet' ? '' : '≈ '}</span>
-          <span>
-            {verbinden.km < 1 ? `${Math.round(verbinden.km * 1000)} m` : `${String(verbinden.km).replace('.', ',')} km`}
-          </span>
-          <span aria-hidden>·</span>
-          <span>{minutenText(verbinden.minuten)}</span>
-          <span style={{ color: 'var(--text3)' }}>({verbinden.quelle === 'gerechnet' ? 'gerechnet' : 'geschätzt'})</span>
-        </p>
-      ) : null}
+      {verbinden ? <Wegangabe weg={verbinden} wort={verbinden.quelle === 'gerechnet' ? 'gerechnet' : 'geschätzt'} /> : null}
+      {verbinden || !nachbarWeg ? null : <Wegangabe weg={nachbarWeg} zuFuss wort={nachbarName ? `zum nächsten – ${nachbarName}` : 'zum nächsten'} />}
 
       <Ablage offen={tagWaehlen} titel="Wann soll das stattfinden?" schliessen={() => setTagWaehlen(false)}>
         <div className="flex flex-wrap gap-2 pt-3">
@@ -186,5 +183,21 @@ export function EintragZeile({
         </div>
       </Ablage>
     </div>
+  );
+}
+
+/**
+ * Der schritt von hier zum nächsten punkt: minuten zuerst, die länge dahinter.
+ * Was nur überschlagen ist, trägt ≈ und sagt im titel, woran es liegt.
+ */
+function Wegangabe({ weg, wort, zuFuss = false }: { weg: Fussweg; wort: string; zuFuss?: boolean }) {
+  return (
+    <p className="mikro flex flex-wrap items-center gap-x-1.5 pb-1 pl-[calc(12px+52px)] text-[13px]" title={wegTitel(weg)}>
+      {zuFuss ? <span aria-hidden>🚶</span> : null}
+      <span className="tabular-nums">{wegText(weg)}</span>
+      <span aria-hidden>·</span>
+      <span className="tabular-nums">{wegLaenge(weg)}</span>
+      <span style={{ color: 'var(--text3)' }}>{wort}</span>
+    </p>
   );
 }

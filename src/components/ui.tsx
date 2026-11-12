@@ -312,7 +312,8 @@ export function TextFeld({
   /** zeilen im mehrzeiligen feld – ein eingefügter text braucht höhe */
   zeilen?: number;
   autoVeroellstaendigen?: string;
-  eingabeModus?: 'text' | 'decimal' | 'url' | 'email' | 'tel';
+  /** die tastatur am feld – „numeric" für ziffernfolgen wie das ansehen-wort */
+  eingabeModus?: 'text' | 'decimal' | 'numeric' | 'url' | 'email' | 'tel';
   hinweis?: React.ReactNode;
   className?: string;
   /** tastatur am eingabefeld – hier für „eintreten = erster vorschlag" */
