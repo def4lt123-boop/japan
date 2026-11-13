@@ -1,0 +1,47 @@
+{
+  "name": "urlaubsplaner",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -H 0.0.0.0",
+    "build": "next build",
+    "start": "next start -H 0.0.0.0",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test:plan": "tsx scripts/plan-test.mts",
+    "test:suche": "tsx scripts/suche-test.mts",
+    "test:gruppen": "tsx scripts/gruppen-test.mts",
+    "test:kartenlink": "tsx scripts/kartenlink-test.mts",
+    "test:weg": "tsx scripts/weg-test.mts",
+    "test:layout": "tsx scripts/layout-check.mts",
+    "test:sql": "tsx scripts/sql-check.mts",
+    "test:render": "node -r tsx/cjs scripts/render-test.cjs",
+    "test:all": "npm run typecheck && npm run test:plan && npm run test:suche && npm run test:gruppen && npm run test:kartenlink && npm run test:weg && npm run test:google && npm run test:layout && npm run test:sql && npm run test:render",
+    "test:google": "tsx scripts/google-test.mts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "clsx": "^2.1.1",
+    "leaflet": "^1.9.4",
+    "next": "^15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-leaflet": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.12",
+    "@types/node": "^22.10.7",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "autoprefixer": "^10.4.20",
+    "jsdom": "^30.1.3",
+    "postcss": "^8.4.49",
+    "libpg-query": "^17.8.2",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
