@@ -30,8 +30,8 @@
   --schatten: 0 1px 2px rgb(16 24 40 / 0.05), 0 10px 26px -14px rgb(16 24 40 / 0.22);
   --radius: 18px;
 
-  /* was das dunkel umfärben soll: text auf akzent, felder, der vorhang über
-     dem bild, die meldezeile. alles andre folgt --karte und --text. */
+  /* Flächen, die nicht einfach --karte oder --text folgen: text auf akzent,
+     felder, der vorhang über dem bild, die meldezeile. */
   --auf-akzent: #ffffff;
   --feld-fläche: #ffffff;
   --skelett: #e9edf4;
@@ -47,42 +47,6 @@
   --nadel-ring: #ffffff;
   --siegel-fläche: #ffffff;
   --auf-gut: #ffffff;
-}
-
-/* Dunkel: dieselben namen, andere tiefe. Die Kartenkacheln in der Mitte
-   bleiben hell, und darauf gehört der Nadelring weiß – er bleibt daher in
-   beiden Lichtern, wie er ist. */
-[data-thema='dunkel'] {
-  --fläche: #0e1218;
-  --karte: #171d26;
-  --text: #e9eef6;
-  --text2: #aebccd;
-  --text3: #8fa0b5;
-  --rand: #263141;
-  --rand-stark: #3a4860;
-  --akzent: #14b8a6;
-  --akzent-text: #5eead4;
-  --akzent-fläche: #102a2e;
-  --warnt: #fcd34d;
-  --warnt-fläche: #2b2213;
-  --gefahr: #fda4a4;
-  --gefahr-fläche: #2e1b1b;
-  --gut: #6ee7a8;
-  --gut-fläche: #16281e;
-  --schatten: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 28px -16px rgb(0 0 0 / 0.75);
-  --auf-akzent: #04211f;
-  --feld-fläche: #1d2530;
-  --skelett: #222c3a;
-  --chip-fläche: #222d3c;
-  --bett-fläche: #241f3d;
-  --randglas: rgb(23 29 38 / 0.92);
-  --vorhang-schwer: rgb(23 29 38 / 0.9);
-  --vorhang-mittel: rgb(23 29 38 / 0.78);
-  --vorhang-leicht: rgb(23 29 38 / 0.46);
-  --bild-deckkraft: 0.5;
-  --meldung-fläche: #e9eef6;
-  --meldung-text: #10151d;
-  --auf-gut: #06231a;
 }
 
 @layer base {
