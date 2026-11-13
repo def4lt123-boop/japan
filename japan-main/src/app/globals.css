@@ -1,0 +1,776 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Ein Designsystem für Handy und Rechner. Mobile zuerst: alles ist für die
+ * Daumenzone gebaut, der Rechner bekommt dasselbe in breiter.
+ */
+
+:root {
+  --fläche: #f4f6f9;
+  --karte: #ffffff;
+  --text: #10151d;
+  --text2: #4d5a6b;
+  --text3: #6b7a8d;
+  --rand: #e3e8f0;
+  --rand-stark: #cfd7e4;
+  --akzent: #0f766e;
+  --akzent-text: #0b5c56;
+  --akzent-fläche: #e7f3f1;
+  --warnt: #a8560c;
+  --warnt-fläche: #fdf1e3;
+  --gefahr: #a4322a;
+  --gefahr-fläche: #fdecea;
+  --gut: #1f6f43;
+  --gut-fläche: #e8f4ec;
+  --dock: 60px;
+  --dokhoehe: calc(var(--dock) + env(safe-area-inset-bottom, 0px));
+  --randseiten: 16px;
+  --schatten: 0 1px 2px rgb(16 24 40 / 0.05), 0 10px 26px -14px rgb(16 24 40 / 0.22);
+  --radius: 18px;
+
+  /* Flächen, die nicht einfach --karte oder --text folgen: text auf akzent,
+     felder, der vorhang über dem bild, die meldezeile. */
+  --auf-akzent: #ffffff;
+  --feld-fläche: #ffffff;
+  --skelett: #e9edf4;
+  --chip-fläche: #eef1f6;
+  --bett-fläche: #efeafe;
+  --randglas: rgb(255 255 255 / 0.94);
+  --vorhang-schwer: rgb(255 255 255 / 0.86);
+  --vorhang-mittel: rgb(255 255 255 / 0.76);
+  --vorhang-leicht: rgb(255 255 255 / 0.5);
+  --bild-deckkraft: 0.62;
+  --meldung-fläche: #10151d;
+  --meldung-text: #ffffff;
+  --nadel-ring: #ffffff;
+  --siegel-fläche: #ffffff;
+  --auf-gut: #ffffff;
+}
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  html {
+    color-scheme: light;
+    background: var(--fläche);
+    overflow-x: clip;
+  }
+  body {
+    margin: 0;
+    background: var(--fläche);
+    color: var(--text);
+    font-size: 15.5px;
+    line-height: 1.45;
+    overflow-x: clip;
+    padding-bottom: var(--dokhoehe);
+    -webkit-text-size-adjust: 100%;
+  }
+  h1,
+  h2,
+  h3,
+  p {
+    margin: 0;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  h2 {
+    font-size: 17px;
+    font-weight: 650;
+  }
+  a {
+    color: var(--akzent-text);
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+  :focus-visible {
+    outline: 2px solid var(--akzent);
+    outline-offset: 2px;
+  }
+  img {
+    display: block;
+  }
+}
+
+@layer components {
+  /* ── Rahmen ─────────────────────────────────────────────────────────── */
+  .seite {
+    width: 100%;
+    max-width: 1080px;
+    margin-inline: auto;
+    padding-inline: var(--randseiten);
+  }
+  .seitenkopf {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 0 10px;
+  }
+  .seitenkopf .titel {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .seitenkopf .neben {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    width: 100%;
+  }
+  .karte {
+    background: var(--karte);
+    border: 1px solid var(--rand);
+    border-radius: var(--radius);
+    box-shadow: var(--schatten);
+  }
+  .karte-flach {
+    background: var(--karte);
+    border: 1px solid var(--rand);
+    border-radius: 14px;
+  }
+  .kopf {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    border-bottom: 1px solid var(--rand);
+    min-height: 44px;
+  }
+  .kopf > .titel {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .liste {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* ── Zeile: Text volle Breite, Knöpfe darunter ─────────────────────── */
+  .zeile {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px 10px;
+    padding: 12px;
+    position: relative;
+    isolation: isolate;
+  }
+  .zeile > .text {
+    min-width: 0;
+    flex: 1 1 12rem;
+  }
+  .zeile-bett {
+    background: linear-gradient(90deg, rgb(109 91 208 / 0.09), transparent 46%);
+    border-radius: 12px;
+  }
+  /* das Band muß über dem Bild stehen, sonst verschwindet ein Bett hinter seiner eigenen Unterkunft */
+  .zeile-bett::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: 12px;
+    box-shadow: inset 3px 0 0 #6d5bd0;
+    pointer-events: none;
+  }
+  .zeile > .taten {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    width: 100%;
+  }
+
+  /* ── Bild des Ortes hinter dem Text ─────────────────────────────────── */
+  .zeile-bild {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--skelett);
+  }
+  .zeile-bild img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    object-position: 50% 42%;
+    opacity: var(--bild-deckkraft);
+  }
+  /* Vorhang von links: wo Text steht, bleibt der Grund hell genug zum Lesen,
+     nach rechts darf das Bild atmen – es soll zu sehn sein, nicht zu ahnen */
+  .zeile-bild::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, var(--vorhang-schwer) 0%, var(--vorhang-mittel) 44%, var(--vorhang-leicht) 100%);
+  }
+  .zeile > :not(.zeile-bild) {
+    position: relative;
+    z-index: 1;
+  }
+  .zeile-bild-da {
+    border-radius: 12px;
+  }
+
+  /* ── Knöpfe ─────────────────────────────────────────────────────────── */
+  .knopf {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 12px;
+    border: 1px solid var(--akzent);
+    background: var(--akzent);
+    color: var(--auf-akzent);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.05s;
+    white-space: nowrap;
+  }
+  .knopf:hover {
+    filter: brightness(1.06);
+  }
+  .knopf:active {
+    transform: translateY(1px);
+  }
+  .knopf:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .knopf-ghost {
+    background: var(--karte);
+    color: var(--text);
+    border-color: var(--rand-stark);
+  }
+  .knopf-dezent {
+    background: transparent;
+    border-color: transparent;
+    color: var(--akzent-text);
+    padding-inline: 10px;
+    font-weight: 600;
+  }
+  .knopf-gefahr {
+    background: var(--karte);
+    border-color: color-mix(in srgb, var(--gefahr) 45%, var(--karte));
+    color: var(--gefahr);
+  }
+  .knopf-klein {
+    min-height: 36px;
+    padding: 0 12px;
+    font-size: 13.5px;
+  }
+  .icon-knopf {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border-radius: 12px;
+    border: 1px solid var(--rand);
+    background: var(--karte);
+    color: var(--text2);
+    font: inherit;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .icon-knopf:hover:not(:disabled) {
+    background: var(--akzent-fläche);
+    color: var(--akzent-text);
+    border-color: color-mix(in srgb, var(--akzent) 45%, var(--karte));
+  }
+  .icon-knopf:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  .fab {
+    position: fixed;
+    right: max(16px, env(safe-area-inset-right, 0px));
+    bottom: calc(var(--dokhoehe) + 14px);
+    z-index: 30;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 0;
+    background: var(--akzent);
+    color: var(--auf-akzent);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 650;
+    box-shadow: 0 8px 22px -8px rgb(15 118 110 / 0.6);
+    cursor: pointer;
+  }
+
+  /* ── Beschriftetes ──────────────────────────────────────────────────── */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    align-self: center;
+    vertical-align: middle;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: var(--chip-fläche);
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 550;
+    white-space: nowrap;
+  }
+  .chip-aktiv {
+    background: var(--akzent);
+    color: var(--auf-akzent);
+  }
+  .chip-warnt {
+    background: var(--warnt-fläche);
+    color: var(--warnt);
+  }
+  .chip-gut {
+    background: var(--gut-fläche);
+    color: var(--gut);
+  }
+  .mikro {
+    font-size: 13px;
+    line-height: 1.3;
+    color: var(--text3);
+  }
+  .label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--text2);
+    margin-bottom: 4px;
+  }
+  .eingabe {
+    width: 100%;
+    min-height: 44px;
+    padding: 9px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--rand-stark);
+    background: var(--feld-fläche);
+    color: var(--text);
+    font: inherit;
+    font-size: 16px;
+  }
+  .eingabe::placeholder {
+    color: var(--text3);
+  }
+  .eingabe:focus {
+    border-color: var(--akzent);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--akzent-fläche);
+  }
+  textarea.eingabe {
+    min-height: 74px;
+    resize: vertical;
+    line-height: 1.45;
+  }
+  .selekt {
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--text2) 50%), linear-gradient(135deg, var(--text2) 50%, transparent 50%);
+    background-position: calc(100% - 17px) 20px, calc(100% - 12px) 20px;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 34px;
+  }
+  .feld {
+    min-width: 0;
+  }
+
+  /* ── Kalender ───────────────────────────────────────────────────────── */
+  .raster {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .zelle {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-height: 46px;
+    padding: 5px 6px;
+    border-radius: 12px;
+    background: var(--skelett);
+    border: 1px solid transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 13.5px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .zelle-leer {
+    background: transparent;
+    cursor: default;
+  }
+  .zelle-reise {
+    background: var(--akzent-fläche);
+    border-color: color-mix(in srgb, var(--akzent) 40%, var(--karte));
+  }
+  .zelle-heute {
+    border-color: var(--akzent);
+    font-weight: 700;
+  }
+  .zelle-punkte {
+    display: flex;
+    gap: 3px;
+    margin-top: auto;
+  }
+  .zeitangabe {
+    flex: none;
+    width: 52px;
+    font-size: 13.5px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    color: var(--text2);
+    padding-top: 2px;
+  }
+  .fuellung {
+    display: inline-flex;
+    gap: 3px;
+    align-self: center;
+  }
+  .fuellung i {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--rand-stark);
+  }
+  .fuellung i[data_an='1'] {
+    background: var(--akzent);
+  }
+
+  /* ── Fortschritt ────────────────────────────────────────────────────── */
+  .fortschritt {
+    display: flex;
+    height: 6px;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--skelett);
+  }
+  .fortschritt > span {
+    display: block;
+    background: var(--akzent);
+    border-radius: 999px;
+  }
+  .pruefpunkt {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13.5px;
+    color: var(--text2);
+  }
+  .pruefpunkt b {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* ── Blattleiste und Ablage unten ───────────────────────────────────── */
+  .dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    align-items: stretch;
+    height: var(--dokhoehe);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--randglas);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--rand);
+  }
+  .dock a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    color: var(--text3);
+    font-size: 13px;
+    font-weight: 550;
+    text-decoration: none;
+  }
+  .dock a > span.ikone {
+    font-size: 19px;
+    line-height: 1;
+  }
+  .dock a[aria-current='page'] {
+    color: var(--akzent-text);
+  }
+  .dock a[aria-current='page'] > span.ikone {
+    transform: translateY(-1px) scale(1.06);
+  }
+
+  .boden-ablage {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    background: rgb(16 21 29 / 0.42);
+    padding: 0;
+  }
+  .ablage {
+    display: flex;
+    max-height: min(90dvh, 860px);
+    width: 100%;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 22px 22px 0 0;
+    background: var(--karte);
+    box-shadow: 0 -12px 40px -18px rgb(16 24 40 / 0.4);
+    animation: hochfahren 0.18s ease-out;
+  }
+  .ablage-inhalt {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px var(--randseiten) calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  .ablage-kopf {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px var(--randseiten);
+    border-bottom: 1px solid var(--rand);
+  }
+
+  .meldung {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--dokhoehe) + 74px);
+    z-index: 70;
+    transform: translateX(-50%);
+    max-width: min(92vw, 460px);
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: var(--meldung-fläche);
+    color: var(--meldung-text);
+    font-size: 13.5px;
+    box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.5);
+    animation: hochfahren 0.16s ease-out;
+  }
+
+  .gelenk {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 2px 0;
+    margin: 0 calc(var(--randseiten) * -1);
+    padding-inline: var(--randseiten);
+    scroll-snap-type: x proximity;
+  }
+  .gelenk > * {
+    scroll-snap-align: center;
+  }
+  .gelenk::-webkit-scrollbar {
+    display: none;
+  }
+
+  .rahmen-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── Die Nadel über einem Punkt ──────────────────────────────────────── */
+  .kartennadel {
+    background: none;
+    border: 0;
+  }
+  .nadel-koerper {
+    position: relative;
+    display: block;
+    width: 30px;
+    height: 30px;
+    border-radius: 50% 50% 50% 6px;
+    transform: rotate(-45deg);
+    background: var(--nadel, #0f766e);
+    background: linear-gradient(158deg, color-mix(in srgb, var(--nadel, #0f766e) 78%, #fff) 0%, var(--nadel, #0f766e) 60%);
+    border: 2px solid var(--nadel-ring);
+    box-shadow: 0 7px 14px -7px rgb(16 21 29 / 0.55), 0 0 0 1px rgb(16 21 29 / 0.08);
+  }
+  .nadel-koerper i {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-style: normal;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+    transform: rotate(45deg);
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 1px 1px rgb(16 21 29 / 0.3);
+  }
+  .nadel-koerper i.nadel-zeichen {
+    font-size: 15px;
+    text-shadow: none;
+  }
+  .nadel-koerper b {
+    position: absolute;
+    right: -11px;
+    top: 50%;
+    display: grid;
+    place-items: center;
+    width: 19px;
+    height: 19px;
+    border-radius: 999px;
+    background: var(--siegel-fläche);
+    border: 1px solid var(--rand);
+    font-weight: 400;
+    font-size: 12px;
+    line-height: 1;
+    transform: translate(0, -50%) rotate(45deg);
+    box-shadow: 0 2px 5px -2px rgb(16 21 29 / 0.3);
+  }
+  /* die fläche um die nadel ist größer als der körper – der körper sitzt
+     oben links in ihr, damit die spitze auf dem punkt bleibt */
+  .kartennadel:active .nadel-koerper {
+    transform: rotate(-45deg) scale(0.97);
+  }
+  /* nur wer mit der maus zeigt, sieht das aufziehen */
+  @media (hover: hover) and (pointer: fine) {
+    .nadel-koerper:hover,
+    .kartennadel:focus-visible .nadel-koerper {
+      transform: rotate(-45deg) scale(1.07);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .nadel-koerper {
+      transition: transform 0.12s ease;
+    }
+  }
+}
+
+@keyframes hochfahren {
+  from {
+    transform: translateY(14px);
+    opacity: 0.4;
+  }
+}
+
+@keyframes einblenden {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.98);
+    opacity: 0;
+  }
+}
+
+/* Finger: jede Fläche gut zu treffen, aber nie auf Kosten des Textes daneben */
+@media (hover: none) {
+  button,
+  .knopf,
+  .dock a,
+  summary,
+  .ablage a,
+  .ablage button,
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea,
+  .zelle {
+    min-height: 44px;
+  }
+  .icon-knopf,
+  .knopf-klein {
+    min-width: 44px;
+  }
+  .eingabe {
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --randseiten: 24px;
+    --radius: 20px;
+  }
+  body {
+    font-size: 15.5px;
+  }
+  h1 {
+    font-size: 26px;
+  }
+  .seitenkopf {
+    padding-top: 22px;
+  }
+  .seitenkopf .neben {
+    width: auto;
+  }
+  .zeile > .taten {
+    width: auto;
+    margin-left: auto;
+  }
+  .ablage {
+    max-width: 620px;
+    margin-inline: auto;
+    border-radius: 22px;
+    margin-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  }
+  .boden-ablage {
+    padding: 24px 16px;
+  }
+  .zelle {
+    min-height: 84px;
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 1024px) {
+  body {
+    padding-bottom: 28px;
+  }
+}
+
+@media print {
+  .dock,
+  .fab,
+  .taten,
+  .zeile-bild {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .zeile-bild img {
+    animation: einblenden 0.24s ease-out;
+  }
+}

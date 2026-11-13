@@ -1,0 +1,208 @@
+'use client';
+
+import { useState } from 'react';
+import { tagKurz, gilt, abstandTage } from '../lib/dates';
+import { preisText, reiseTage } from '../lib/plan';
+import { artMeta, kategorie } from '../lib/kategorien';
+import { kartenLink } from '../lib/karten';
+import { wegLaenge, wegText, wegTitel, type Fussweg } from '../lib/weg';
+import { geld, uhrzeitText } from '../lib/format';
+import { useStore } from '../lib/daten';
+import type { RoutenInfo } from '../lib/routen';
+import type { Eintrag, Reise } from '../lib/types';
+import { Ablage, Chip, Foto, IconKnopf, Menue, cx } from './ui';
+import { ReihenBild, useOrtsbild } from './ReihenBild';
+
+/**
+ * Eine Zeile im Kalender: Zeit links, Bild, Name, darunter was dazugehört.
+ * Die Knöpfe stehen auf dem Handy unter dem Text, damit der Name atmen kann.
+ */
+
+export function EintragZeile({
+  eintrag,
+  reise,
+  oben,
+  unten,
+  verbinden,
+  nachbarWeg = null,
+  nachbarName = null,
+  bearbeiten,
+  kompakt = false,
+}: {
+  eintrag: Eintrag;
+  reise: Reise;
+  oben?: () => void;
+  unten?: () => void;
+  /** Weg zum nächsten Punkt des Tages */
+  verbinden?: RoutenInfo | null;
+  /** schritt zum nächsten wartenden punkt – in der liste ohne tag */
+  nachbarWeg?: Fussweg | null;
+  nachbarName?: string | null;
+  bearbeiten: () => void;
+  kompakt?: boolean;
+}) {
+  const store = useStore();
+  const [tagWaehlen, setTagWaehlen] = useState(false);
+  const katz = kategorie(eintrag.kategorie);
+  const metadaten = artMeta(eintrag.art);
+  const istBett = eintrag.art === 'unterkunft';
+  /* dichte Listen zeigen das Bild als Vorschnitt neben dem Text, die volle
+     reihe dahinter – gesucht wird in beiden, der weg zum bild ist gleich */
+  const bild = useOrtsbild(eintrag, reise, true);
+  const hintergrund = kompakt ? null : bild;
+  const vorschau = kompakt ? eintrag.foto_url ?? bild?.url ?? null : null;
+  const zeiten = [eintrag.zeit ? uhrzeitText(eintrag.zeit) : null, eintrag.bis_zeit ? `bis ${uhrzeitText(eintrag.bis_zeit)}` : null].filter(Boolean).join(' · ');
+  const nacht = istBett && gilt(eintrag.date) && gilt(eintrag.bis_date) ? abstandTage(eintrag.date, eintrag.bis_date) : 0;
+
+  const ohneTag = async (id: string) => {
+    await store.eintragAendern(id, { date: null });
+    store.sagen(`${metadaten.wort} ohne Tag – in der Liste zu finden.`);
+  };
+
+  const verschieben = async (id: string, datum: string) => {
+    const liste = store.eintraege.filter((e) => e.reise_id === reise.id && e.art !== 'unterkunft' && e.date === datum);
+    await store.eintragAendern(id, { date: datum, sortierung: liste.reduce((m, e) => Math.max(m, e.sortierung), 0) + 1 });
+    store.sagen(`${metadaten.wort} nach ${tagKurz(datum)} verschoben.`);
+  };
+
+  const uebernehmen = async () => {
+    if (!bild?.gefunden) return;
+    await store.eintragAendern(eintrag.id, { foto_url: bild.url, foto_nachweis: bild.nachweis });
+    store.sagen('Bild übernommen.');
+  };
+
+  const duplizieren = async () => {
+    const { id, erstellt_am, ...ohne } = eintrag;
+    await store.eintragAnlegen({ ...ohne, titel: `${eintrag.titel} (Kopie)`, sortierung: eintrag.sortierung + 0.5 });
+    store.sagen('Dupliziert.');
+  };
+
+  return (
+    <div className="group">
+      <div className={cx('zeile !gap-x-2.5', hintergrund && 'zeile-bild-da', istBett && 'zeile-bett', kompakt ? '!py-1.5' : '!py-2.5')}>
+        {hintergrund ? <ReihenBild url={hintergrund.url} /> : null}
+        <span className="zeitangabe" style={{ color: eintrag.zeit ? 'var(--text)' : undefined }}>
+          {istBett ? '🛏️' : eintrag.zeit ? eintrag.zeit : <span style={{ color: 'var(--text3)' }}>—</span>}
+        </span>
+        {vorschau ? <Foto url={vorschau} alt={eintrag.titel} zeichen={katz.icon} hoehe={44} /> : null}
+        <div className="text min-w-0">
+          <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <button type="button" onClick={bearbeiten} className="min-w-0 max-w-full truncate rounded text-left text-[16px] font-semibold leading-snug hover:underline">
+              {eintrag.titel}
+            </button>
+            <span aria-hidden className="shrink-0 text-[13px]" style={{ color: katz.farbe }} title={katz.label}>
+              {istBett ? metadaten.Icon : katz.icon}
+            </span>
+          </p>
+          <p className="mikro mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            {zeiten ? <span>{zeiten}</span> : null}
+            {eintrag.dauer_min ? <span>{eintrag.dauer_min} Min</span> : null}
+            {eintrag.ort ? (
+              <span>
+                {zeiten || eintrag.dauer_min ? <span aria-hidden> · </span> : null}
+                {eintrag.ort}
+              </span>
+            ) : null}
+            {istBett ? <span>🌙 {nacht > 0 ? `${nacht} ${nacht === 1 ? 'Nacht' : 'Nächte'}` : 'eine Nacht'}</span> : null}
+            {eintrag.preis ? <Chip titel={istBett ? 'pro Aufenthalt' : 'Preis'}>{preisText(eintrag, reise)}</Chip> : null}
+            {eintrag.buchung_nr ? <Chip titel="Buchungsnummer">🎫 {eintrag.buchung_nr}</Chip> : null}
+            {!eintrag.date ? <Chip ton="warnt">ohne Tag</Chip> : null}
+          </p>
+          {eintrag.notiz ? <p className="mt-1 line-clamp-2 text-[13.5px] leading-snug text-[var(--text2)]">{eintrag.notiz}</p> : null}
+          {eintrag.adresse && !kompakt ? <p className="mikro mt-0.5 truncate">{eintrag.adresse}</p> : null}
+        </div>
+        <div className="taten">
+          {oben || unten ? (
+            <span className="flex gap-0.5">
+              <IconKnopf titel="eine Stelle höher" onClick={oben} deaktiviert={!oben}>
+                ▲
+              </IconKnopf>
+              <IconKnopf titel="eine Stelle tiefer" onClick={unten} deaktiviert={!unten}>
+                ▼
+              </IconKnopf>
+            </span>
+          ) : null}
+          <a
+            href={kartenLink(eintrag)}
+            target="_blank"
+            rel="noreferrer"
+            title="auf Google Maps öffnen"
+            aria-label="auf Google Maps öffnen"
+            className="icon-knopf no-underline"
+            style={{ color: 'var(--text2)' }}
+          >
+            🗺️
+          </a>
+          <Menue
+            titel={eintrag.titel}
+            punkte={[
+              { label: 'bearbeiten', zeichen: '✏️', onClick: bearbeiten },
+              { label: 'auf anderen Tag', zeichen: '🗓️', onClick: () => setTagWaehlen(true) },
+              { label: 'duplizieren', zeichen: '⧉', onClick: duplizieren },
+              bild?.gefunden ? { label: 'Bild übernehmen', zeichen: '🖼️', onClick: () => void uebernehmen() } : null,
+              eintrag.foto_url ? { label: 'Bild entfernen', zeichen: '✂️', onClick: () => void store.eintragAendern(eintrag.id, { foto_url: null, foto_nachweis: null }) } : null,
+              eintrag.buchung_url ? { label: 'Buchung öffnen', zeichen: '🔗', href: eintrag.buchung_url } : null,
+              { label: 'löschen', zeichen: '🗑', gefahr: true, onClick: () => void store.eintragLoeschen(eintrag.id) },
+            ].filter(Boolean) as never}
+          />
+        </div>
+      </div>
+
+      {verbinden ? <Wegangabe weg={verbinden} wort={verbinden.quelle === 'gerechnet' ? (verbinden.anbieter === 'google' ? 'über Google Maps' : 'gerechnet') : 'geschätzt'} /> : null}
+      {verbinden || !nachbarWeg ? null : <Wegangabe weg={nachbarWeg} zuFuss wort={nachbarName ? `zum nächsten – ${nachbarName}` : 'zum nächsten'} />}
+
+      <Ablage offen={tagWaehlen} titel="Wann soll das stattfinden?" schliessen={() => setTagWaehlen(false)}>
+        <div className="flex flex-wrap gap-2 pt-3">
+          {istBett ? null : (
+            <button
+              type="button"
+              onClick={() => {
+                setTagWaehlen(false);
+                void ohneTag(eintrag.id);
+              }}
+              className={cx('chip !px-3 !py-2 !text-[13.5px]', !eintrag.date && 'chip-aktiv')}
+              style={{ borderColor: !eintrag.date ? 'var(--akzent)' : 'var(--rand)', borderWidth: 1, borderStyle: 'solid' }}
+            >
+              🕓 ohne Tag
+            </button>
+          )}
+          {reiseTage(reise).map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => {
+                setTagWaehlen(false);
+                void verschieben(eintrag.id, d);
+              }}
+              className={cx('chip !px-3 !py-2 !text-[13.5px]', eintrag.date === d && 'chip-aktiv')}
+              style={{ borderColor: 'var(--rand)', borderWidth: 1, borderStyle: 'solid' }}
+            >
+              {tagKurz(d)}
+            </button>
+          ))}
+        </div>
+      </Ablage>
+    </div>
+  );
+}
+
+/**
+ * Der schritt von hier zum nächsten punkt: minuten zuerst, die länge dahinter.
+ * Was nur überschlagen ist, trägt ≈ und sagt im titel, woran es liegt.
+ */
+function Wegangabe({ weg, wort, zuFuss = false }: { weg: Fussweg; wort: string; zuFuss?: boolean }) {
+  return (
+    <p className="mikro flex flex-wrap items-center gap-x-1.5 pb-1 pl-[calc(12px+52px)] text-[13px]" title={wegTitel(weg)}>
+      {zuFuss ? <span aria-hidden>🚶</span> : null}
+      <span className="tabular-nums">{wegText(weg)}</span>
+      <span aria-hidden>·</span>
+      <span className="tabular-nums">{wegLaenge(weg)}</span>
+      <span style={{ color: 'var(--text3)' }}>{wort}</span>
+      {weg.maps ? (
+        <a href={weg.maps} target="_blank" rel="noreferrer" className="font-medium">
+          in Google Maps
+        </a>
+      ) : null}
+    </p>
+  );
+}
