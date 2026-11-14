@@ -148,7 +148,7 @@ export function EintragZeile({
         </div>
       </div>
 
-      {verbinden ? <Wegangabe weg={verbinden} wort={verbinden.quelle === 'gerechnet' ? 'gerechnet' : 'geschätzt'} /> : null}
+      {verbinden ? <Wegangabe weg={verbinden} wort={verbinden.quelle === 'gerechnet' ? (verbinden.anbieter === 'google' ? 'über Google Maps' : 'gerechnet') : 'geschätzt'} /> : null}
       {verbinden || !nachbarWeg ? null : <Wegangabe weg={nachbarWeg} zuFuss wort={nachbarName ? `zum nächsten – ${nachbarName}` : 'zum nächsten'} />}
 
       <Ablage offen={tagWaehlen} titel="Wann soll das stattfinden?" schliessen={() => setTagWaehlen(false)}>
@@ -198,6 +198,11 @@ function Wegangabe({ weg, wort, zuFuss = false }: { weg: Fussweg; wort: string; 
       <span aria-hidden>·</span>
       <span className="tabular-nums">{wegLaenge(weg)}</span>
       <span style={{ color: 'var(--text3)' }}>{wort}</span>
+      {weg.maps ? (
+        <a href={weg.maps} target="_blank" rel="noreferrer" className="font-medium">
+          in Google Maps
+        </a>
+      ) : null}
     </p>
   );
 }

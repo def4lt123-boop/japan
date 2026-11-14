@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { useStore } from '../../../../../lib/daten';
 import { gilt, tagLang, tagNackt } from '../../../../../lib/dates';
 import { chronologisch, eintragVersetzen, reiseTage, tagesPlan } from '../../../../../lib/plan';
-import { MODI } from '../../../../../lib/karten';
+import { MODI, routenLink } from '../../../../../lib/karten';
 import { routeZwischen, type RoutenInfo } from '../../../../../lib/routen';
 import { wieVorher } from '../../../../../lib/format';
 import type { Eintrag, EintragArt } from '../../../../../lib/types';
@@ -51,7 +51,10 @@ export default function Reisetag() {
     void (async () => {
       const ergebnis: Record<string, RoutenInfo | null> = {};
       for (const paar of paare) {
-        ergebnis[paar.schluessel] = await routeZwischen(paar.von, paar.nach, modus);
+        const info = await routeZwischen(paar.von, paar.nach, modus);
+        // derselbe Schritt in Google Maps: mit Abfahrtszeiten, Gleis und Navigation
+        const maps = routenLink([paar.von, paar.nach], modus);
+        ergebnis[paar.schluessel] = info && maps ? { ...info, maps } : info;
       }
       if (!abbruch) setRouten((vorher) => wieVorher(vorher, ergebnis));
     })();
@@ -59,6 +62,12 @@ export default function Reisetag() {
       abbruch = true;
     };
   }, [paare, modus]);
+
+  // der ganze Tag als eine Strecke in Google Maps – bei Bahn gibt es nur den Link je Schritt
+  const tagesLink = routenLink(
+    (plan?.eintraege ?? []).filter((e) => e.lat !== null && e.lng !== null),
+    modus,
+  );
 
   if (!store.bereit) return null;
   if (!reise) {
@@ -116,6 +125,11 @@ export default function Reisetag() {
                 <span aria-hidden>{m.icon}</span> {m.label}
               </button>
             ))}
+            {tagesLink ? (
+              <a href={tagesLink} target="_blank" rel="noreferrer" className="chip !py-1.5 !text-[13px] no-underline" style={{ borderColor: 'var(--rand)', borderWidth: 1, borderStyle: 'solid' }}>
+                <span aria-hidden>🗺️</span> Tag in Google Maps
+              </a>
+            ) : null}
           </div>
         ) : null}
 

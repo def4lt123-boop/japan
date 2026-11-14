@@ -15,7 +15,6 @@ Ein universeller Reiseplaner fürs Handy: Reisen anlegen, Tage füllen, Unterkü
 | Unterkünfte | `/t/<reise>/hotels` | Betten mit Check-in und Check-out – die Nächte dazwischen füllen sich von selbst |
 | Karte | `/t/<reise>/karte` | nummerierte Nadeln in Kategoriefarbe, Weg des Tages, Punkt antippen öffnet das Blatt |
 | Reisedaten | `/t/<reise>/daten` | die Reise selbst ändern, Prüfliste, Archiv und Löschen |
-| Einstellungen | ⚙️ (Blatt, keine Seite) | Anrede, Standardwährung, Personen, Bilder an oder aus, Sicherung als Datei, alles löschen |
 
 Die untere Leiste führt auf dem Handy durch Dashboard, Reisen, Kalender und Karte; ab dem Rechner steht dasselbe als Spalte links. „Kalender" und „Karte" öffnen dabei die Reise, die zuletzt offen war. Was früher ein Profil-Reiter war, ist ein Blatt geworden: ⚙️ oben rechts auf dem Dashboard und in der Seitenleiste – ein paar Entscheidungen füllen keine eigene Seite.
 

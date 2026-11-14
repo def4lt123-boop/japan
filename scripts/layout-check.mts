@@ -94,7 +94,7 @@ const huelle = text('src/components/Huelle.tsx');
 const kurz = [...huelle.matchAll(/kurz:\s*'([^']+)'/g)].map((m) => m[1]!);
 assert.equal(kurz.length, 4, 'vier Bereiche in der Leiste – das profil ist ein blatt, kein bereich');
 assert.ok(!/href:\s*'\/profil'|label:\s*'Profil'/.test(huelle), 'der Profil-Reiter ist weg, nicht nur ausgeblendet');
-assert.match(huelle, /<Einstellungen variante="zeile" \/>/, 'die seitenleiste öffnet dasselbe blatt wie das dashboard');
+assert.ok(!/Einstellungen/.test(huelle), 'die seitenleiste hat kein einstellungsblatt mehr');
 assert.ok(kurz.every((k) => k.length <= 10), `Kurze Namen für die Leiste (${kurz.join(', ')})`);
 for (const weg of ['src/app/page.tsx', 'src/app/reisen/page.tsx', 'src/app/kalender/page.tsx', 'src/app/karte/page.tsx', 'src/app/reisen/neu/page.tsx', 'src/app/t/[tripId]/layout.tsx']) {
   assert.ok(existsSync(join(WURZEL, weg)), `${weg} fehlt`);
@@ -167,8 +167,12 @@ assert.match(pruefer, /cache: 'no-store'/, 'der Status wird nicht zwischengespei
 const stores = text('src/lib/daten.tsx');
 assert.match(stores, /window\.addEventListener\('focus'/, 'wer zurückkommt, sieht einen frischen Status');
 assert.match(text('src/components/Huelle.tsx'), /<StatusAnzeige variant="zeile" pruefen \/>/, 'auf dem Rechner steht der Status in der Spalte');
-assert.match(text('src/components/Einstellungen.tsx'), /<StatusAnzeige pruefen \/>/, 'auf dem Handy steht er im Einstellungsblatt');
-assert.match(text('src/app/page.tsx'), /<Einstellungen \/>/, 'das Blatt geht vom dashboard auf – von zwei stellen aus');
+assert.ok(!existsSync(join(WURZEL, 'src/components/Einstellungen.tsx')), 'das einstellungsblatt gibt es nicht mehr');
+assert.ok(!/Einstellungen/.test(text('src/app/page.tsx')), 'und das dashboard öffnet auch keins');
+assert.match(text('src/app/page.tsx'), /<span className="md:hidden">\s*<StatusAnzeige \/>/, 'auf dem handy steht der status im kopf des dashboards');
+const bettZeileText = text('src/components/BettZeile.tsx');
+assert.match(bettZeileText, /store\.eintragLoeschen\(eintrag\.id\)/, 'ein bett lässt sich am reisetag löschen, wie eine aktivität');
+assert.match(bettZeileText, /Unterkunft löschen\?/, 'aber mit rückfrage – ein aufenthalt gilt für mehrere nächte');
 const seitenAlles = texte(seiten).join('\n');
 assert.ok(!/'\/profil/.test(seitenAlles), 'kein Weg führt noch nach /profil');
 
@@ -276,7 +280,7 @@ const nadel = nadelAbschnitt(text('src/app/globals.css'));
 assert.match(nadel, /border-radius: 50% 50% 50% 6px/, 'ein körper mit zugespitzter ecke, kein kreis');
 assert.match(nadel, /transform: rotate\(-45deg\)/, 'und er steht auf der spitze');
 assert.match(nadel, /border: 2px solid var\(--nadel-ring\)/, 'ein ring hebt ihn von jeder kachel ab');
-assert.match(text('src/app/globals.css'), /--nadel-ring: #ffffff;[\s\S]{0,1400}\[data-thema='dunkel'\]/, 'der ring bleibt weiß – die kacheln in der mitte sind es im dunkeln auch');
+assert.match(text('src/app/globals.css'), /--nadel-ring: #ffffff;/, 'der ring bleibt weiß – die kacheln in der mitte sind hell');
 assert.match(nadel, /box-shadow:/, 'ein schatten setzt ihn darauf');
 assert.ok(nadel.includes('rotate(45deg)'), 'zahl und zeichen stehen gegen die neigung des körpers');
 assert.ok(/\.nadel-koerper b \{[\s\S]{0,320}border-radius: 999px/.test(nadel), 'das zeichen sitzt in einem siegel, nicht auf dem kopf');
@@ -287,8 +291,8 @@ assert.match(text('src/lib/karten.ts'), /export function nadelHtml/, 'die nadel 
 const punktfindung = text('src/lib/punktfindung.ts');
 assert.match(punktfindung, /fetch\(\s*["'`~]\/api\/orte\?q=/, 'die suche nach dem punkt geht durch dasselbe tor wie das formular');
 assert.ok(!/key=|API_KEY|process\.env/.test(punktfindung), 'kein zweiter schlüssel und keine neue anbietertür');
-assert.match(punktfindung, /if \(!stadt\.some\(\(w\) => ziel\.has\(w\)\)\) continue/, 'eine genannte stadt muss dabeisein – lieber kein punkt als ein falscher');
-assert.match(punktfindung, /if \(!gesuchte\.some\(\(w\) => name\.has\(w\)\)\) continue/, 'ein treffer muss sich für den namen halten, nicht nur für die stadt');
+assert.match(punktfindung, /if \(!stadt\.some\(\(w\) => wortKommtVor\(w, ziel\)\)\) continue/, 'eine genannte stadt muss dabeisein – lieber kein punkt als ein falscher');
+assert.match(punktfindung, /if \(!vertraut && !gesuchte\.some\(\(w\) => wortKommtVor\(w, name\)\)\) continue/, 'ein treffer muss sich für den namen halten, nicht nur für die stadt – nur Googles erster Treffer darf einen anderen Namen tragen');
 assert.match(text('src/components/EintragFormular.tsx'), /if \(werte\.lat === null\) void punktNachtragen/, 'nachgereicht wird nur, wo noch keiner steht');
 assert.match(text('src/components/EintragFormular.tsx'), /Punkt von \$\{treffer\.name\} · \$\{treffer\.quelle\} übernommen/, 'und es bleibt gesagt, woher der punkt kommt');
 assert.match(karte, /onClick=\{\(\) => void punkteFinden\(\)\}/, 'auf der karte liegt der knopf, nicht im formularversteck');
@@ -298,19 +302,13 @@ assert.match(karte, /ohne Punkt steht nichts auf der Karte/, 'die lücke ist am 
 assert.ok(!/p\.titel/.test(text('src/lib/karten.ts').split('nadelHtml')[1] ?? ''), 'fremder text wird nicht in die nadel gehoben');
 
 
-/* ── 12 · das licht und das bild im hintergrund ───────────────────────── */
+/* ── 12 · das bild im hintergrund (die app hat nur ein helles licht) ──── */
 
-const grundblatt = text('src/app/layout.tsx');
-assert.match(grundblatt, /dangerouslySetInnerHTML/, 'das licht wird vor dem ersten bild entschieden – nichts blitzt weiß auf');
-assert.match(grundblatt, /reiseplan\.einstellungen\.v1/, 'das skript liest denselben zettel wie das speicherblatt');
-assert.match(grundblatt, /suppressHydrationWarning/, 'und das dokument darf beim start schon gefärbt sein');
-assert.match(text('src/lib/types.ts'), /thema: 'hell' \| 'dunkel' \| 'auto'/, 'das licht gehört zu den einstellungen, nicht zu einem blatt');
-assert.match(stores, /wendeAn\(einstellungen\.thema\)/, 'ein setter, zwei wirkungen: gespeichert und umgefärbt');
-const licht = text('src/app/globals.css');
-assert.match(licht, /\[data-thema='dunkel'\] \{[\s\S]{0,700}--fläche: #0e1218/, 'im dunkeln gilt eine eigene palette, nicht ein filter');
-assert.match(licht, /\[data-thema='dunkel'\][\s\S]{0,1200}--auf-akzent: #04211f/, 'auf dem hellen akzent steht dunkle schrift – sonst liest niemand was');
+assert.ok(!/data-thema|dangerouslySetInnerHTML/.test(text('src/app/layout.tsx')), 'kein umschalten des lichts mehr beim start');
+assert.ok(!/data-thema/.test(text('src/app/globals.css')), 'keine zweite palette – die app ist hell');
+assert.ok(!/thema/.test(text('src/lib/types.ts')), 'das licht ist keine einstellung mehr');
+assert.ok(!existsSync(join(WURZEL, 'src/lib/thema.ts')), 'die rechnung fürs licht ist weg');
 assert.ok(!/color: '#fff'/.test(text('src/components/Huelle.tsx') + text('src/components/Kalender.tsx')), 'kein weiß mehr auf akzentflächen');
-assert.match(text('src/components/Einstellungen.tsx'), /LICHT_OPTIONEN/, 'das licht steht im blatt, nicht in einem eigenen bereich');
 
 const suche = text('src/components/ReihenBild.tsx');
 assert.match(suche, /bildFragen\(/, 'die reihe fragt die staffel, nicht ein einzelnes feld');
@@ -319,7 +317,7 @@ assert.match(text('src/lib/ortsbild.ts'), /return fragen\.slice\(0, 3\)/, 'höch
 assert.match(text('src/lib/ortsbild.ts'), /const HÖCHSTENS = 2/, 'und höchstens zwei anfragen gleichzeitig');
 assert.match(text('src/lib/anbieter.ts'), /SIEHBT_GOOGLE \? await beiGoogleFoto|if \(SIEHBT_GOOGLE\)/, 'wer einen schlüssel hat, kriegt die fotos von google');
 assert.match(text('src/app/api/bild/route.ts'), /googleBild\(foto\)/, 'gereicht wird durch unsere eigene tür, der schlüssel bleibt im server');
-assert.ok(/export const Fotopfad = \/.*places/.test(text('src/lib/anbieter.ts')), 'nur ein google-fotopfad – die tür bleibt kein offener verteiler');
+assert.ok(/export const Fotopfad = \/.*places/.test(text('src/lib/orte.ts')), 'nur ein google-fotopfad – die tür bleibt kein offener verteiler');
 assert.match(text('src/components/EintragZeile.tsx'), /eintrag\.foto_url \?\? bild\?\.url/, 'auch die dichte reihe zeigt das bild, als vorschnitt');
 
 /* ── 13. ortssuche: kurz tippen, richtig treffen ────────────────────────── */
@@ -360,7 +358,7 @@ assert.match(suchBlatt, /quellenName\(v\.quelle\)/, 'die quelle steht unter dem 
 assert.match(orteLib, /export function quellenName/, 'eine benennung pro concept: photon und nominatim heißen beide openstreetmap');
 assert.match(text('src/lib/punktfindung.ts'), /quellenName\(treffer\.quelle\)/, 'auch ein nachgesuchter punkt nennt dieselbe quelle');
 assert.match(suchBlatt, /entfernungKm\(/, 'und was nahe an der reise liegt, sagt das');
-assert.match(text('src/lib/types.ts'), /'google' \| 'openstreetmap' \| 'photon'/, 'die quelle photon ist im typ bekannt');
+assert.match(text('src/lib/types.ts'), /'google' \| 'openstreetmap' \| 'photon' \| 'geonames'/, 'die quellen photon und geonames sind im typ bekannt');
 assert.match(text('src/components/ui.tsx'), /onKeyDown=\{onTaste\}/, 'das feld kennt die taste');
 assert.match(suchBlatt, /e\.key !== 'Enter'/, 'eintreten nimmt den ersten vorschlag');
 
@@ -490,7 +488,7 @@ const anbieterQuelle = text('src/lib/anbieter.ts');
 assert.match(anbieterQuelle, /const gebremst_bis = new Map<string, number>\(\)/, 'gebremst wird pro quelle, nicht für alle zusammen');
 assert.match(anbieterQuelle, /antwort\.status === 429 \|\| antwort\.status === 503/, 'eine absage macht die tür zu');
 assert.match(anbieterQuelle, /retry-after/, 'und die frist, die der dienst nennt, wird gehalten');
-assert.match(anbieterQuelle, /else if \(!brems_gemeldet\) gemerkte_fragen\.set/, 'eine leere hand mitten in der bremse wird nicht gemerkt');
+assert.match(anbieterQuelle, /else if \(!brems_gemeldet && antworten\.every\(\(a\) => a !== null\)\) gemerkte_fragen\.set/, 'eine leere hand wird nur gemerkt, wenn keine bremse lief und jede quelle geantwortet hat');
 assert.match(anbieterQuelle, /export function bremsZuletzt\(\)/, 'die meldung geht an die antwort der api weiter');
 assert.match(anbieterQuelle, /!gebremst\('nominatim'/, 'in der eignen bremse wird nominatim gar nicht gefragt');
 
@@ -565,7 +563,8 @@ assert.match(mittel, /export async function middleware\(/, 'die tür sitzt vorn 
 assert.match(mittel, /aufgesperrt\(anfrage\.cookies\.get\(ANSICHT_COOKIE\)\?\.value\)/, 'geprüft wird der cookie, nie das wort im blatt');
 assert.match(mittel, /searchParams\.set\('von', /, 'und der weg, den einer wollte, bleibt gemerkt');
 assert.match(schlossSeite, /redirect\(zielSichern\(von\)\)/, 'wer hinein kann, kommt ohne fragen weiter');
-assert.match(schlossBlatt, /typ="password"/, 'das feld ist ein passwortfeld');
+assert.match(schlossBlatt, /'password'/, 'das feld ist ein passwortfeld – und sichtbar nur auf Tipp');
+assert.ok(!/flex-row|sm:flex-row/.test(schlossBlatt), 'nichts steht neben etwas anderem: die spalte läuft von oben nach unten');
 assert.ok(!/benutzername|type="email"|konto anlegen/i.test(schlossBlatt), 'nach einem namen wird nicht gefragt');
 assert.match(schlossWarte, /export const dynamic = 'force-dynamic'/, 'die tür wird nicht zwischengespeichert');
 assert.match(schlossWarte, /httpOnly: true/, 'der schlüssel liegt nur beim browser, nicht im blatt');
@@ -603,7 +602,8 @@ assert.match(routenQuelle, /export function untergrenze\(km: number, modus: stri
 assert.match(routenQuelle, /Math\.max\(1, zeit, untergrenze\(km, modus\)\)/, 'keine dienstantwort ist schneller, als der modus laufen kann');
 assert.match(routenQuelle, /export function wegQuellen\(/, 'ein modus hat eine kette von diensten, nicht nur einen');
 assert.match(routenQuelle, /if \(diener !== ALLGEMEIN\)/, 'dahinter fragt der allgemeine dienst nach');
-assert.match(routenQuelle, /if \(gebremst\(\)\) return geschaetzteRoute\(von, nach, modus\);/, 'in der bremse wird niemand mehr gefragt – die zeile überschlägt sich');
+assert.match(routenQuelle, /if \(gebremst\(\)\) return bekannt \?\? geschaetzteRoute\(von, nach, modus\);/, 'in der bremse werden die offenen dienste nicht mehr gefragt – die zeile überschlägt sich');
+assert.match(routenQuelle, /const ausGoogle = await googleRoute\(von, nach, modus, streckenbild\)/, 'google maps wird vor den offenen diensten gefragt');
 assert.match(routenQuelle, /export const TABELLE_MAX = 12/, 'eine gruppe fragt die wege auf einmal, und die anfrage hat ein maß');
 assert.match(routenQuelle, /\/table\/v1\/\$\{quelle\.osrm\}/, 'die tabelle fragt denselben diener wie das einzelpaar');
 assert.match(routenQuelle, /if \(a === b\) \{/, 'und sich selbst ist kein schritt');

@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useStore } from '../lib/daten';
 import { StatusAnzeige } from './StatusAnzeige';
-import { Einstellungen } from './Einstellungen';
 import { MadeByFlo } from './ui';
 
 /**
@@ -79,7 +78,6 @@ export function Huelle({ children }: { children: React.ReactNode }) {
           </div>
         ) : null}
         <div className="mt-auto space-y-1 pt-3">
-          <Einstellungen variante="zeile" />
           <StatusAnzeige variant="zeile" pruefen />
           <Link href="/reisen/neu" className="knopf w-full no-underline">
           + Neue Reise

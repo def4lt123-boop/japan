@@ -169,6 +169,7 @@ async function reihenPrüfen() {
   assert.equal(behälter.querySelectorAll('img[src="https://beispiel.org/gefunden.jpg"]').length, 1, 'auch die dichte reihe zeigt das gesuchte bild – als vorschnitt');
   assert.ok(!behälter.textContent.includes('Foto: Jem Kell'), 'die reihen tragen keinen nachweis, das bild soll luft haben');
   assert.ok(behälter.querySelector('.zeile-bett .zeile-bild'), 'auch das Bett zeigt sein Bild');
+  assert.ok(behälter.querySelector('.zeile-bett button[title="mehr"], .zeile-bett button[aria-label="mehr"]'), 'das Bett hat sein Menü – dort liegt „löschen“, wie bei den Aktivitäten');
   assert.ok(!behälter.querySelector('li:nth-child(3) .zeile-bild'), 'die dichte reihe sucht nicht den hintergrund, sie zeigt den vorschnitt');
   assert.ok(!behälter.querySelector('.zeile li'), 'eine Reihe verschachtelt kein li in ein li');
 

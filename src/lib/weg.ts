@@ -17,6 +17,10 @@ export interface Fussweg {
   km: number;
   minuten: number;
   quelle: 'gerechnet' | 'geschätzt';
+  /** Google Maps hat gerechnet – nicht die offenen Wegdienste */
+  anbieter?: 'google';
+  /** derselbe Schritt in Google Maps, zum Öffnen */
+  maps?: string;
 }
 
 /** der schritt von einem punkt zum andern – ohne netz, aus der luftlinie überschlagen */
@@ -55,7 +59,7 @@ export function wegLaenge(weg: Fussweg | null | undefined): string {
 export function wegTitel(weg: Fussweg | null, modus = FUSS): string {
   if (!weg) return '';
   const ziel = `${wegLaenge(weg)} ${modus === FUSS ? 'Fußweg' : modusInfo(modus).label}`;
-  return `${ziel} · ${weg.minuten} Min – ${weg.quelle === 'gerechnet' ? 'gerechnet' : 'überschlagen, der Wegdienst war nicht zu erreichen'}`;
+  return `${ziel} · ${weg.minuten} Min – ${weg.quelle === 'gerechnet' ? (weg.anbieter === 'google' ? 'von Google Maps gerechnet' : 'gerechnet') : 'überschlagen, der Wegdienst war nicht zu erreichen'}`;
 }
 
 /**

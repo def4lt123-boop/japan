@@ -106,10 +106,16 @@ export function EintragFormular({
   }, [offen, bestehend, vorlage, reise, datum]);
 
   const tage = useMemo(() => reiseTage(reise), [reise]);
+  // gesucht wird dort, wo gerade geplant wird: bei den Punkten dieses Tages, sonst bei
+  // denen der ganzen Reise – nicht beim allerersten Eintrag, der in einer anderen Stadt liegen kann
   const mittelpunkt = useMemo(() => {
-    const nabar = store.eintraegeVon(reise.id).find((e) => typeof e.lat === 'number' && typeof e.lng === 'number');
-    return typeof nabar?.lat === 'number' && typeof nabar?.lng === 'number' ? { lat: nabar.lat, lng: nabar.lng } : null;
-  }, [store, reise.id]);
+    const mitPunkt = store.eintraegeVon(reise.id).filter((e) => e.id !== bestehend?.id && typeof e.lat === 'number' && typeof e.lng === 'number');
+    const amTag = entwurf.date ? mitPunkt.filter((e) => e.date === entwurf.date) : [];
+    const grundlage = amTag.length ? amTag : mitPunkt;
+    if (!grundlage.length) return null;
+    const mitte = (feld: 'lat' | 'lng') => grundlage.reduce((summe, e) => summe + (e[feld] as number), 0) / grundlage.length;
+    return { lat: mitte('lat'), lng: mitte('lng') };
+  }, [store, reise.id, entwurf.date, bestehend?.id]);
   const metadaten = artMeta(art);
   const istBett = art === 'unterkunft';
   const set = (patch: Partial<Entwurf>) => setEntwurf((v) => ({ ...v, ...patch }));
@@ -125,8 +131,12 @@ export function EintragFormular({
       ort: orte,
       kategorie: entwurf.kategorie || (art === 'unterkunft' ? 'unterschlupf' : kategorieVorschlag(v.titel, v.adresse ?? '')),
     });
-    // das bild folgt demselben weg wie an der reihe – mit dem namen, was gerade übernommen ist
-    if (store.einstellungen.bilder && !entwurf.foto_url) void bildeins({ titel: v.titel, adresse: v.adresse, ort: orte });
+    // hat Google das Foto des Ortes gleich mitgebracht, ist es das richtige – sonst folgt das
+    // Bild demselben weg wie an der reihe, mit dem namen, was gerade übernommen ist
+    if (store.einstellungen.bilder && !entwurf.foto_url) {
+      if (v.foto) set({ foto_url: v.foto.url, foto_nachweis: v.foto.nachweis });
+      else void bildeins({ titel: v.titel, adresse: v.adresse, ort: orte });
+    }
   };
 
   /**

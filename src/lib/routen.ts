@@ -24,6 +24,10 @@ export interface RoutenInfo {
   km: number;
   minuten: number;
   quelle: 'gerechnet' | 'geschätzt';
+  /** wer gerechnet hat, wenn es Google Maps war – dann gilt auch „Bahn“ als echter Fahrplanweg */
+  anbieter?: 'google';
+  /** derselbe Schritt in Google Maps, zum Öffnen (setzt die Seite) */
+  maps?: string;
   /** [lat, lng] für die Linie auf der Karte */
   strecke?: [number, number][];
 }
@@ -57,6 +61,50 @@ export function wegQuellen(modus: string): { name: string; grund: string; diener
 /** was die geschwindigkeit des modus hergibt – die untergrenze für jede rechnung */
 export function untergrenze(km: number, modus: string): number {
   return Math.max(1, Math.round((km / modusInfo(modus).kmh) * 60));
+}
+
+/**
+ * Google Maps als erste Quelle, wenn der Server einen Schlüssel hat (er sagt es mit
+ * `konfiguriert`). Ohne Schlüssel wird nach der ersten Antwort nicht mehr gefragt; bei
+ * einem Ausfall eine Minute lang nicht – dann rechnen die offenen Dienste.
+ */
+let google_aus_bis = 0;
+
+export function googleVergessen(): void {
+  google_aus_bis = 0;
+}
+
+/** für den test der offenen dienste: google bleibt zu */
+export function googleAbschalten(): void {
+  google_aus_bis = Number.POSITIVE_INFINITY;
+}
+
+const googleBereit = () => google_aus_bis < Date.now();
+
+async function vomServer<T>(url: string, init?: RequestInit): Promise<{ konfiguriert?: boolean } & T | null> {
+  if (!googleBereit()) return null;
+  try {
+    const antwort = await fetch(url, { ...init, signal: AbortSignal.timeout(12000) });
+    if (!antwort.ok) {
+      google_aus_bis = Date.now() + 60_000;
+      return null;
+    }
+    const daten = (await antwort.json()) as { konfiguriert?: boolean } & T;
+    if (daten.konfiguriert === false) google_aus_bis = Number.POSITIVE_INFINITY;
+    return daten;
+  } catch {
+    google_aus_bis = Date.now() + 60_000;
+    return null;
+  }
+}
+
+async function googleRoute(von: Punkt & { lat: number; lng: number }, nach: Punkt & { lat: number; lng: number }, modus: string, streckenbild: boolean): Promise<RoutenInfo | null> {
+  const daten = await vomServer<{ route?: { km: number; minuten: number; strecke?: [number, number][] } | null }>(
+    `/api/route?von=${von.lat},${von.lng}&nach=${nach.lat},${nach.lng}&modus=${encodeURIComponent(modus)}${streckenbild ? '&linie=1' : ''}`,
+  );
+  const route = daten?.route;
+  if (!route || !Number.isFinite(route.minuten) || route.minuten < 1) return null;
+  return { km: route.km, minuten: route.minuten, quelle: 'gerechnet', anbieter: 'google', ...(route.strecke?.length ? { strecke: route.strecke } : {}) };
 }
 
 const speicher = new Map<string, RoutenInfo>();
@@ -116,9 +164,15 @@ export async function routeZwischen(von: Punkt, nach: Punkt, modus: string, stre
   if (!punktVorhanden(von) || !punktVorhanden(nach)) return null;
   const schlussel = schluessel(von, nach, modus);
   const bekannt = speicher.get(schlussel);
-  if (bekannt) return bekannt;
+  if (bekannt && (!streckenbild || bekannt.strecke)) return bekannt;
+  // erst Google Maps (hat Fahrpläne, kennt Bahnhöfe und Treppen), dann die offenen Dienste
+  const ausGoogle = await googleRoute(von, nach, modus, streckenbild);
+  if (ausGoogle) {
+    speicher.set(schlussel, ausGoogle);
+    return ausGoogle;
+  }
   // wer gerade abgewiesen wurde, fragt nicht noch einmal – überschlagen reicht
-  if (gebremst()) return geschaetzteRoute(von, nach, modus);
+  if (gebremst()) return bekannt ?? geschaetzteRoute(von, nach, modus);
   const paare = `${von.lng},${von.lat};${nach.lng},${nach.lat}`;
   for (const quelle of wegQuellen(modus)) {
     const daten = (await frage(`${quelle.grund}/${paare}?overview=${streckenbild ? 'full' : 'false'}&geometries=geojson&alternatives=false&steps=false`, 4500)) as
@@ -147,6 +201,19 @@ export async function wegTabelle(punkte: Punkt[], modus = 'zu fuss'): Promise<We
     .join('|')}`;
   const bekannt = speicherTabellen.get(schlussel);
   if (bekannt) return bekannt;
+  // Google rechnet jede Richtung gegen jede – auch die Gruppe eines Tages nach echten Wegen
+  const ausGoogle = await vomServer<{ tabelle?: { minuten: (number | null)[][]; km: number[][] } | null }>('/api/route', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ punkte: halte.map((p) => ({ lat: p.lat, lng: p.lng })), modus }),
+  });
+  if (ausGoogle?.tabelle) {
+    // eine Zeit, die Google nicht kennt, steht im Netz als null – für die Rechnung ist sie „unerreichbar“
+    const fund = { minuten: ausGoogle.tabelle.minuten.map((zeile) => zeile.map((m) => (m === null ? Number.POSITIVE_INFINITY : m))), km: ausGoogle.tabelle.km };
+    if (speicherTabellen.size > 120) speicherTabellen.clear();
+    speicherTabellen.set(schlussel, fund);
+    return fund;
+  }
   if (gebremst()) return null;
   const orte = halte.map((p) => `${p.lng},${p.lat}`).join(';');
   for (const quelle of wegQuellen(modus)) {

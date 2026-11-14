@@ -111,7 +111,8 @@ export function MehrfachFormular({ reise, offen, schliessen }: { reise: Reise; o
       } else {
         ohnePunkt.push({ eintrag: neu, name: vorlage.name });
       }
-      const fund = await bildFuer({ titel: vorlage.name, ort: patch.ort ?? null, adresse: patch.adresse ?? null }, { stationen: reise.stationen, land: reise.land });
+      // Google bringt das Foto des gefundenen Ortes mit – sonst fragt die Bilderstaffel
+      const fund = treffer?.bild ?? (await bildFuer({ titel: vorlage.name, ort: patch.ort ?? null, adresse: patch.adresse ?? null }, { stationen: reise.stationen, land: reise.land }));
       if (fund?.url) {
         patch.foto_url = fund.url;
         patch.foto_nachweis = fund.nachweis;

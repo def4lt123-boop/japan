@@ -1,4 +1,4 @@
-import { quellenName, stadtAusAdresse } from './orte';
+import { frageWorte, quellenName, stadtAusAdresse, wortKommtVor } from './orte';
 import { bremsMelden } from './suchtakt';
 import type { Eintrag, Ortsvorschlag } from './types';
 
@@ -41,21 +41,24 @@ const woerter = (text: string | null | undefined) =>
 
 /**
  * Der erste Treffer, der sich für das Gesuchte hält: einer der Wörter aus dem
- * Namen muss im Namen des Treffers stehen, und nennt die Suche eine Stadt, muss
- * die in Name oder Adresse vorkommen. Ein Treffer, der nur über die Stadt
- * gefunden wäre, ist eine Vermutung – und die wird nicht auf die Karte gemalt.
+ * Namen muss im Namen des Treffers stehen (auch unter anderem Namen oder mit
+ * Tippfehler), und nennt die Suche eine Stadt, muss die in Name oder Adresse
+ * vorkommen. Ein Treffer, der nur über die Stadt gefunden wäre, ist eine
+ * Vermutung – und die wird nicht auf die Karte gemalt. Eine Ausnahme: der erste
+ * Treffer von Google, das den Namen auch unter anderer Schreibweise kennt.
  */
 export function bestenPunkt(orte: Ortsvorschlag[], text: string): Ortsvorschlag | null {
   const brocken = text.split(',').map((t) => t.trim()).filter(Boolean);
-  const gesuchte = woerter(brocken[0]);
+  const gesuchte = frageWorte(brocken[0] ?? '').filter((w) => w.length > 2);
   if (!gesuchte.length) return null;
   const stadt = brocken.length > 1 ? woerter(brocken[brocken.length - 1]) : [];
-  for (const treffer of orte.slice(0, 5)) {
-    const name = new Set(woerter(treffer.name));
-    if (!gesuchte.some((w) => name.has(w))) continue;
+  for (const [rang, treffer] of orte.slice(0, 5).entries()) {
+    const name = woerter(treffer.name);
+    const vertraut = treffer.quelle === 'google' && rang === 0;
+    if (!vertraut && !gesuchte.some((w) => wortKommtVor(w, name))) continue;
     if (stadt.length) {
-      const ziel = new Set([...woerter(treffer.name), ...woerter(treffer.adresse)]);
-      if (!stadt.some((w) => ziel.has(w))) continue;
+      const ziel = [...name, ...woerter(treffer.adresse)];
+      if (!stadt.some((w) => wortKommtVor(w, ziel))) continue;
     }
     return treffer;
   }
@@ -67,6 +70,8 @@ export interface Punktuebernahme {
   patch: Partial<Pick<Eintrag, 'lat' | 'lng' | 'ort' | 'adresse' | 'karten_stichwort'>>;
   name: string;
   quelle: string;
+  /** das Foto des Ortes, wenn die Suche eins mitgebracht hat (Google) */
+  bild?: { url: string; nachweis: string | null } | null;
 }
 
 /**
@@ -119,6 +124,7 @@ export async function punktFuer(
       },
       name: treffer.name,
       quelle: quellenName(treffer.quelle),
+      bild: treffer.foto ?? null,
     };
   }
   return null;

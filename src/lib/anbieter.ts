@@ -1,6 +1,10 @@
 import {
   ausCommons,
+  ausGeoNames,
   ausGoogle,
+  fotoAusGoogle,
+  Fotopfad,
+  type GeoNamesRoh,
   ausOpenStreetMap,
   ausPexels,
   ausPhoton,
@@ -16,6 +20,7 @@ import {
   type PexelsRoh,
   type UnsplashRoh,
 } from '../lib/orte';
+import { linieAusText } from './linie';
 import type { Bildvorschlag, Ortsvorschlag } from '../lib/types';
 
 /**
@@ -69,6 +74,14 @@ async function hole(url: string, init?: RequestInit, frist = 5000, quelle = 'kar
       bremse(quelle, ruhe(antwort));
       return null;
     }
+    // 403 heißt bei den offenen Diensten „diese Adresse ist gesperrt“, bei Google „Schlüssel
+    // oder freigeschaltete API stimmt nicht“ – in beiden Fällen hilft Nachfragen im Sekundentakt nicht
+    if (antwort.status === 403 || antwort.status === 401) {
+      bremse(quelle, 60_000);
+      if (quelle.startsWith('google')) console.error(`[${quelle}] ${antwort.status}`, (await antwort.text().catch(() => '')).slice(0, 300));
+      return null;
+    }
+    if (!antwort.ok && quelle.startsWith('google')) console.error(`[${quelle}] ${antwort.status}`, (await antwort.text().catch(() => '')).slice(0, 300));
     return antwort.ok ? antwort : null;
   } catch {
     return null;
@@ -77,9 +90,16 @@ async function hole(url: string, init?: RequestInit, frist = 5000, quelle = 'kar
 
 /* ── Orte ─────────────────────────────────────────────────────────────── */
 
-async function beiGoogle(q: string, nah?: { lat: number; lng: number } | null): Promise<Ortsvorschlag[]> {
-  const key = process.env.GOOGLE_MAPS_API_KEY || process.env.PLACES_API_KEY;
-  if (!key) return [];
+const googleKey = () => process.env.GOOGLE_MAPS_API_KEY || process.env.PLACES_API_KEY;
+
+/**
+ * Google Places (neu), Textsuche: dieselbe Suche wie im Suchfeld von Google Maps –
+ * versteht „big ben“, „hotel in kyoto“, deutsche Namen und Tippfehler, und liefert
+ * in einer Antwort Name, Adresse, Punkt, Place-ID und Foto. `null` heißt: nicht erreichbar.
+ */
+async function beiGoogle(q: string, nah?: { lat: number; lng: number } | null): Promise<Ortsvorschlag[] | null> {
+  const key = googleKey();
+  if (!key) return null;
   const antwort = await hole(
     'https://places.googleapis.com/v1/places:searchText',
     {
@@ -87,15 +107,15 @@ async function beiGoogle(q: string, nah?: { lat: number; lng: number } | null): 
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': key,
-        'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.location,places.primaryType',
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.photos',
       },
       body: JSON.stringify({ textQuery: q, languageCode: 'de', maxResultCount: 8, ...(nah ? { locationBias: { circle: { center: { latitude: nah.lat, longitude: nah.lng }, radius: 50000 } } } : {}) }),
     },
-    undefined,
+    6000,
     'google',
   );
-  if (!antwort) return [];
-  return ausGoogle((await antwort.json()) as { places?: GoogleRoh[] });
+  if (!antwort) return null;
+  return ausGoogle((await antwort.json().catch(() => ({}))) as { places?: GoogleRoh[] });
 }
 
 /** beide freien Quellen wollen wissen, wer da fragt – ohne das antworten sie nicht */
@@ -105,7 +125,7 @@ const FRAGEKOPF = {
   Accept: 'application/json',
 } as const;
 
-async function beiOpenStreetMap(q: string, nah?: { lat: number; lng: number } | null): Promise<Ortsvorschlag[]> {
+async function beiOpenStreetMap(q: string, nah?: { lat: number; lng: number } | null): Promise<Ortsvorschlag[] | null> {
   const url = new URL('https://nominatim.openstreetmap.org/search');
   url.searchParams.set('format', 'jsonv2');
   url.searchParams.set('addressdetails', '1');
@@ -117,16 +137,16 @@ async function beiOpenStreetMap(q: string, nah?: { lat: number; lng: number } | 
     url.searchParams.set('bounded', '0');
   }
   const antwort = await hole(url.toString(), { headers: FRAGEKOPF }, 5000, 'nominatim');
-  if (!antwort) return [];
-  return ausOpenStreetMap((await antwort.json()) as NominatimRoh[]);
+  if (!antwort) return null;
+  return ausOpenStreetMap((await antwort.json().catch(() => [])) as NominatimRoh[]);
 }
 
 /**
  * Photon ist die Suche von OpenStreetMap: sie denkt bei kurzen, umgangssprachlichen
- * fragen mit („big ben") und verzeiht kleinbuchstaben. Gleiche datenbank, anderer
+ * fragen mit („big ben\") und verzeiht kleinbuchstaben. Gleiche datenbank, anderer
  * kopf – deshalb laufen beide, und einer von beiden reicht schon.
  */
-async function beiPhoton(q: string, nah?: { lat: number; lng: number } | null): Promise<Ortsvorschlag[]> {
+async function beiPhoton(q: string, nah?: { lat: number; lng: number } | null): Promise<Ortsvorschlag[] | null> {
   const url = new URL('https://photon.komoot.io/api/');
   url.searchParams.set('q', q);
   url.searchParams.set('lang', 'de');
@@ -136,8 +156,25 @@ async function beiPhoton(q: string, nah?: { lat: number; lng: number } | null): 
     url.searchParams.set('lon', String(nah.lng));
   }
   const antwort = await hole(url.toString(), { headers: FRAGEKOPF }, 5000, 'photon');
-  if (!antwort) return [];
-  return ausPhoton((await antwort.json()) as { features?: PhotonFeature[] });
+  if (!antwort) return null;
+  return ausPhoton((await antwort.json().catch(() => ({}))) as { features?: PhotonFeature[] });
+}
+
+/**
+ * Städte und Regionen unter ihrem deutschen Namen („Tokio“, „Kioto“): GeoNames über
+ * den offenen Geocoder von open-meteo – ohne Schlüssel, ohne Sekundentakt. Nur für
+ * Fragen, die wie ein Ortsname aussehen, nicht für „hotel in kyoto“.
+ */
+async function beiGeoNames(q: string): Promise<Ortsvorschlag[] | null> {
+  if (q.trim().split(/\s+/).length > 3) return [];
+  const url = new URL('https://geocoding-api.open-meteo.com/v1/search');
+  url.searchParams.set('name', q);
+  url.searchParams.set('count', '6');
+  url.searchParams.set('language', 'de');
+  url.searchParams.set('format', 'json');
+  const antwort = await hole(url.toString(), { headers: FRAGEKOPF }, 4000, 'geonames');
+  if (!antwort) return null;
+  return ausGeoNames((await antwort.json().catch(() => ({}))) as { results?: GeoNamesRoh[] });
 }
 
 /**
@@ -174,27 +211,33 @@ export async function orteSuchen(q: string, nah?: { lat: number; lng: number } |
   const schlüssel = `${anfrage}${anker}`;
   const gemerkt = frisch ? undefined : gemerkte_fragen.get(schlüssel);
   if (gemerkt && gemerkt.bis > Date.now()) return gemerkt.orte;
-  const leistungen: Array<Promise<Ortsvorschlag[]>> = [];
-  if (SIEHBT_GOOGLE) leistungen.push(beiGoogle(suchwort, nah));
+  // `null` heißt „diese Quelle hat nicht geantwortet“, `[]` heißt „hat geantwortet: nichts“ –
+  // nur das zweite darf als Antwort gelten und gemerkt werden
+  const leistungen: Array<Promise<Ortsvorschlag[] | null>> = [];
+  // google zuerst: nur wer einen schlüssel hat; erst ab drei zeichen, jede Frage kostet dort
+  if (SIEHBT_GOOGLE && anfrage.length >= 3) leistungen.push(beiGoogle(suchwort, nah));
   leistungen.push(beiPhoton(suchwort, nah));
+  leistungen.push(beiGeoNames(suchwort));
   // nominatim will höchstens eine anfrage pro sekunde: wer in die frist hineinfragt,
-  // der lässt es in dieser runde lieber – eine ausfallende quelle ist eine halbe
-  // antwort, ein „zu schnell" ist eine bitte um pause
+  // der lässt es in dieser runde lieber – das ist keine ausfallende quelle
   const jetzt = Date.now();
   if (jetzt - anfrage_zuletzt >= ABSTAND_UNTER_EINANDER && !gebremst('nominatim', jetzt)) {
     anfrage_zuletzt = jetzt;
     leistungen.push(beiOpenStreetMap(suchwort, nah));
   }
   const ergebnisse = await Promise.allSettled(leistungen);
+  const antworten = ergebnisse.map((r) => (r.status === 'fulfilled' ? r.value : null));
   const orte = stelleOrte(
-    ergebnisse.map((r) => (r.status === 'fulfilled' ? r.value : [])),
+    antworten.map((a) => a ?? []),
     { suchwort, nahe: nah ?? null },
   ).slice(0, 8);
+  const alleAusgefallen = antworten.every((a) => a === null);
+  // wenn nichts geantwortet hat, ist die tür zu – nicht „kein ort gefunden“
+  if (alleAusgefallen) brems_gemeldet = true;
   if (gemerkte_fragen.size > 300) gemerkte_fragen.clear();
-  // eine leere hand mitten in einer bremse ist keine antwort: sie wird nicht
-  // gemerkt, sonst hinge „kein punkt" eine zeitlang über jedem weiteren versuch
+  // eine leere hand ist nur dann eine antwort, wenn alle gefragten quellen geantwortet haben
   if (orte.length) gemerkte_fragen.set(schlüssel, { orte, bis: Date.now() + FRIST_TREFFER });
-  else if (!brems_gemeldet) gemerkte_fragen.set(schlüssel, { orte, bis: Date.now() + FRIST_LEER });
+  else if (!brems_gemeldet && antworten.every((a) => a !== null)) gemerkte_fragen.set(schlüssel, { orte, bis: Date.now() + FRIST_LEER });
   return orte;
 }
 
@@ -242,7 +285,7 @@ async function beiWikimedia(q: string): Promise<Bildvorschlag | null> {
  * im blatt oder im eintrag landet.
  */
 async function beiGoogleFoto(q: string): Promise<Bildvorschlag | null> {
-  const key = process.env.GOOGLE_MAPS_API_KEY || process.env.PLACES_API_KEY;
+  const key = googleKey();
   if (!key) return null;
   const antwort = await hole(
     'https://places.googleapis.com/v1/places:searchText',
@@ -255,21 +298,21 @@ async function beiGoogleFoto(q: string): Promise<Bildvorschlag | null> {
       },
       body: JSON.stringify({ textQuery: q, languageCode: 'de', maxResultCount: 3 }),
     },
-    undefined,
+    6000,
     'google',
   );
   if (!antwort) return null;
-  const roh = (await antwort.json()) as { places?: { photos?: { name?: string }[] }[] };
-  const name = (roh.places ?? []).flatMap((p) => p.photos ?? []).map((f) => f.name).find((n) => typeof n === 'string' && Fotopfad.test(n));
-  if (!name) return null;
-  return { url: `/api/bild?foto=${encodeURIComponent(name)}`, nachweis: 'Foto: Google Places', quelle: 'Google' };
+  const roh = (await antwort.json().catch(() => ({}))) as { places?: GoogleRoh[] };
+  // der erste Ort mit Foto – in der Reihenfolge, die Google für die Frage für richtig hält
+  for (const ort of roh.places ?? []) {
+    const foto = fotoAusGoogle(ort.photos);
+    if (foto) return { url: foto.url, nachweis: foto.nachweis, quelle: 'Google' };
+  }
+  return null;
 }
 
-/** nur ein google-fotopfad, nie ein beliebiges ziel – die tür bleibt kein offener verteiler */
-export const Fotopfad = /^places\/[\w.\-]{8,180}\/photos\/[\w.\-]{8,180}$/;
-
 export async function googleBild(name: string): Promise<Response | null> {
-  const key = process.env.GOOGLE_MAPS_API_KEY || process.env.PLACES_API_KEY;
+  const key = googleKey();
   if (!key || !Fotopfad.test(name)) return null;
   const antwort = await hole(`https://places.googleapis.com/v1/${name}/media?maxWidthPx=900&key=${key}`, undefined, 8000, 'google-foto');
   return antwort && antwort.body ? antwort : null;
@@ -301,4 +344,142 @@ export async function bildFinden(q: string): Promise<Bildvorschlag | null> {
   if (fund) return fund;
   const kern = bildGrund(suchwort);
   return kern && kern !== suchwort ? beiDenBildquellen(kern) : null;
+}
+
+/* ── Wege: Google Routes (wie in Google Maps), wenn ein Schlüssel da ist ──── */
+
+type GoogleModus = 'WALK' | 'BICYCLE' | 'DRIVE' | 'TRANSIT';
+const GOOGLE_MODI: Record<string, GoogleModus> = { 'zu fuss': 'WALK', rad: 'BICYCLE', auto: 'DRIVE', bahn: 'TRANSIT' };
+
+export interface GoogleWeg {
+  km: number;
+  minuten: number;
+  strecke?: [number, number][];
+}
+
+export interface GoogleTabelle {
+  minuten: number[][];
+  km: number[][];
+}
+
+const wegpunkt = (p: { lat: number; lng: number }) => ({ location: { latLng: { latitude: p.lat, longitude: p.lng } } });
+const sekundenAus = (text: string | undefined) => Number.parseInt(text ?? '', 10);
+
+/**
+ * Bahn und Bus haben Fahrpläne: ohne Zeitangabe rechnet Google mit „jetzt“, und wo
+ * gerade Nacht ist, fährt nichts. Gerechnet wird mit dem nächsten Morgen um
+ * zehn Uhr Ortszeit (der Ort steckt im Längengrad).
+ */
+export function naechsterMorgen(lng: number, jetzt = new Date()): string {
+  const versatz = Math.round(lng / 15) * 3_600_000;
+  const lokal = new Date(jetzt.getTime() + versatz);
+  const ziel = new Date(Date.UTC(lokal.getUTCFullYear(), lokal.getUTCMonth(), lokal.getUTCDate(), 10));
+  if (lokal.getUTCHours() >= 9) ziel.setUTCDate(ziel.getUTCDate() + 1);
+  return new Date(ziel.getTime() - versatz).toISOString();
+}
+
+const gemerkte_wege = new Map<string, { weg: GoogleWeg | null; bis: number }>();
+const FRIST_WEG = 24 * 60 * 60 * 1000;
+
+export function wegegedaechtnisVergessen(): void {
+  gemerkte_wege.clear();
+}
+
+/** Ein Weg von A nach B so, wie ihn Google Maps rechnet – zu Fuß, mit Rad, Auto oder mit Bahn und Bus. */
+export async function googleWeg(
+  von: { lat: number; lng: number },
+  nach: { lat: number; lng: number },
+  modus: string,
+  mitStrecke = false,
+): Promise<GoogleWeg | null> {
+  const key = googleKey();
+  if (!key) return null;
+  const art = GOOGLE_MODI[modus] ?? 'WALK';
+  const schluessel = `${art}|${von.lat.toFixed(4)},${von.lng.toFixed(4)}|${nach.lat.toFixed(4)},${nach.lng.toFixed(4)}`;
+  const gemerkt = gemerkte_wege.get(schluessel);
+  // ein Fund mit Strecke genügt auch der Frage ohne – umgekehrt nicht
+  if (gemerkt && gemerkt.bis > Date.now() && gemerkt.weg && (!mitStrecke || gemerkt.weg.strecke)) return gemerkt.weg;
+  const antwort = await hole(
+    'https://routes.googleapis.com/directions/v2:computeRoutes',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': key,
+        'X-Goog-FieldMask': ['routes.duration', 'routes.distanceMeters', ...(mitStrecke ? ['routes.polyline.encodedPolyline'] : [])].join(','),
+      },
+      body: JSON.stringify({
+        origin: wegpunkt(von),
+        destination: wegpunkt(nach),
+        travelMode: art,
+        languageCode: 'de',
+        units: 'METRIC',
+        ...(art === 'TRANSIT' ? { departureTime: naechsterMorgen(von.lng) } : {}),
+      }),
+    },
+    8000,
+    'google-route',
+  );
+  if (!antwort) return null;
+  const roh = (await antwort.json().catch(() => ({}))) as { routes?: { duration?: string; distanceMeters?: number; polyline?: { encodedPolyline?: string } }[] };
+  const route = roh.routes?.[0];
+  const sekunden = sekundenAus(route?.duration);
+  // keine Strecke (derselbe Ort, oder Google kennt dort keinen Weg) ist keine Antwort
+  if (!route || !Number.isFinite(sekunden) || !route.distanceMeters || route.distanceMeters < 1) return null;
+  const fund: GoogleWeg = {
+    km: Math.round((route.distanceMeters / 1000) * 10) / 10,
+    minuten: Math.max(1, Math.round(sekunden / 60)),
+    ...(mitStrecke && route.polyline?.encodedPolyline ? { strecke: linieAusText(route.polyline.encodedPolyline) } : {}),
+  };
+  if (gemerkte_wege.size > 500) gemerkte_wege.clear();
+  gemerkte_wege.set(schluessel, { weg: fund, bis: Date.now() + FRIST_WEG });
+  return fund;
+}
+
+/**
+ * Die Wege durch eine Gruppe in einer Frage: Google rechnet jede Richtung gegen
+ * jede. Fahrplanwege dürfen höchstens hundert Felder haben, also zehn Halte.
+ */
+export async function googleTabelle(punkte: { lat: number; lng: number }[], modus: string): Promise<GoogleTabelle | null> {
+  const key = googleKey();
+  const n = punkte.length;
+  const art = GOOGLE_MODI[modus] ?? 'WALK';
+  if (!key || n < 2 || n > 12 || (art === 'TRANSIT' && n * n > 100)) return null;
+  const antwort = await hole(
+    'https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': key,
+        'X-Goog-FieldMask': 'originIndex,destinationIndex,duration,distanceMeters,condition',
+      },
+      body: JSON.stringify({
+        origins: punkte.map((p) => ({ waypoint: wegpunkt(p) })),
+        destinations: punkte.map((p) => ({ waypoint: wegpunkt(p) })),
+        travelMode: art,
+        ...(art === 'TRANSIT' ? { departureTime: naechsterMorgen(punkte[0]!.lng) } : {}),
+      }),
+    },
+    10000,
+    'google-matrix',
+  );
+  if (!antwort) return null;
+  const roh = (await antwort.json().catch(() => null)) as { originIndex?: number; destinationIndex?: number; duration?: string; distanceMeters?: number; condition?: string }[] | null;
+  if (!Array.isArray(roh) || !roh.length) return null;
+  const minuten = Array.from({ length: n }, (_, a) => Array.from({ length: n }, (_, b) => (a === b ? 0 : Number.POSITIVE_INFINITY)));
+  const km = Array.from({ length: n }, () => Array.from({ length: n }, () => 0));
+  let gefunden = 0;
+  for (const feld of roh) {
+    const a = feld.originIndex ?? -1;
+    const b = feld.destinationIndex ?? -1;
+    if (a < 0 || b < 0 || a >= n || b >= n || a === b) continue;
+    const sekunden = sekundenAus(feld.duration);
+    if (feld.condition !== 'ROUTE_EXISTS' || !Number.isFinite(sekunden)) continue;
+    minuten[a]![b] = Math.max(1, Math.round(sekunden / 60));
+    km[a]![b] = Math.round(((feld.distanceMeters ?? 0) / 1000) * 10) / 10;
+    gefunden += 1;
+  }
+  // eine Tabelle ohne einen einzigen Weg hilft keiner Gruppe
+  return gefunden ? { minuten, km } : null;
 }

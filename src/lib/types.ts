@@ -80,8 +80,6 @@ export interface Einstellungen {
   personen: number;
   /** Bilder beim Anlegen automatisch suchen */
   bilder: boolean;
-  /** das licht der App – 'auto' folgt dem gerät */
-  thema: 'hell' | 'dunkel' | 'auto';
   /** zuletzt geöffnete Reise – davon handeln „Kalender" und „Karte" in der Leiste */
   aktive_reise: string | null;
 }
@@ -93,7 +91,11 @@ export interface Ortsvorschlag {
   lat: number;
   lng: number;
   stichwort: string | null;
-  quelle: 'google' | 'openstreetmap' | 'photon';
+  quelle: 'google' | 'openstreetmap' | 'photon' | 'geonames';
+  /** Google: die Place-ID des Ortes – der Treffer ist dann genau dieses Ding auf der Karte */
+  google_id?: string;
+  /** Google: ein Foto des Ortes samt Nachweis, gleich mit dem Treffer geliefert */
+  foto?: { url: string; nachweis: string | null } | null;
 }
 
 export interface Bildvorschlag {

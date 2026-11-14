@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { ausCommons, ausGoogle, ausOpenStreetMap, ausPexels, ausUnsplash, ausPhoton, bestesBild, bildGrund, frageLohnt, punktAusText, stelleOrte, stadtAusAdresse, vergleichText } from '../src/lib/orte';
+import { ausCommons, ausGeoNames, ausGoogle, ausOpenStreetMap, ausPexels, ausUnsplash, ausPhoton, bestesBild, bildGrund, frageLohnt, Fotopfad, ortPunkte, punktAusText, quellenName, stelleOrte, stadtAusAdresse, vergleichText } from '../src/lib/orte';
 import { kategorieVorschlag } from '../src/lib/kategorien';
 import { bestenPunkt, punktFuer, suchkandidaten } from '../src/lib/punktfindung';
 import type { Ortsvorschlag } from '../src/lib/types';
@@ -212,6 +212,48 @@ assert.equal(
 assert.deepEqual(stelleOrte([[]], { suchwort: 'big ben' }), [], 'eine leere hand bleibt leer');
 assert.deepEqual(stelleOrte([[turm]], { suchwort: ' ' }), [], 'was nichts fragt, bekommt nichts');
 
+/* ── Google bringt Place-ID und Foto mit, die Suche verzeiht Namen und Füllwörter ── */
+
+const googleTreffer = ausGoogle({
+  places: [
+    {
+      id: 'ChIJ8cM8zdaoAWARPR27azYdlsA',
+      displayName: { text: 'Fushimi Inari-Taisha' },
+      formattedAddress: '68 Fukakusa Yabunouchicho, Fushimi Ward, Kyoto, Japan',
+      location: { latitude: 34.9671, longitude: 135.7727 },
+      primaryType: 'shinto_shrine',
+      photos: [{ name: 'places/ChIJ8cM8zdaoAWARPR27azYdlsA/photos/' + 'A'.repeat(300), authorAttributions: [{ displayName: 'Mika Tanaka' }] }],
+    },
+  ],
+});
+assert.equal(googleTreffer[0]!.google_id, 'ChIJ8cM8zdaoAWARPR27azYdlsA', 'die Place-ID geht mit');
+assert.match(googleTreffer[0]!.foto!.url, /^\/api\/bild\?foto=places%2FChIJ/, 'das Foto läuft durch unsere Tür – der Schlüssel bleibt im Server');
+assert.equal(googleTreffer[0]!.foto!.nachweis, 'Foto: Mika Tanaka / Google Maps', 'der Fotograf wird genannt, wie Google es verlangt');
+assert.ok(Fotopfad.test('places/ChIJ8cM8zdaoAWARPR27azYdlsA/photos/' + 'A'.repeat(300)), 'auch lange Foto-Namen kommen durch');
+assert.equal(Fotopfad.test('https://evil.example/photos/x'), false, 'die Tür bleibt kein offener Verteiler');
+assert.equal(ausGoogle({ places: [{ displayName: { text: 'Ohne Foto' }, location: { latitude: 1, longitude: 2 }, photos: [{ name: '../geheim' }] }] })[0]!.foto, undefined, 'ein fremder Pfad wird nicht als Foto genommen');
+
+const ortO = (name: string, adresse: string, stichwort: string | null, quelle: Ortsvorschlag['quelle'] = 'photon', lat = 35, lng = 135): Ortsvorschlag => ({ name, adresse, lat, lng, stichwort, quelle });
+assert.ok(ortPunkte(ortO('Tokyo', 'Japan', 'city'), 'tokio') > 0, '„Tokio“ findet Tokyo');
+assert.ok(ortPunkte(ortO('Hotel Granvia Kyoto', 'Karasuma, Kyoto, Japan', 'hotel'), 'hotel in kyoto') > 0, '„hotel in kyoto“ verliert sich nicht an „in“');
+assert.ok(ortPunkte(ortO('Santa Maria della Scala', 'Piazza del Duomo, Siena, Italien', 'museum'), 'museum in siena') > 0, 'der Name trägt die Stadt nicht – die Adresse tut es');
+assert.ok(ortPunkte(ortO('München', 'Bayern, Deutschland', 'city'), 'muenchen') > 0, 'ein Tippfehler wird verziehen');
+assert.ok(ortPunkte(ortO('Venedig', 'Italien', 'city'), 'venice') > 0, 'englisch und deutsch sind ein Ort');
+assert.equal(ortPunkte(ortO('BP Tankstelle', 'Luton', 'fuel'), 'big ben'), -1, 'was kein Wort der Frage trägt, bleibt draußen');
+assert.equal(stelleOrte([[ortO('東京', '日本', 'locality', 'google')]], { suchwort: 'tokio' }).length, 1, 'Google kennt den Namen unter anderer Schrift – der Treffer bleibt');
+assert.equal(
+  stelleOrte([[ortO('Fushimi Inari Taisha', 'Kyoto', 'shrine', 'photon', 34.9671, 135.7727)], [ortO('Fushimi Inari-Taisha', 'Kyoto, Japan', 'shinto_shrine', 'google', 34.9671, 135.7727)]], { suchwort: 'fushimi inari' })[0]!.quelle,
+  'google',
+  'derselbe Ort von Google und OpenStreetMap: Google steht vorn, mit Foto und Place-ID',
+);
+assert.equal(ausGeoNames({ results: [{ name: 'Tokio', latitude: 35.6895, longitude: 139.69171, country: 'Japan', admin1: 'Tokyo', feature_code: 'PPLC' }, { name: 'ohne Punkt' }] }).length, 1, 'GeoNames: nur Treffer mit Punkt');
+assert.equal(ausGeoNames({ results: [{ name: 'Tokio', latitude: 35.6895, longitude: 139.69171, country: 'Japan', admin1: 'Tokyo', feature_code: 'PPLC' }] })[0]!.adresse, 'Tokyo, Japan', 'die Adresse ist Region und Land');
+assert.equal(quellenName('geonames'), 'GeoNames', 'auch die Stadtsuche nennt ihre Quelle');
+assert.equal(bestenPunkt([{ name: '東京タワー', adresse: 'Minato City, Tokio, Japan', lat: 35.65, lng: 139.74, stichwort: null, quelle: 'google' }], 'Tokyo Tower, Tokio')?.quelle, 'google', 'der erste Google-Treffer zählt auch unter anderem Namen, wenn die Stadt passt');
+assert.equal(bestenPunkt([{ name: '東京タワー', adresse: 'Minato City, Osaka, Japan', lat: 35.65, lng: 139.74, stichwort: null, quelle: 'google' }], 'Tokyo Tower, Tokio'), null, 'aber die Stadt entscheidet weiter');
+assert.equal(bestenPunkt([osm('Hotel Kioto Plaza', 'Kyoto, Japan')], 'Hotel Kyoto Plaza, Kioto')?.name, 'Hotel Kioto Plaza', 'Kioto und Kyoto sind dasselbe Wort');
+
+
 const nominatimRoh = [{ display_name: 'Big Ben, Westminster, London, England', name: 'Big Ben', lat: '51.5007', lon: '-0.1246', type: 'clock_tower', addresstype: 'historic' }];
 const gefragte: string[] = [];
 const koepfe: Array<Record<string, string>> = [];
@@ -234,6 +276,7 @@ const beideQuellen = () =>
     const antwort = fundZu(new URL(text).searchParams.get('q') ?? '');
     if (text.includes('photon.komoot.io')) return new Response(JSON.stringify(antwort.photon));
     if (text.includes('nominatim.openstreetmap.org')) return new Response(JSON.stringify(antwort.nominatim));
+    if (text.includes('geocoding-api.open-meteo.com')) return new Response(JSON.stringify({ results: [] }));
     return new Response('nicht gefunden', { status: 404 });
   }) as typeof fetch;
 
@@ -244,7 +287,7 @@ assert.equal(frageLohnt(' b '), false, 'ein buchstabe wird nicht gefragt');
 assert.equal(frageLohnt('bi'), true, 'zwei zeichen reichen');
 
 const erste = await orteSuchen('big ben');
-assert.equal(gefragte.length, 2, 'beide freien quellen laufen gleichzeitig, keins wartet auf das andere');
+assert.equal(gefragte.length, 3, 'alle freien quellen (photon, geonames, nominatim) laufen gleichzeitig, keins wartet auf das andere');
 assert.equal(nominatimFragen(), 1, 'nominatim wird einmal gefragt, nicht dreimal');
 assert.ok(erste.some((o) => o.adresse?.includes('London')), '„big ben" findet den turm in London');
 assert.equal(erste[0]!.adresse?.includes('London'), true, 'und er steht vorn');
@@ -257,7 +300,7 @@ assert.ok(new URL(gefragte[0]!).searchParams.get('lang') === 'de', 'die namen ko
 
 const zweite = await orteSuchen('Big  Ben');
 assert.deepEqual(zweite, erste, 'dieselbe frage, dieselben treffer');
-assert.equal(gefragte.length, 2, 'zum zweiten mal geht nichts ins netz');
+assert.equal(gefragte.length, 3, 'zum zweiten mal geht nichts ins netz');
 
 // nominatim spielt jetzt nicht mehr mit – photon allein muss reichen
 globalThis.fetch = ((url: string | URL, init?: unknown) => {

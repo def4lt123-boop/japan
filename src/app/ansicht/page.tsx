@@ -13,7 +13,7 @@ export default async function Ansicht({ searchParams }: { searchParams: Promise<
   const verrat = await cookies();
   if (await aufgesperrt(verrat.get(ANSICHT_COOKIE)?.value)) redirect(zielSichern(von));
   return (
-    <main className="fixed inset-0 z-[80] overflow-y-auto" style={{ background: 'var(--karte)' }}>
+    <main className="fixed inset-0 z-[80] overflow-y-auto" style={{ background: 'linear-gradient(180deg, var(--akzent-fläche) 0%, var(--fläche) 60%)' }}>
       <AnsichtSchloss von={zielSichern(von)} />
     </main>
   );

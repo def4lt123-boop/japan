@@ -8,7 +8,6 @@ import { inTagen, laufend, reiseTage, vergangen } from '../lib/plan';
 import { plural } from '../lib/format';
 import { ReiseKarte } from '../components/ReiseKarte';
 import { Karten, KartenKopf, Chip, Fortschritt, Hinweis, Leer, MadeByFlo, SeitenKopf } from '../components/ui';
-import { Einstellungen } from '../components/Einstellungen';
 import { StatusAnzeige } from '../components/StatusAnzeige';
 import { planFortschritt } from '../lib/plan';
 
@@ -49,7 +48,7 @@ export default function Dashboard() {
   if (!reisen.length) {
     return (
       <main className="seite pb-6">
-        <SeitenKopf titel={`${begriessung()}${name ? `, ${name}` : ''}`} untertitel={tagLang(heute)} seitlich={<Einstellungen />} />
+        <SeitenKopf titel={`${begriessung()}${name ? `, ${name}` : ''}`} untertitel={tagLang(heute)} />
         <Karten className="p-4">
           <Leer
             zeichen="🧳"
@@ -98,12 +97,9 @@ export default function Dashboard() {
           </span>
         }
         seitlich={
-          <span className="flex items-center gap-2">
-            <Einstellungen />
-            <Link href="/reisen/neu" className="knopf no-underline">
-              + Neue Reise
-            </Link>
-          </span>
+          <Link href="/reisen/neu" className="knopf no-underline">
+            + Neue Reise
+          </Link>
         }
       />
 

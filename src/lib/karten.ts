@@ -28,6 +28,23 @@ export function kartenLink(p: Punkt): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stichwort)}`;
 }
 
+const MAPS_MODUS: Record<string, string> = { 'zu fuss': 'walking', rad: 'bicycling', auto: 'driving', bahn: 'transit' };
+
+/**
+ * Der Weg in Google Maps: Start, Ziel und was dazwischen liegt, mit der gewählten
+ * Fortbewegung – dort gibt es dann Abfahrtszeiten, Gleise und die Navigation. Google
+ * nimmt höchstens neun Zwischenhalte. Bahn und Bus kennen keine Zwischenhalte: für
+ * mehr als zwei Punkte gibt es dann keinen Link, sondern einen je Schritt.
+ */
+export function routenLink(stationen: Punkt[], modus: string): string | null {
+  const halte = stationen.filter(punktVorhanden).slice(0, 11);
+  if (halte.length < 2) return null;
+  const art = MAPS_MODUS[modus] ?? 'walking';
+  if (art === 'transit' && halte.length > 2) return null;
+  const mitte = halte.slice(1, -1).map(zentriert).join(encodeURIComponent('|'));
+  return `https://www.google.com/maps/dir/?api=1&travelmode=${art}&origin=${zentriert(halte[0]!)}&destination=${zentriert(halte[halte.length - 1]!)}${mitte ? `&waypoints=${mitte}` : ''}`;
+}
+
 /**
  * Die Karte direkt im Formular: ein Rahmen um den Punkt, offen eingebettet,
  * ohne Schlüssel und ohne Wasserzeichen. Der Ausschnitt wächst mit dem Zoom

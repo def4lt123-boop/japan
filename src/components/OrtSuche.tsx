@@ -27,6 +27,8 @@ export interface Gewaehlt {
   lng: number | null;
   stichwort: string | null;
   quelle: string;
+  /** Google: das Foto des Ortes kommt gleich mit – dann braucht es keine zweite Bildersuche */
+  foto?: { url: string; nachweis: string | null } | null;
 }
 
 const ZULETZT_SCHLUESSEL = 'reiseplan.orte.zuletzt.v1';
@@ -39,7 +41,7 @@ const AB_KUERZE = 2;
  */
 const sitzung = new Map<string, Ortsvorschlag[]>();
 
-const QUELLEN = ['google', 'openstreetmap', 'photon'];
+const QUELLEN = ['google', 'openstreetmap', 'photon', 'geonames'];
 
 /** ein ort, wie er auf dem gerät liegt – nur das brauchbarematerial kommt hinein */
 function istOrt(d: unknown): d is Ortsvorschlag {
@@ -213,7 +215,7 @@ export function OrtSuche({
     setOffen(false);
     setVorschlaege([]);
     setLeer(false);
-    beiAuswahl({ titel: v.name, adresse: v.adresse, lat: v.lat, lng: v.lng, stichwort: v.stichwort, quelle: quellenName(v.quelle) });
+    beiAuswahl({ titel: v.name, adresse: v.adresse, lat: v.lat, lng: v.lng, stichwort: v.stichwort, quelle: quellenName(v.quelle), foto: v.foto ?? null });
     merkeZuletzt(v);
     setZuletzt(liesZuletzt());
   };

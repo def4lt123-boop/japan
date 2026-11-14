@@ -12,7 +12,10 @@ import { join } from 'node:path';
 
 import { TAKT_WERTE, bremsMelden, gebremst, takt, taktVergessen } from '../src/lib/suchtakt';
 import { bremsenVergessen, fragegedaechtnisVergessen, orteSuchen, bremsZuletzt, frageLohnt } from '../src/lib/anbieter';
-import { routeBekannt, routeZwischen, wegTabelle } from '../src/lib/routen';
+import { googleAbschalten, googleVergessen, routeBekannt, routeZwischen, wegTabelle } from '../src/lib/routen';
+import { naechsterMorgen } from '../src/lib/anbieter';
+import { linieAusText } from '../src/lib/linie';
+import { routenLink } from '../src/lib/karten';
 import { FUSS, minutenAus, nahGenug, wegLaenge, wegSchaetzen, wegText, wegTitel, type Fussweg } from '../src/lib/weg';
 import { haufungen, nachbarn } from '../src/lib/naehe';
 import { ansichtWert, aufgesperrt, passtDas, wurzel, zielSichern } from '../src/lib/ansicht.server';
@@ -40,6 +43,9 @@ const LEER = {
 
 const eintrag = (id: string, titel: string, lat: number | null, lng: number | null): Eintrag =>
   ({ id, titel, lat, lng, erstellt_am: '2026-01-01T10:00:00Z', sortierung: 1, ...(LEER as object) }) as Eintrag;
+
+// die offenen dienste werden hier geprüft – google (über /api/route) hat weiter unten seinen eigenen abschnitt
+googleAbschalten();
 
 /* ── 1 · der suchtakt: in ruhe schnell, nach der bremse langsam ───────── */
 
@@ -244,6 +250,93 @@ await wegTabelle(halte, 'zu fuss');
 assert.equal(gefragteTabelle.length, 1, 'dieselbe handvoll wird nicht noch einmal gefragt');
 
 console.log('🎉 Der Weg wird gerechnet, wo der Dienst antwortet, und überschlagen, wo nicht');
+
+/* ── 4c · Google Maps rechnet zuerst, die offenen Dienste bleiben der Rückhalt ── */
+
+googleVergessen();
+const gefragtGoogle: string[] = [];
+globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+  const text = String(url);
+  gefragtGoogle.push(`${init?.method ?? 'GET'} ${text}`);
+  if (text.startsWith('/api/route?')) {
+    return new Response(JSON.stringify({ konfiguriert: true, route: { km: 6.4, minuten: 23, strecke: [[35.0, 135.7], [35.1, 135.8]] } }));
+  }
+  if (text === '/api/route') {
+    return new Response(JSON.stringify({ konfiguriert: true, tabelle: { minuten: [[0, 7, null], [7, 0, 9], [11, 9, 0]], km: [[0, 0.5, 0], [0.5, 0, 0.7], [0.9, 0.7, 0]] } }));
+  }
+  return new Response('offene dienste sollen hier nicht gefragt werden', { status: 500 });
+}) as typeof fetch;
+
+const kyotoA = { lat: 35.0116, lng: 135.7681 };
+const kyotoB = { lat: 35.0394, lng: 135.7292 };
+const mitBahn = await routeZwischen(kyotoA, kyotoB, 'bahn');
+assert.equal(mitBahn?.anbieter, 'google', 'die zahl kommt von Google Maps');
+assert.equal(mitBahn?.minuten, 23, 'mit Fahrplan: so lange braucht man wirklich, nicht Luftlinie durch Tempo');
+assert.equal(mitBahn?.quelle, 'gerechnet', 'und die zeile sagt, dass gerechnet ist');
+assert.ok(/modus=bahn/.test(gefragtGoogle[0]!), 'der modus geht mit – Bahn ist hier ein echter Fahrplanweg');
+assert.ok(gefragtGoogle.every((f) => !/openstreetmap|osrm/.test(f)), 'wo Google antwortet, wird kein offener Dienst gefragt');
+assert.match(wegTitel(mitBahn!, 'bahn'), /von Google Maps gerechnet$/, 'der Titel nennt den Rechner');
+const vorGoogle = gefragtGoogle.length;
+await routeZwischen(kyotoA, kyotoB, 'bahn');
+assert.equal(gefragtGoogle.length, vorGoogle, 'dasselbe paar wird nicht noch einmal gefragt');
+const mitLinie = await routeZwischen(kyotoA, kyotoB, 'bahn', true);
+assert.deepEqual(mitLinie?.strecke, [[35.0, 135.7], [35.1, 135.8]], 'wer die strecke für die karte will, bekommt sie von Google');
+
+const googleTab = await wegTabelle([kyotoA, kyotoB, { lat: 35.02, lng: 135.75 }], 'zu fuss');
+assert.equal(googleTab?.minuten[0]![1], 7, 'die gruppe wird nach Google-Wegen geordnet');
+assert.equal(googleTab?.minuten[0]![2], Number.POSITIVE_INFINITY, 'ein weg, den Google nicht kennt, ist unerreichbar – nicht null minuten');
+
+// Google fällt aus: die offenen Dienste übernehmen, und Google wird eine Minute nicht weiter gefragt
+googleVergessen();
+const offeneFragen: string[] = [];
+globalThis.fetch = (async (url: string | URL) => {
+  const text = String(url);
+  offeneFragen.push(text);
+  if (text.startsWith('/api/route')) return new Response('kaputt', { status: 502 });
+  return new Response(JSON.stringify({ code: 'Ok', routes: [{ distance: 2000, duration: 1500, geometry: { coordinates: [[135.7, 35.0], [135.8, 35.1]] } }] }));
+}) as typeof fetch;
+const rueckfall = await routeZwischen({ lat: 34.9858, lng: 135.7588 }, { lat: 34.9671, lng: 135.7727 }, 'zu fuss');
+assert.equal(rueckfall?.anbieter, undefined, 'ohne Google rechnen die offenen Dienste');
+assert.equal(rueckfall?.quelle, 'gerechnet');
+assert.equal(offeneFragen.filter((f) => f.startsWith('/api/route')).length, 1, 'Google wurde einmal gefragt');
+await routeZwischen({ lat: 34.99, lng: 135.76 }, { lat: 34.97, lng: 135.77 }, 'zu fuss');
+assert.equal(offeneFragen.filter((f) => f.startsWith('/api/route')).length, 1, 'und nach dem Ausfall eine Minute lang nicht mehr');
+
+// kein Schlüssel auf dem Server: nach der ersten Antwort wird nie wieder gefragt
+googleVergessen();
+const ohneSchluessel: string[] = [];
+globalThis.fetch = (async (url: string | URL) => {
+  const text = String(url);
+  ohneSchluessel.push(text);
+  if (text.startsWith('/api/route')) return new Response(JSON.stringify({ konfiguriert: false, route: null }));
+  return new Response(JSON.stringify({ code: 'Ok', routes: [{ distance: 900, duration: 700, geometry: { coordinates: [[135.7, 35.0], [135.8, 35.1]] } }] }));
+}) as typeof fetch;
+await routeZwischen({ lat: 35.1, lng: 135.1 }, { lat: 35.11, lng: 135.12 }, 'zu fuss');
+await routeZwischen({ lat: 35.2, lng: 135.2 }, { lat: 35.21, lng: 135.22 }, 'zu fuss');
+assert.equal(ohneSchluessel.filter((f) => f.startsWith('/api/route')).length, 1, 'ohne Schlüssel wird Google nur einmal gefragt');
+googleAbschalten();
+
+// der Fahrplan rechnet mit dem nächsten Morgen vor Ort, nicht mit „jetzt“
+const nachtInJapan = new Date('2026-11-13T17:30:00Z'); // 02:30 Uhr in Kyoto
+assert.equal(naechsterMorgen(135.77, nachtInJapan), '2026-11-14T01:00:00.000Z', 'um halb drei nachts (dort schon der 14.) wird mit zehn uhr früh gerechnet – 10:00 Ortszeit sind 01:00 UTC');
+const spaetAmTag = new Date('2026-11-13T05:00:00Z'); // 14:00 Uhr in Kyoto
+assert.equal(naechsterMorgen(135.77, spaetAmTag), '2026-11-14T01:00:00.000Z', 'nach neun uhr morgens ist der nächste morgen der von morgen');
+
+// die Strecke: encoded polyline, so wie Google sie schickt (Beispiel aus der Google-Dokumentation)
+const linie = linieAusText('_p~iF~ps|U_ulLnnqC_mqNvxq`@');
+assert.deepEqual(linie, [[38.5, -120.2], [40.7, -120.95], [43.252, -126.453]], 'die Strecke wird wieder zu Punkten');
+assert.deepEqual(linieAusText(''), [], 'ohne Strecke keine Punkte');
+assert.ok(linieAusText('_p~iF~ps|U_ulLnnqC_mqNvxq`@', 2).length <= 3, 'lange Strecken werden ausgedünnt');
+
+// Links in Google Maps
+const tag1 = routenLink([kyotoA, { lat: 35.02, lng: 135.75 }, kyotoB], 'zu fuss')!;
+assert.match(tag1, /travelmode=walking&origin=35\.0116,135\.7681&destination=35\.0394,135\.7292&waypoints=35\.02,135\.75$/, 'Start, Ziel und der Halt dazwischen');
+assert.equal(routenLink([kyotoA, { lat: 35.02, lng: 135.75 }, kyotoB], 'bahn'), null, 'Bahn kennt keine Zwischenhalte – dort gibt es nur den Link je Schritt');
+assert.match(routenLink([kyotoA, kyotoB], 'bahn')!, /travelmode=transit/, 'ein einzelner Schritt geht auch mit der Bahn');
+assert.equal(routenLink([kyotoA], 'zu fuss'), null, 'ein einzelner Punkt ist kein Weg');
+assert.equal(routenLink([kyotoA, { lat: null, lng: null }], 'zu fuss'), null, 'ein Punkt ohne Ort zählt nicht');
+
+console.log('🎉 Google Maps rechnet zuerst – Fahrplan, Tabelle, Rückfall auf offene Dienste, Links in Google Maps');
 
 /* ── 5 · der filter mißt, was die zeile zeigt ─────────────────────────── */
 
